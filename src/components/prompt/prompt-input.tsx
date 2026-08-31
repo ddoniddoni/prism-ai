@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
+import { ArrowUpRight, DatabaseZap } from "lucide-react";
 
 const MINIMUM_QUESTION_LENGTH = 2;
 const MAXIMUM_QUESTION_LENGTH = 300;
@@ -47,48 +48,40 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
   return (
     <div>
       <form aria-describedby="prompt-description" onSubmit={handleSubmit}>
-        <label
-          className="text-sm font-semibold text-[#151a2d]"
-          htmlFor="analysis-question"
-        >
-          어떤 변화를 확인하고 싶나요?
+        <label className="sr-only" htmlFor="analysis-question">
+          분석할 질문
         </label>
-        <p
-          className="mt-1 text-sm leading-6 text-slate-600"
-          id="prompt-description"
-        >
+        <p className="sr-only" id="prompt-description">
           자연어 질문을 허용된 분석 계획과 데이터 근거가 있는 대시보드로
           연결합니다.
         </p>
-        <div className="mt-4 border border-slate-900/15 bg-white shadow-[0_20px_45px_-36px_rgba(21,26,45,0.7)] transition-shadow focus-within:border-[#6657dd]/55 focus-within:shadow-[0_20px_45px_-32px_rgba(102,87,221,0.5)]">
+        <div className="flex min-h-[72px] items-center gap-3 rounded-xl border border-[#dde2e8] bg-white px-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-[border-color,box-shadow] duration-100 focus-within:border-[#4f46e5] focus-within:shadow-[0_0_0_3px_rgba(79,70,229,0.1)]">
+          <DatabaseZap
+            aria-hidden="true"
+            className="size-5 shrink-0 text-[#777587]"
+          />
           <textarea
             aria-invalid={error ? true : undefined}
             aria-errormessage={error ? "question-error" : undefined}
-            className="min-h-32 w-full resize-y bg-transparent px-4 py-4 text-base leading-7 text-[#151a2d] outline-none placeholder:text-slate-400"
+            className="max-h-32 min-h-[70px] w-full resize-none bg-transparent py-5 text-[15px] leading-7 text-[#191c1e] outline-none placeholder:text-[#9296a0]"
             id="analysis-question"
             maxLength={MAXIMUM_QUESTION_LENGTH}
             onChange={(event) => setQuestion(event.target.value)}
-            placeholder="예: 지난달 매출이 왜 감소했어?"
+            placeholder="예: 지난달 매출이 감소한 이유를 분석해줘"
             value={question}
           />
-          <div className="flex items-center justify-between gap-4 border-t border-slate-900/8 px-3 py-3">
-            <span
-              className="font-mono text-[11px] text-slate-500"
-              aria-live="polite"
-            >
-              {isPending
-                ? "대시보드 셸을 여는 중"
-                : `${question.length}/${MAXIMUM_QUESTION_LENGTH}`}
-            </span>
-            <button
-              className="bg-[#151a2d] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6657dd] focus-visible:ring-2 focus-visible:ring-[#6657dd] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-wait disabled:opacity-65"
-              disabled={isPending}
-              type="submit"
-            >
-              분석 시작하기
-            </button>
-          </div>
+          <button
+            aria-label={isPending ? "분석 화면을 여는 중" : "분석 시작하기"}
+            className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#4f46e5] text-white transition-colors duration-100 hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] disabled:cursor-wait disabled:opacity-60"
+            disabled={isPending}
+            type="submit"
+          >
+            <ArrowUpRight aria-hidden="true" className="size-[18px]" />
+          </button>
         </div>
+        <span className="sr-only" aria-live="polite">
+          {isPending ? "대시보드 셸을 여는 중" : `${question.length}자 입력됨`}
+        </span>
         {error ? (
           <p
             className="mt-2 text-sm font-medium text-rose-700"
@@ -100,17 +93,14 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
         ) : null}
       </form>
 
-      <section aria-labelledby="recommended-questions-title" className="mt-8">
-        <p
-          className="font-mono text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase"
-          id="recommended-questions-title"
-        >
+      <section aria-labelledby="recommended-questions-title" className="mt-4">
+        <p className="sr-only" id="recommended-questions-title">
           Try a known signal
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           {recommendedQuestions.map((recommendedQuestion) => (
             <button
-              className="border border-slate-900/10 bg-white px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:border-[#6657dd]/35 hover:bg-[#f0efff] hover:text-[#4538a6] focus-visible:ring-2 focus-visible:ring-[#6657dd] focus-visible:outline-none"
+              className="rounded border border-[#dde2e8] bg-white px-3 py-1.5 text-left text-[12px] text-[#595e6b] transition-colors duration-100 hover:border-[#c3c0ff] hover:bg-[#f2f4f6] hover:text-[#3525cd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
               key={recommendedQuestion}
               onClick={() => chooseQuestion(recommendedQuestion)}
               type="button"

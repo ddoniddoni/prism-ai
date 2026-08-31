@@ -1,11 +1,10 @@
 import { HistoryShell } from "@/components/history/history-shell";
-import { SiteHeader } from "@/components/site-header";
+import { WorkspaceShell } from "@/components/workspace-shell";
 
 export default function HistoryPage() {
   return (
-    <div className="min-h-screen bg-[#f6f7fb] text-[#151a2d]">
-      <SiteHeader />
+    <WorkspaceShell activeNavigation="history" activeTab="overview">
       <HistoryShell />
-    </div>
+    </WorkspaceShell>
   );
 }

@@ -1,5 +1,5 @@
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { SiteHeader } from "@/components/site-header";
+import { WorkspaceShell } from "@/components/workspace-shell";
 import { LocalAnalyticsRepository } from "@/lib/data/local-repository";
 
 type DashboardPageProps = {
@@ -35,17 +35,15 @@ export default async function DashboardPage({
   const dataRange = await repository.getDataRange();
 
   return (
-    <div
-      data-dashboard-id={id}
-      className="min-h-screen bg-[#f6f7fb] text-[#151a2d]"
-    >
-      <SiteHeader />
-      <DashboardShell
-        dashboardId={id}
-        dataRange={dataRange}
-        historyEntryId={readHistoryEntryId(query.historyId)}
-        question={readQuestion(query.question)}
-      />
-    </div>
+    <WorkspaceShell activeNavigation="home" activeTab="market">
+      <div data-dashboard-id={id}>
+        <DashboardShell
+          dashboardId={id}
+          dataRange={dataRange}
+          historyEntryId={readHistoryEntryId(query.historyId)}
+          question={readQuestion(query.question)}
+        />
+      </div>
+    </WorkspaceShell>
   );
 }

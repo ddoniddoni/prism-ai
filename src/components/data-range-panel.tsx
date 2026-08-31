@@ -1,5 +1,6 @@
 import { formatDataRange } from "@/lib/data/date-range";
 import type { AnalyticsDataRange } from "@/lib/data/repository";
+import { CheckCircle2, Database } from "lucide-react";
 
 type DataRangePanelProps = {
   dataRange: AnalyticsDataRange;
@@ -10,28 +11,28 @@ export function DataRangePanel({ dataRange, rowCount }: DataRangePanelProps) {
   return (
     <section
       aria-labelledby="data-range-title"
-      className="border border-slate-900/10 bg-white/70 p-5 shadow-[0_16px_40px_-30px_rgba(21,26,45,0.55)]"
+      className="flex flex-col gap-4 rounded-lg border border-[#dde2e8] bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#eef2ff] text-[#4f46e5]">
+          <Database aria-hidden="true" className="size-[18px]" />
+        </span>
         <div>
-          <p className="font-mono text-[10px] font-semibold tracking-[0.16em] text-[#6657dd] uppercase">
-            Local signal
-          </p>
           <h2
-            className="mt-2 text-base font-semibold text-[#151a2d]"
+            className="text-[13px] font-semibold text-[#191c1e]"
             id="data-range-title"
           >
-            분석 가능한 합성 데이터
+            Local Synthetic Dataset
           </h2>
+          <p className="mt-1 text-[12px] text-[#595e6b]">
+            {formatDataRange(dataRange)} · {rowCount.toLocaleString("ko-KR")}개
+            레코드
+          </p>
         </div>
-        <span className="size-2 rounded-full bg-[#67d8c8] shadow-[0_0_0_4px_rgba(103,216,200,0.18)]" />
       </div>
-      <p className="mt-5 font-mono text-sm font-medium tracking-[-0.02em] text-[#151a2d]">
-        {formatDataRange(dataRange)}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        {rowCount.toLocaleString("ko-KR")}개의 일별 레코드 · 고정 시드 · API 키
-        불필요
+      <p className="flex items-center gap-2 text-[12px] font-medium text-[#17835c]">
+        <CheckCircle2 aria-hidden="true" className="size-4" />
+        고정 시드 검증 완료 · API 키 불필요
       </p>
     </section>
   );

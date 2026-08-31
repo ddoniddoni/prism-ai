@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowUpRight, MessageSquareText } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 type FollowUpPromptProps = {
@@ -30,55 +31,55 @@ export function FollowUpPrompt({ disabled, onSubmit }: FollowUpPromptProps) {
   return (
     <section
       aria-labelledby="follow-up-title"
-      className="border border-[#6657dd]/25 bg-[#f0efff] p-5 shadow-[0_18px_45px_-38px_rgba(21,26,45,0.72)] sm:p-6"
+      className="rounded-xl border border-[#dde2e8] bg-white p-4 sm:p-5"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-mono text-[10px] font-semibold tracking-[0.16em] text-[#5144bb] uppercase">
-            Context thread
-          </p>
-          <h2
-            className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[#151a2d]"
-            id="follow-up-title"
-          >
-            이 결과에서 이어서 분석하기
-          </h2>
-        </div>
-        <span className="border border-[#6657dd]/25 bg-white px-2.5 py-1 font-mono text-[10px] text-[#5144bb]">
-          기간·지표 유지
-        </span>
-      </div>
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-        예: “모바일만 자세히 분석해줘”, “작년 같은 기간과 비교해줘”
-      </p>
       <form
-        className="mt-5 flex flex-col gap-3 sm:flex-row"
+        className="flex flex-col gap-4 lg:flex-row lg:items-center"
         onSubmit={handleSubmit}
       >
+        <div className="flex shrink-0 items-center gap-3 lg:w-64">
+          <span className="grid size-9 place-items-center rounded-lg bg-[#eef2ff] text-[#4f46e5]">
+            <MessageSquareText aria-hidden="true" className="size-[17px]" />
+          </span>
+          <div>
+            <h2
+              className="text-[13px] font-semibold text-[#191c1e]"
+              id="follow-up-title"
+            >
+              이어서 분석하기
+            </h2>
+            <p className="mt-0.5 text-[11px] text-[#777587]">
+              현재 기간과 지표를 유지합니다
+            </p>
+          </div>
+        </div>
         <label className="sr-only" htmlFor="follow-up-question">
           후속 분석 질문
         </label>
         <input
           aria-describedby={validationMessage ? "follow-up-error" : undefined}
-          className="min-h-11 flex-1 border border-slate-900/15 bg-white px-3 text-sm text-[#151a2d] placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#6657dd] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-100"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-[#dde2e8] bg-[#f8f9fb] px-3 text-[13px] text-[#191c1e] outline-none placeholder:text-[#9296a0] focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10 disabled:cursor-not-allowed disabled:bg-[#e7e8ea]"
           disabled={disabled}
           id="follow-up-question"
           maxLength={300}
           onChange={(event) => setQuestion(event.target.value)}
-          placeholder="현재 분석에 이어서 물어보세요"
+          placeholder="예: 모바일만 자세히 분석해줘"
           value={question}
         />
         <button
-          className="min-h-11 bg-[#151a2d] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#6657dd] focus-visible:ring-2 focus-visible:ring-[#6657dd] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-400"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#4f46e5] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] disabled:cursor-not-allowed disabled:bg-[#9296a0]"
           disabled={disabled}
           type="submit"
         >
           {disabled ? "분석 준비 중" : "후속 분석"}
+          {!disabled ? (
+            <ArrowUpRight aria-hidden="true" className="size-4" />
+          ) : null}
         </button>
       </form>
       {validationMessage ? (
         <p
-          className="mt-3 text-sm text-rose-700"
+          className="mt-3 text-[12px] text-[#ba1a1a]"
           id="follow-up-error"
           role="alert"
         >

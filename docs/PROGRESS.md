@@ -2,11 +2,11 @@
 
 ## 현재 Phase
 
-Phase 6: Supabase와 운영 복구
+Phase 7: Dashboard Editing과 Stitch UI Alignment
 
 ## 상태
 
-구현 완료 · 테스트 실행 보류
+Stitch UI 적용 완료 · Dashboard Editing 진행 전 · 테스트 실행 보류
 
 ## 완료
 
@@ -54,10 +54,17 @@ Phase 6: Supabase와 운영 복구
 - Gemini Live Kill Switch(`AI_LIVE_ENABLED=false`)가 즉시 Mock Provider로 복구하도록 추가했다.
 - 질문·IP·Secret을 로그나 Supabase Event에 저장하지 않고, 해시된 분석 Key와 Provider·Cache·Partial·Fallback·Duration Metadata만 기록한다. Persisted History는 명시적 Opt-in일 때만 저장한다.
 - Supabase Row 정규화, Cache 재결합·만료, Rate Limit, Request Deduplication, Coordinator Cache 우선순위, Kill Switch와 환경 선택에 대한 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- Google Stitch의 `Prism AI Executive Analytics` Home, Executive Dashboard, Analysis History, Processing Analysis 화면을 현재 기능에 매핑했다.
+- 232px Dark Rail, 60px Top Bar, 최대 1440px 분석 Canvas, Inter Typography, Indigo Primary, Cool Gray Surface와 8~10px Radius를 공통 Workspace Shell과 Design Token에 적용했다.
+- Home Prompt와 Local Dataset 상태를 Stitch의 Command Workspace 밀도로 재구성하고, 실제 Local History 최근 3개를 Home Activity에 연결했다.
+- Dashboard Loading을 3단계 진행 상태와 KPI·Chart Skeleton으로 교체하고, 검증된 Dashboard Widget을 White Card, Indigo Time Series, Compact Table 문법으로 통일했다.
+- Analysis History를 실제 제목·질문 검색과 Live/Mock Filter가 동작하는 고밀도 Table로 바꾸고, 기존 재열기와 삭제 동작을 유지했다.
+- Mobile에서는 Dark Rail 대신 Compact Header와 Home·History·New Analysis 경로를 제공하며, Skeleton Animation은 `prefers-reduced-motion`에서 중지한다.
+- Product Shell E2E 기대값을 새 Heading, Dataset Label, History Table 재열기 경로에 맞춰 갱신했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
-- 없음
+- Phase 7 Dashboard Editing과 Zustand Editor State는 아직 구현하지 않았다.
 
 ## 결정 사항
 
@@ -87,6 +94,8 @@ Phase 6: Supabase와 운영 복구
 | 2026-08-31 | 분석 Cache는 요청 식별자를 제외한 질문·Context·실행 Scope를 Key로 사용 | 같은 분석 작업을 재사용하면서도 Response의 Analysis·Session·Dashboard ID는 현재 요청에 귀속하기 위함 |
 | 2026-08-31 | Rate Limit은 Cache Miss에만 UTC 일 단위로 적용 | Cached Demo가 Limit이나 Provider 장애로 막히지 않게 하고, 새 분석의 비용만 제한하기 위함 |
 | 2026-08-31 | 운영 기록은 Raw Question 대신 SHA-256 분석 Key만 사용 | Prompt나 식별 정보를 보관하지 않고 복구 상태를 관측하기 위함 |
+| 2026-08-31 | Stitch `Prism AI Executive Analytics`를 UI Source of Truth로 사용 | 현재 제품 기능은 유지하면서 Home·Dashboard·History·Processing 전반의 시각 언어와 화면 밀도를 일관되게 맞추기 위함 |
+| 2026-08-31 | Stitch에 없는 기능은 동일 Token과 Component Grammar로 확장 | Local Dataset 상태, Follow-up, Recoverable Error, History 삭제처럼 현재 제품에만 있는 기능도 별도 스타일로 분리되지 않게 하기 위함 |
 
 ## 검증 결과
 
@@ -102,6 +111,13 @@ Phase 6: Supabase와 운영 복구
 - `npm run lint`: 통과 (Phase 2)
 - `npm run typecheck`: 통과 (Phase 2)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 7 Stitch UI)
+- `npm run typecheck`: 통과 (Phase 7 Stitch UI)
+- `npm run build`: 통과 (Phase 7 Stitch UI, Next.js Webpack production build)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 - `npm run lint`: 통과 (Phase 6)
@@ -139,7 +155,8 @@ Phase 6: Supabase와 운영 복구
 - In-memory Cache와 Rate Limit·Request Deduplication은 단일 Server Instance 범위다. 여러 Instance에서 공유하려면 Redis 또는 Platform Durable Cache가 필요하다.
 - Supabase Project·Key가 아직 제공되지 않아 Migration 적용, `seed:supabase`, 실제 Row Query, RLS Advisor와 Database Test는 실행하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.
+- Stitch UI 적용 후 Runtime Browser·E2E 시각 검증은 사용자 요청에 따라 실행하지 않았다.
 
 ## 다음 권장 작업
 
-`docs/IMPLEMENTATION_PLAN.md`의 Phase 7을 진행해 Dashboard Editing과 Client Editor State를 구현한다.
+`docs/IMPLEMENTATION_PLAN.md`의 Phase 7을 이어서 진행해 Dashboard Editing과 Client Editor State를 구현한다.

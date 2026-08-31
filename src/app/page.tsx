@@ -1,8 +1,9 @@
 import { DataRangePanel } from "@/components/data-range-panel";
+import { RecentAnalysisList } from "@/components/history/history-list";
 import { PromptInput } from "@/components/prompt/prompt-input";
-import { SiteHeader } from "@/components/site-header";
-import { AnalysisStatus } from "@/components/status/analysis-status";
+import { WorkspaceShell } from "@/components/workspace-shell";
 import { LocalAnalyticsRepository } from "@/lib/data/local-repository";
+import Link from "next/link";
 
 const recommendedQuestions = [
   "지난달 매출이 왜 감소했어?",
@@ -21,79 +22,63 @@ export default async function Home() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#f6f7fb] text-[#151a2d]">
-      <SiteHeader />
-      <main className="prism-grid overflow-hidden px-5 py-10 sm:px-8 lg:py-16">
-        <div className="mx-auto w-full max-w-7xl">
-          <div className="prism-spectrum h-1.5 w-36" aria-hidden="true" />
-          <div className="mt-8 grid gap-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)] lg:gap-20">
-            <section aria-labelledby="home-title">
-              <p className="font-mono text-[11px] font-semibold tracking-[0.17em] text-[#5144bb] uppercase">
-                Generative analytics workspace
-              </p>
-              <h1 className="mt-5 max-w-4xl text-5xl font-semibold tracking-[-0.065em] text-[#151a2d] sm:text-6xl lg:text-7xl">
-                질문을 신호로,
-                <br />
-                데이터를 다음 결정으로.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-                Prism AI는 자연어 질문을 제한된 분석 계획으로 바꾸고, 실제
-                데이터에서 계산한 근거로 대시보드를 구성합니다.
-              </p>
+    <WorkspaceShell activeNavigation="home" activeTab="overview">
+      <main className="min-h-[calc(100vh-60px)] px-4 py-10 sm:px-8 lg:py-16">
+        <div className="mx-auto w-full max-w-[1440px]">
+          <section
+            aria-labelledby="home-title"
+            className="mx-auto max-w-4xl text-center"
+          >
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-[#4f46e5] uppercase">
+              E-commerce Workspace
+            </p>
+            <h1
+              className="mt-4 text-[clamp(2rem,4vw,3.25rem)] leading-[1.12] font-semibold tracking-[-0.045em] text-[#191c1e]"
+              id="home-title"
+            >
+              비즈니스에 대해 무엇이든 물어보세요.
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-7 text-[#595e6b] sm:text-base">
+              질문을 검증된 분석 계획으로 바꾸고, 실제 데이터에서 계산한 근거로
+              대시보드를 구성합니다.
+            </p>
 
-              <div className="mt-10 max-w-3xl">
-                <PromptInput recommendedQuestions={recommendedQuestions} />
-              </div>
-            </section>
+            <div className="mt-9 text-left">
+              <PromptInput recommendedQuestions={recommendedQuestions} />
+            </div>
+          </section>
 
-            <aside className="space-y-4 lg:pt-14" aria-label="데이터 준비 정보">
-              <DataRangePanel dataRange={dataRange} rowCount={rows.length} />
-              <AnalysisStatus stage="idle" />
-              <section className="border border-slate-900/10 bg-[#151a2d] p-5 text-white">
-                <p className="font-mono text-[10px] font-semibold tracking-[0.16em] text-[#a9a0ff] uppercase">
-                  Prism contract
-                </p>
-                <dl className="mt-5 space-y-4 text-sm">
-                  <div className="flex items-start justify-between gap-6 border-b border-white/10 pb-3">
-                    <dt className="text-slate-300">AI의 역할</dt>
-                    <dd className="text-right font-medium">계획과 구성 선택</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-6 border-b border-white/10 pb-3">
-                    <dt className="text-slate-300">숫자의 원천</dt>
-                    <dd className="text-right font-medium">결정론적 계산</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-6">
-                    <dt className="text-slate-300">기본 실행 모드</dt>
-                    <dd className="text-right font-medium">Mock AI</dd>
-                  </div>
-                </dl>
-              </section>
-            </aside>
+          <div className="mx-auto mt-10 max-w-4xl">
+            <DataRangePanel dataRange={dataRange} rowCount={rows.length} />
           </div>
 
           <section
             aria-labelledby="recent-analysis-title"
-            className="mt-16 border-t border-slate-900/10 pt-6 lg:mt-20"
+            className="mx-auto mt-14 max-w-4xl lg:mt-16"
           >
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="font-mono text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                  Recent work
+                <p className="text-[10px] font-semibold tracking-[0.13em] text-[#777587] uppercase">
+                  Workspace activity
                 </p>
                 <h2
-                  className="mt-2 text-xl font-semibold tracking-[-0.035em]"
+                  className="mt-1.5 text-xl font-semibold tracking-[-0.025em] text-[#191c1e]"
                   id="recent-analysis-title"
                 >
-                  아직 저장된 분석이 없습니다.
+                  최근 분석
                 </h2>
               </div>
-              <p className="text-sm text-slate-600">
-                분석 History는 Follow-up Context 단계에서 연결됩니다.
-              </p>
+              <Link
+                className="text-[13px] font-medium text-[#4f46e5] hover:text-[#3525cd]"
+                href="/history"
+              >
+                전체 기록 보기
+              </Link>
             </div>
+            <RecentAnalysisList />
           </section>
         </div>
       </main>
-    </div>
+    </WorkspaceShell>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft, Database } from "lucide-react";
 
 import { AnalysisDashboard } from "@/components/dashboard/analysis-dashboard";
 import { formatDataRange } from "@/lib/data/date-range";
@@ -18,58 +19,40 @@ export function DashboardShell({
   historyEntryId,
 }: DashboardShellProps) {
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f6f7fb] px-5 py-10 sm:px-8 lg:py-14">
-      <div className="mx-auto w-full max-w-7xl">
-        <Link
-          className="inline-flex rounded-sm font-mono text-xs font-semibold tracking-[0.08em] text-[#5144bb] uppercase focus-visible:ring-2 focus-visible:ring-[#6d5ce7] focus-visible:outline-none"
-          href="/"
-        >
-          ← 질문으로 돌아가기
-        </Link>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-          <section>
-            <p className="font-mono text-[11px] font-semibold tracking-[0.16em] text-[#6657dd] uppercase">
-              Mock analysis route
-            </p>
-            <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-[-0.055em] text-[#151a2d] sm:text-5xl">
-              질문을 검증된 분석으로 연결합니다.
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-              Mock Planner는 허용된 Query만 선택하고, 화면에 표시되는 수치는
-              Local Dataset에서 결정론적으로 계산합니다.
-            </p>
-
-            <section
-              aria-labelledby="submitted-question-title"
-              className="mt-10 border-l-2 border-[#67d8c8] bg-white px-5 py-5 shadow-[0_18px_40px_-34px_rgba(21,26,45,0.7)]"
-            >
-              <p
-                className="font-mono text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase"
-                id="submitted-question-title"
-              >
-                Submitted question
-              </p>
-              <p className="mt-3 text-xl leading-8 font-medium text-[#151a2d]">
-                {question}
-              </p>
-            </section>
-          </section>
-
-          <aside className="space-y-4" aria-label="분석 데이터 정보">
-            <section className="border border-slate-900/10 bg-[#151a2d] p-5 text-white">
-              <p className="font-mono text-[10px] font-semibold tracking-[0.15em] text-[#a9a0ff] uppercase">
-                Dataset window
-              </p>
-              <p className="mt-3 font-mono text-sm">
-                {formatDataRange(dataRange)}
-              </p>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
-                Local synthetic data is ready for the analytics engine.
-              </p>
-            </section>
-          </aside>
+    <main className="min-h-[calc(100vh-60px)] px-4 py-6 sm:px-8 lg:py-8">
+      <div className="mx-auto w-full max-w-[1440px]">
+        <div className="flex flex-col gap-3 border-b border-[#dde2e8] pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <Link
+            className="inline-flex items-center gap-2 text-[12px] font-semibold text-[#595e6b] hover:text-[#4f46e5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+            href="/"
+          >
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            질문으로 돌아가기
+          </Link>
+          <p className="flex items-center gap-2 text-[11px] text-[#595e6b]">
+            <Database aria-hidden="true" className="size-3.5 text-[#4f46e5]" />
+            Local dataset · {formatDataRange(dataRange)}
+          </p>
         </div>
+
+        <section
+          aria-labelledby="submitted-question-title"
+          className="mt-5 flex flex-col gap-2 rounded-lg border border-[#dde2e8] bg-white px-4 py-3 sm:flex-row sm:items-center"
+        >
+          <h1
+            className="shrink-0 text-[10px] font-semibold tracking-[0.1em] text-[#777587] uppercase"
+            id="submitted-question-title"
+          >
+            Submitted question
+          </h1>
+          <span
+            aria-hidden="true"
+            className="hidden h-4 w-px bg-[#dde2e8] sm:block"
+          />
+          <p className="truncate text-[13px] font-medium text-[#191c1e]">
+            {question}
+          </p>
+        </section>
 
         <AnalysisDashboard
           dashboardId={dashboardId}
