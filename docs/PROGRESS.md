@@ -6,7 +6,7 @@ Phase 8: Portfolio 완성
 
 ## 상태
 
-Phase 8 접근성·반응형 1차 보완 완료 · Portfolio 문서와 성능 측정 진행 전 · 테스트 실행 보류
+Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio 문서와 성능 측정 진행 전 · 테스트 실행 보류
 
 ## 완료
 
@@ -73,10 +73,14 @@ Phase 8 접근성·반응형 1차 보완 완료 · Portfolio 문서와 성능 �
 - 차트에 Screen Reader용 계산 요약과 Table Caption을 추가하고, 증감률은 색상뿐 아니라 상승·하락·변화 없음 텍스트를 함께 표시한다.
 - Dashboard Editor 조작과 History 검색 결과를 Live Region으로 알리고, History 삭제는 8초 실행 취소 창을 제공하도록 바꿨다.
 - 접근성 보완에 대한 Formatter·History Storage Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- MIT 라이선스인 `@nivo/line`으로 `PrismTrendChart`를 구성했다. Chart Bundle은 Dashboard에서만 동적으로 로드한다.
+- Trend Chart는 Gradient Area, Spring Transition, Comparison Line, Tooltip, Focusable Data Point와 Reduced Motion Fallback을 제공하며 원본 데이터 표는 유지한다.
+- PrismTrendChart의 Nivo Series·X Axis Tick 변환 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- Trend Chart의 Y Axis는 지표에 따라 K·M·B 축약 표기를 사용하고, Tooltip은 날짜와 현재·비교 기간의 실제 값을 표시한다. 밀집된 데이터 Point는 숨기고 Crosshair로만 강조한다.
 
 ## 진행 중
 
-- Phase 8의 Accessibility·Responsive 1차 보완을 마쳤다. Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
+- Phase 8의 Accessibility·Responsive 1차 보완과 Nivo 기반 `PrismTrendChart`를 마쳤다. 다음 Custom Chart, Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
 
 ## 결정 사항
 
@@ -113,6 +117,7 @@ Phase 8 접근성·반응형 1차 보완 완료 · Portfolio 문서와 성능 �
 | 2026-09-01 | Dashboard Grid는 `react-grid-layout` 2.2.4를 동적 로드 | Drag·Resize와 반응형 Layout을 직접 재구현하지 않고 Editor Bundle을 분석 완료 전 경로에서 분리하기 위함 |
 | 2026-09-01 | 삭제 작업은 가능한 경우 즉시 영구 제거 대신 Undo Window를 제공 | Local History와 Dashboard Widget 삭제가 실수로 발생해도 사용자가 같은 흐름 안에서 복구할 수 있게 하기 위함 |
 | 2026-09-01 | 차트의 시각 상태는 텍스트 요약·표·상승/하락 문구로 중복 전달 | 색상, SVG만 읽을 수 없는 환경에서도 결정론적 Dataset 근거와 변화 방향을 이해할 수 있게 하기 위함 |
+| 2026-09-01 | Trend Chart는 MIT 라이선스의 Nivo를 동적 로드 | D3·react-spring 기반의 높은 시각 완성도와 Tooltip·접근성 기능을 사용하면서 초기 Dashboard Bundle을 키우지 않기 위함 |
 
 ## 검증 결과
 
@@ -142,6 +147,30 @@ Phase 8 접근성·반응형 1차 보완 완료 · Portfolio 문서와 성능 �
 - `npm run lint`: 통과 (Phase 8 Accessibility·Responsive)
 - `npm run typecheck`: 통과 (Phase 8 Accessibility·Responsive)
 - `npm run build`: 통과 (Phase 8 Accessibility·Responsive, Next.js Webpack production build)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 PrismTrendChart)
+- `npm run typecheck`: 통과 (Phase 8 PrismTrendChart)
+- `npm run build`: 통과 (Phase 8 PrismTrendChart, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 PrismTrendChart)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 Nivo Trend Chart)
+- `npm run typecheck`: 통과 (Phase 8 Nivo Trend Chart)
+- `npm run build`: 통과 (Phase 8 Nivo Trend Chart, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 Nivo Trend Chart)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 Nivo Trend Chart Polish)
+- `npm run typecheck`: 통과 (Phase 8 Nivo Trend Chart Polish)
+- `npm run build`: 통과 (Phase 8 Nivo Trend Chart Polish, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 Nivo Trend Chart Polish)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)

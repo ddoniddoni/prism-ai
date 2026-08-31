@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { memo, type ReactNode } from "react";
 
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
@@ -14,6 +15,19 @@ import {
   formatMetricValue,
   getComparisonLabel,
 } from "./formatters";
+
+const PrismTrendChart = dynamic(
+  () => import("./prism-trend-chart").then((module) => module.PrismTrendChart),
+  {
+    loading: () => (
+      <div
+        aria-label="추이 차트를 불러오는 중"
+        className="prism-skeleton h-72 rounded-xl sm:h-80"
+      />
+    ),
+    ssr: false,
+  },
+);
 
 type DashboardRendererProps = {
   dashboard: DashboardSpec;
@@ -129,62 +143,14 @@ function TimeSeriesWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
-  const values = dataset?.points.filter((point) => point.value !== null) ?? [];
-  const numbers = values.map((point) => point.value ?? 0);
-  const minimum = numbers.length > 0 ? Math.min(...numbers) : 0;
-  const maximum = numbers.length > 0 ? Math.max(...numbers) : 1;
-  const range = maximum - minimum || 1;
-  const linePoints = values
-    .map((point, index) => {
-      const x = values.length === 1 ? 50 : (index / (values.length - 1)) * 100;
-      const y = 36 - (((point.value ?? minimum) - minimum) / range) * 30;
-
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
-  const summaryId = `${widget.id}-chart-summary`;
-  const firstPoint = values.at(0);
-  const lastPoint = values.at(-1);
-  const chartSummary =
-    firstPoint && lastPoint
-      ? `${widget.title}: ${firstPoint.label} ${formatMetricValue(
-          dataset?.metric ?? "revenue",
-          firstPoint.value,
-        )}에서 ${lastPoint.label} ${formatMetricValue(
-          dataset?.metric ?? "revenue",
-          lastPoint.value,
-        )}까지의 흐름입니다.`
-      : `${widget.title} 차트에 표시할 데이터가 없습니다.`;
 
   return (
     <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
-      <div className="rounded-lg border border-[#eef0f2] bg-[#fbfcfd] px-3 py-3">
-        <svg
-          aria-describedby={summaryId}
-          aria-label={`${widget.title} 선 그래프`}
-          className="h-40 w-full"
-          role="img"
-          viewBox="0 0 100 40"
-        >
-          <path
-            d="M0 6 H100 M0 16 H100 M0 26 H100 M0 36 H100"
-            fill="none"
-            stroke="#e7e8ea"
-            strokeWidth="0.35"
-          />
-          <polyline
-            fill="none"
-            points={linePoints}
-            stroke="#4f46e5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="1.2"
-          />
-        </svg>
-      </div>
-      <p className="sr-only" id={summaryId}>
-        {chartSummary}
-      </p>
+      <PrismTrendChart
+        metric={dataset?.metric ?? "revenue"}
+        points={dataset?.points ?? []}
+        title={widget.title}
+      />
       <details className="mt-4 border-t border-[#eef0f2] pt-3 text-[12px] text-[#595e6b]">
         <summary className="cursor-pointer font-medium text-[#4f46e5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]">
           차트 데이터 표 보기

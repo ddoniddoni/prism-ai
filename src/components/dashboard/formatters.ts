@@ -11,6 +11,28 @@ const countFormatter = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 0,
 });
 
+const compactNumberFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 1,
+});
+
+function formatCompactNumber(value: number): string {
+  const absoluteValue = Math.abs(value);
+
+  if (absoluteValue >= 1_000_000_000) {
+    return `${compactNumberFormatter.format(value / 1_000_000_000)}B`;
+  }
+
+  if (absoluteValue >= 1_000_000) {
+    return `${compactNumberFormatter.format(value / 1_000_000)}M`;
+  }
+
+  if (absoluteValue >= 1_000) {
+    return `${compactNumberFormatter.format(value / 1_000)}K`;
+  }
+
+  return compactNumberFormatter.format(value);
+}
+
 export function formatMetricValue(
   metric: MetricKey,
   value: number | null | undefined,
@@ -36,6 +58,33 @@ export function formatMetricValue(
   }
 
   return countFormatter.format(value);
+}
+
+export function formatMetricAxisValue(
+  metric: MetricKey,
+  value: number | null | undefined,
+): string {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  if (
+    metric === "revenue" ||
+    metric === "averageOrderValue" ||
+    metric === "adSpend"
+  ) {
+    return `₩${formatCompactNumber(value)}`;
+  }
+
+  if (metric === "conversionRate" || metric === "refundRate") {
+    return `${value.toFixed(1)}%`;
+  }
+
+  if (metric === "roas") {
+    return `${value.toFixed(1)}×`;
+  }
+
+  return formatCompactNumber(value);
 }
 
 export function formatChange(value: number | null | undefined): string {
