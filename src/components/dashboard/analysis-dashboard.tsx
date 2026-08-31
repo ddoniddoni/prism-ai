@@ -1,12 +1,14 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CircleCheck,
   DatabaseZap,
   LayoutDashboard,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   analyzeErrorResponseSchema,
@@ -23,7 +25,6 @@ import {
   notifyLocalAnalysisHistoryChange,
   useLocalAnalysisHistory,
 } from "@/components/history/use-local-analysis-history";
-import { DashboardRenderer } from "./dashboard-renderer";
 import { FollowUpPrompt } from "./follow-up-prompt";
 
 type AnalysisDashboardProps = {
@@ -38,7 +39,9 @@ type PendingAnalysis = {
   sessionId?: string;
 };
 
-type AnalysisStatusName = "loading" | "ready" | "error";
+type AnalysisMutationInput = PendingAnalysis & {
+  dashboardId: string;
+};
 
 function createRequestId(dashboardId: string): string {
   if (
@@ -65,6 +68,38 @@ async function readResponseBody(response: Response): Promise<unknown> {
   } catch {
     throw new Error("분석 서버의 응답 형식을 확인할 수 없습니다.");
   }
+}
+
+async function requestAnalysis({
+  dashboardId,
+  question,
+  currentContext,
+  sessionId,
+}: AnalysisMutationInput): Promise<AnalyzeResponse> {
+  const response = await fetch("/api/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      question,
+      requestId: createRequestId(dashboardId),
+      dashboardId,
+      ...(sessionId ? { sessionId } : {}),
+      ...(currentContext ? { currentContext } : {}),
+    }),
+  });
+  const body = await readResponseBody(response);
+
+  if (!response.ok) {
+    const errorResponse = analyzeErrorResponseSchema.safeParse(body);
+
+    throw new Error(
+      errorResponse.success
+        ? errorResponse.data.error.message
+        : "분석 요청을 처리하지 못했습니다.",
+    );
+  }
+
+  return analyzeResponseSchema.parse(body);
 }
 
 function getProviderLabel(response: AnalyzeResponse): string {
@@ -158,18 +193,34 @@ function DashboardLoadingState() {
   );
 }
 
+const DashboardEditor = dynamic(
+  () => import("./dashboard-editor").then((module) => module.DashboardEditor),
+  {
+    loading: DashboardLoadingState,
+    ssr: false,
+  },
+);
+
 export function AnalysisDashboard({
   dashboardId,
   question,
   historyEntryId,
 }: AnalysisDashboardProps) {
-  const [response, setResponse] = useState<AnalyzeResponse | null>(null);
-  const [status, setStatus] = useState<AnalysisStatusName>("loading");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingAnalysis, setPendingAnalysis] =
     useState<PendingAnalysis | null>(() =>
       historyEntryId ? null : { question },
     );
+  const requestedInitialAnalysis = useRef(false);
+  const queryClient = useQueryClient();
+  const analysisQueryKey = ["analysis-dashboard", dashboardId] as const;
+  const { data: response } = useQuery<AnalyzeResponse | null>({
+    queryKey: analysisQueryKey,
+    queryFn: async () => null,
+    enabled: false,
+    gcTime: 0,
+    initialData: null,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
   const { entries: historyEntries, isReady: isHistoryReady } =
     useLocalAnalysisHistory();
   const savedEntry = historyEntryId
@@ -184,78 +235,43 @@ export function AnalysisDashboard({
   }, [historyEntryId, isHistoryReady, question, response, savedEntry]);
   const activePendingAnalysis = pendingAnalysis ?? historyFallback;
   const activeResponse = response ?? savedEntry?.response ?? null;
-  const displayStatus =
-    savedEntry && !response && !pendingAnalysis ? "ready" : status;
+  const {
+    error: analysisError,
+    isError: isAnalysisError,
+    isPending: isAnalysisPending,
+    mutate: mutateAnalysis,
+  } = useMutation({
+    mutationFn: requestAnalysis,
+    onSuccess: (nextResponse, input) => {
+      saveAnalysisHistory(
+        window.localStorage,
+        createAnalysisHistoryEntry(input.question, nextResponse),
+      );
+      notifyLocalAnalysisHistoryChange();
+      queryClient.setQueryData(analysisQueryKey, nextResponse);
+      setPendingAnalysis(null);
+    },
+  });
+  const displayStatus = isAnalysisPending
+    ? "loading"
+    : isAnalysisError
+      ? "error"
+      : activeResponse
+        ? "ready"
+        : "loading";
+  const errorMessage = analysisError?.message ?? null;
 
   useEffect(() => {
-    if (!activePendingAnalysis) {
+    if (!activePendingAnalysis || requestedInitialAnalysis.current) {
       return;
     }
 
-    const controller = new AbortController();
-    const activeAnalysis = activePendingAnalysis;
-
-    async function analyzeQuestion() {
-      setStatus("loading");
-      setErrorMessage(null);
-
-      try {
-        const response = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            question: activeAnalysis.question,
-            requestId: createRequestId(dashboardId),
-            dashboardId,
-            ...(activeAnalysis.sessionId
-              ? { sessionId: activeAnalysis.sessionId }
-              : {}),
-            ...(activeAnalysis.currentContext
-              ? { currentContext: activeAnalysis.currentContext }
-              : {}),
-          }),
-          signal: controller.signal,
-        });
-        const body = await readResponseBody(response);
-
-        if (!response.ok) {
-          const errorResponse = analyzeErrorResponseSchema.safeParse(body);
-
-          throw new Error(
-            errorResponse.success
-              ? errorResponse.data.error.message
-              : "분석 요청을 처리하지 못했습니다.",
-          );
-        }
-
-        const parsedResponse = analyzeResponseSchema.parse(body);
-
-        saveAnalysisHistory(
-          window.localStorage,
-          createAnalysisHistoryEntry(activeAnalysis.question, parsedResponse),
-        );
-        notifyLocalAnalysisHistoryChange();
-        setResponse(parsedResponse);
-        setPendingAnalysis(null);
-        setStatus("ready");
-      } catch (error) {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "분석 요청을 처리하지 못했습니다.",
-        );
-        setStatus("error");
-      }
-    }
-
-    void analyzeQuestion();
-
-    return () => controller.abort();
-  }, [activePendingAnalysis, dashboardId, historyFallback]);
+    requestedInitialAnalysis.current = true;
+    mutateAnalysis({
+      ...activePendingAnalysis,
+      dashboardId,
+    });
+  }, [activePendingAnalysis, dashboardId, mutateAnalysis]);
 
   function retryAnalysis() {
     const retryTarget = pendingAnalysis ?? historyFallback;
@@ -265,8 +281,7 @@ export function AnalysisDashboard({
     }
 
     setPendingAnalysis({ ...retryTarget });
-    setErrorMessage(null);
-    setStatus("loading");
+    mutateAnalysis({ ...retryTarget, dashboardId });
   }
 
   function startFollowUp(nextQuestion: string) {
@@ -274,13 +289,14 @@ export function AnalysisDashboard({
       return;
     }
 
-    setPendingAnalysis({
+    const nextAnalysis = {
       question: nextQuestion,
       currentContext: activeResponse.context,
       sessionId: activeResponse.sessionId,
-    });
-    setErrorMessage(null);
-    setStatus("loading");
+    };
+
+    setPendingAnalysis(nextAnalysis);
+    mutateAnalysis({ ...nextAnalysis, dashboardId });
   }
 
   if (displayStatus === "loading" && !activeResponse) {
@@ -361,7 +377,7 @@ export function AnalysisDashboard({
           </button>
         </section>
       ) : null}
-      <DashboardRenderer
+      <DashboardEditor
         dashboard={activeResponse.dashboard}
         datasets={activeResponse.datasets}
         findings={activeResponse.findings}

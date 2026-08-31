@@ -2,11 +2,11 @@
 
 ## 현재 Phase
 
-Phase 7: Dashboard Editing과 Stitch UI Alignment
+Phase 8: Portfolio 완성
 
 ## 상태
 
-Stitch UI 적용 완료 · Dashboard Editing 진행 전 · 테스트 실행 보류
+Phase 7 Dashboard Editing 구현 완료 · Phase 8 진행 전 · 테스트 실행 보류
 
 ## 완료
 
@@ -61,10 +61,17 @@ Stitch UI 적용 완료 · Dashboard Editing 진행 전 · 테스트 실행 보�
 - Analysis History를 실제 제목·질문 검색과 Live/Mock Filter가 동작하는 고밀도 Table로 바꾸고, 기존 재열기와 삭제 동작을 유지했다.
 - Mobile에서는 Dark Rail 대신 Compact Header와 Home·History·New Analysis 경로를 제공하며, Skeleton Animation은 `prefers-reduced-motion`에서 중지한다.
 - Product Shell E2E 기대값을 새 Heading, Dataset Label, History Table 재열기 경로에 맞춰 갱신했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- `react-grid-layout` 2.2.4와 Zustand 5.0.15를 추가하고, 무거운 Dashboard Editor를 분석 완료 뒤 동적으로 로드하도록 분리했다.
+- Dashboard에 편집 모드, Drag·Resize, 위젯별 앞/뒤 이동, 삭제, Undo·Redo, 초기화를 추가했다. 모바일 Layout은 1열이며 Drag를 쓰지 않아도 순서를 바꿀 수 있다.
+- 호환 Widget Family 안에서 Category Bar와 Donut, Ranking Table과 Data Table을 전환하며 실제 시각 표현과 Table Column이 함께 바뀌도록 구현했다.
+- Editor Store는 Layout·숨김 Widget ID·표시 Type Override만 Versioned Local Storage에 저장한다. Hydration Payload는 Zod로 검증하고 최근 Dashboard 20개, Undo History 30개로 제한했다.
+- 후속 분석은 같은 Widget ID의 사용자 편집을 보존하고, 새 Widget은 아래에 추가하며, 서버에서 제거되거나 Family가 바뀐 Widget의 오래된 편집은 버리는 명시적 Reconcile Policy를 사용한다.
+- 분석 API 응답과 요청 상태는 TanStack Query가 소유하고, Zustand는 사용자 편집 상태만 소유하도록 Client State 경계를 정리했다.
+- 편집 상태 Model Unit Test와 편집·복구·새로고침 보존 E2E 시나리오를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
-- Phase 7 Dashboard Editing과 Zustand Editor State는 아직 구현하지 않았다.
+- Phase 8 Portfolio 완성은 아직 시작하지 않았다.
 
 ## 결정 사항
 
@@ -96,6 +103,9 @@ Stitch UI 적용 완료 · Dashboard Editing 진행 전 · 테스트 실행 보�
 | 2026-08-31 | 운영 기록은 Raw Question 대신 SHA-256 분석 Key만 사용 | Prompt나 식별 정보를 보관하지 않고 복구 상태를 관측하기 위함 |
 | 2026-08-31 | Stitch `Prism AI Executive Analytics`를 UI Source of Truth로 사용 | 현재 제품 기능은 유지하면서 Home·Dashboard·History·Processing 전반의 시각 언어와 화면 밀도를 일관되게 맞추기 위함 |
 | 2026-08-31 | Stitch에 없는 기능은 동일 Token과 Component Grammar로 확장 | Local Dataset 상태, Follow-up, Recoverable Error, History 삭제처럼 현재 제품에만 있는 기능도 별도 스타일로 분리되지 않게 하기 위함 |
+| 2026-09-01 | Server Analysis State는 TanStack Query, 사용자 Dashboard 편집은 Zustand가 소유 | API 응답과 Local UI Override를 분리해 후속 분석 실패 중에도 성공 Dashboard와 사용자 Layout을 독립적으로 보존하기 위함 |
+| 2026-09-01 | Editor Persistence는 Widget ID 기반 최소 Override와 명시적 Reconcile Policy를 사용 | AI가 후속 Widget을 다시 구성해도 같은 Widget의 편집은 유지하고 오래되거나 호환되지 않는 편집만 안전하게 제거하기 위함 |
+| 2026-09-01 | Dashboard Grid는 `react-grid-layout` 2.2.4를 동적 로드 | Drag·Resize와 반응형 Layout을 직접 재구현하지 않고 Editor Bundle을 분석 완료 전 경로에서 분리하기 위함 |
 
 ## 검증 결과
 
@@ -111,6 +121,15 @@ Stitch UI 적용 완료 · Dashboard Editing 진행 전 · 테스트 실행 보�
 - `npm run lint`: 통과 (Phase 2)
 - `npm run typecheck`: 통과 (Phase 2)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 7 Dashboard Editing)
+- `npm run typecheck`: 통과 (Phase 7 Dashboard Editing)
+- `npm run build`: 통과 (Phase 7 Dashboard Editing, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 7 Dashboard Editing)
+- `npm run format:check`: 미통과 (이번 변경과 무관한 기존 `src/lib/data/supabase-repository.test.ts` 포맷 불일치 1건)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 - `npm run lint`: 통과 (Phase 7 Stitch UI)
@@ -155,8 +174,10 @@ Stitch UI 적용 완료 · Dashboard Editing 진행 전 · 테스트 실행 보�
 - In-memory Cache와 Rate Limit·Request Deduplication은 단일 Server Instance 범위다. 여러 Instance에서 공유하려면 Redis 또는 Platform Durable Cache가 필요하다.
 - Supabase Project·Key가 아직 제공되지 않아 Migration 적용, `seed:supabase`, 실제 Row Query, RLS Advisor와 Database Test는 실행하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.
-- Stitch UI 적용 후 Runtime Browser·E2E 시각 검증은 사용자 요청에 따라 실행하지 않았다.
+- Stitch UI와 Dashboard Editing의 Runtime Browser·E2E 시각 검증은 사용자 요청에 따라 실행하지 않았다.
+- Dashboard 편집값은 계정 동기화가 아닌 브라우저별 Local Storage에만 저장된다.
+- Repository 전체 `format:check`는 기존 `src/lib/data/supabase-repository.test.ts` 포맷 불일치 1건 때문에 실패한다. Phase 7 변경 파일은 별도 검사에서 모두 통과했다.
 
 ## 다음 권장 작업
 
-`docs/IMPLEMENTATION_PLAN.md`의 Phase 7을 이어서 진행해 Dashboard Editing과 Client Editor State를 구현한다.
+`docs/IMPLEMENTATION_PLAN.md`의 Phase 8을 진행해 Accessibility Audit, Performance 측정, README, Architecture Diagram과 Portfolio Demo 자료를 완성한다.

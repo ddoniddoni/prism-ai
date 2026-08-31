@@ -42,6 +42,38 @@ test("renders the empty history shell", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("edits, restores, and persists a dashboard layout", async ({ page }) => {
+  await page.goto(
+    "/dashboard/mock-preview?question=지난달%20매출이%20왜%20감소했어%3F",
+  );
+
+  await expect(
+    page.getByRole("heading", { name: "지난달 매출 변화의 신호", level: 1 }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "대시보드 편집" }).click();
+  await page
+    .getByRole("combobox", { name: "주요 세그먼트 비교 표시 형식" })
+    .selectOption("donut");
+  await expect(
+    page.getByRole("img", { name: "주요 세그먼트 비교 도넛 그래프" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "주요 세그먼트 비교 삭제" }).click();
+  await expect(
+    page.getByRole("heading", { name: "주요 세그먼트 비교" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "대시보드 편집 실행 취소" }).click();
+  await expect(
+    page.getByRole("heading", { name: "주요 세그먼트 비교" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "편집 완료" }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("img", { name: "주요 세그먼트 비교 도넛 그래프" }),
+  ).toBeVisible();
+});
+
 test("keeps context across follow-ups and reopens a saved dashboard", async ({
   page,
 }) => {

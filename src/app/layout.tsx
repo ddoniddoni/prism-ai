@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { QueryProvider } from "@/providers/query-provider";
+import "react-grid-layout/css/styles.css";
 import "./globals.css";
 
 const inter = Inter({

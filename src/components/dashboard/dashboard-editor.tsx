@@ -1,0 +1,420 @@
+"use client";
+
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  Edit3,
+  GripVertical,
+  Redo2,
+  RotateCcw,
+  Trash2,
+  Undo2,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ResponsiveGridLayout,
+  useContainerWidth,
+  verticalCompactor,
+  type Layout,
+  type ResponsiveLayouts,
+} from "react-grid-layout";
+
+import type { Finding } from "@/lib/analytics/findings";
+import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
+import type {
+  DashboardSpec,
+  DashboardWidget,
+} from "@/lib/ai/schemas/dashboard-spec";
+import {
+  applyWidgetTypeOverride,
+  createDashboardEditorDocument,
+  editorGridColumns,
+  getCompatibleWidgetTypes,
+  reconcileDashboardEditorDocument,
+  type EditorBreakpoint,
+  type EditableWidgetType,
+} from "@/stores/dashboard-editor-model";
+import { useDashboardEditorStore } from "@/stores/dashboard-editor-store";
+
+import {
+  DashboardHeader,
+  DashboardWidgetCard,
+  DashboardWidgetGrid,
+} from "./dashboard-renderer";
+
+type DashboardEditorProps = {
+  dashboard: DashboardSpec;
+  datasets: readonly AnalyticsDataset[];
+  findings: readonly Finding[];
+};
+
+const editorBreakpoints: Record<EditorBreakpoint, number> = {
+  lg: 1200,
+  md: 640,
+  sm: 0,
+};
+
+const activeDragConfig = {
+  enabled: true,
+  bounded: true,
+  handle: ".dashboard-drag-handle",
+  cancel: "button, select, a, input, textarea",
+  threshold: 3,
+} as const;
+
+const inactiveDragConfig = {
+  ...activeDragConfig,
+  enabled: false,
+} as const;
+
+const activeResizeConfig = {
+  enabled: true,
+  handles: ["se"],
+} as const;
+
+const inactiveResizeConfig = {
+  ...activeResizeConfig,
+  enabled: false,
+} as const;
+
+const widgetTypeLabels: Record<EditableWidgetType, string> = {
+  categoryBar: "막대 차트",
+  donut: "도넛 차트",
+  rankingTable: "순위 표",
+  dataTable: "데이터 표",
+};
+
+function isEditableWidgetType(value: string): value is EditableWidgetType {
+  return Object.prototype.hasOwnProperty.call(widgetTypeLabels, value);
+}
+
+function WidgetEditorControls({
+  dashboardId,
+  widget,
+}: {
+  dashboardId: string;
+  widget: DashboardWidget;
+}) {
+  const compatibleTypes = getCompatibleWidgetTypes(widget);
+
+  function move(direction: "backward" | "forward") {
+    useDashboardEditorStore
+      .getState()
+      .moveWidget(dashboardId, widget.id, direction);
+  }
+
+  function changeType(value: string) {
+    if (!isEditableWidgetType(value)) {
+      return;
+    }
+
+    useDashboardEditorStore
+      .getState()
+      .setWidgetType(dashboardId, widget.id, value);
+  }
+
+  return (
+    <div
+      aria-label={`${widget.title} 편집 도구`}
+      className="flex flex-wrap items-center justify-end gap-1"
+      role="group"
+    >
+      {compatibleTypes.length > 0 ? (
+        <label>
+          <span className="sr-only">{widget.title} 표시 형식</span>
+          <select
+            aria-label={`${widget.title} 표시 형식`}
+            className="h-8 rounded-md border border-[#c9ccd2] bg-white px-2 text-[11px] font-medium text-[#424753] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+            onChange={(event) => changeType(event.target.value)}
+            value={widget.type}
+          >
+            {compatibleTypes.map((type) => (
+              <option key={type} value={type}>
+                {widgetTypeLabels[type]}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <button
+        aria-label={`${widget.title}을 앞 순서로 이동`}
+        className="dashboard-control-button"
+        onClick={() => move("backward")}
+        title="앞 순서로 이동"
+        type="button"
+      >
+        <ArrowUp aria-hidden="true" className="size-3.5" />
+      </button>
+      <button
+        aria-label={`${widget.title}을 뒤 순서로 이동`}
+        className="dashboard-control-button"
+        onClick={() => move("forward")}
+        title="뒤 순서로 이동"
+        type="button"
+      >
+        <ArrowDown aria-hidden="true" className="size-3.5" />
+      </button>
+      <button
+        aria-label={`${widget.title} 삭제`}
+        className="dashboard-control-button text-[#93000a]"
+        onClick={() =>
+          useDashboardEditorStore.getState().hideWidget(dashboardId, widget.id)
+        }
+        title="위젯 삭제"
+        type="button"
+      >
+        <Trash2 aria-hidden="true" className="size-3.5" />
+      </button>
+      <button
+        aria-label={`${widget.title} 드래그하여 이동`}
+        className="dashboard-control-button dashboard-drag-handle cursor-grab active:cursor-grabbing"
+        title="드래그하여 이동"
+        type="button"
+      >
+        <GripVertical aria-hidden="true" className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function EditorToolbar({
+  dashboard,
+  isEditing,
+  onEditingChange,
+}: {
+  dashboard: DashboardSpec;
+  isEditing: boolean;
+  onEditingChange: (isEditing: boolean) => void;
+}) {
+  const document = useDashboardEditorStore(
+    (state) => state.documents[dashboard.id],
+  );
+
+  return (
+    <div className="mt-5 flex flex-col gap-3 rounded-xl border border-[#dde2e8] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-[10px] font-semibold tracking-[0.1em] text-[#4f46e5] uppercase">
+          Layout editor
+        </p>
+        <p className="mt-1 text-[12px] text-[#595e6b]">
+          {isEditing
+            ? "위젯을 이동하거나 크기와 표시 형식을 바꿀 수 있습니다."
+            : "이 브라우저에 저장된 나만의 대시보드입니다."}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {isEditing ? (
+          <>
+            <button
+              aria-label="대시보드 편집 실행 취소"
+              className="dashboard-toolbar-button"
+              disabled={!document || document.past.length === 0}
+              onClick={() =>
+                useDashboardEditorStore.getState().undo(dashboard.id)
+              }
+              type="button"
+            >
+              <Undo2 aria-hidden="true" className="size-3.5" />
+              실행 취소
+            </button>
+            <button
+              aria-label="대시보드 편집 다시 실행"
+              className="dashboard-toolbar-button"
+              disabled={!document || document.future.length === 0}
+              onClick={() =>
+                useDashboardEditorStore.getState().redo(dashboard.id)
+              }
+              type="button"
+            >
+              <Redo2 aria-hidden="true" className="size-3.5" />
+              다시 실행
+            </button>
+            <button
+              className="dashboard-toolbar-button"
+              onClick={() =>
+                useDashboardEditorStore
+                  .getState()
+                  .resetDashboard(dashboard.id, dashboard.widgets)
+              }
+              type="button"
+            >
+              <RotateCcw aria-hidden="true" className="size-3.5" />
+              초기화
+            </button>
+          </>
+        ) : null}
+        <button
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4f46e5] px-3.5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+          onClick={() => onEditingChange(!isEditing)}
+          type="button"
+        >
+          {isEditing ? (
+            <Check aria-hidden="true" className="size-4" />
+          ) : (
+            <Edit3 aria-hidden="true" className="size-4" />
+          )}
+          {isEditing ? "편집 완료" : "대시보드 편집"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function DashboardEditor({
+  dashboard,
+  datasets,
+  findings,
+}: DashboardEditorProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const currentBreakpoint = useRef<EditorBreakpoint>("lg");
+  const { width, containerRef, mounted } = useContainerWidth({
+    measureBeforeMount: true,
+  });
+  const hasHydrated = useDashboardEditorStore((state) => state.hasHydrated);
+  const storedDocument = useDashboardEditorStore(
+    (state) => state.documents[dashboard.id],
+  );
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function hydrateAndInitialize() {
+      if (!useDashboardEditorStore.persist.hasHydrated()) {
+        await useDashboardEditorStore.persist.rehydrate();
+      }
+
+      if (!isActive) {
+        return;
+      }
+
+      const store = useDashboardEditorStore.getState();
+      store.setHydrated(true);
+      store.initializeDashboard(dashboard.id, dashboard.widgets);
+    }
+
+    void hydrateAndInitialize();
+
+    return () => {
+      isActive = false;
+    };
+  }, [dashboard.id, dashboard.widgets]);
+
+  const document = useMemo(
+    () =>
+      reconcileDashboardEditorDocument(
+        storedDocument ?? createDashboardEditorDocument(dashboard.widgets),
+        dashboard.widgets,
+      ),
+    [dashboard.widgets, storedDocument],
+  );
+  const widgets = useMemo(() => {
+    const hiddenWidgetIds = new Set(document.present.hiddenWidgetIds);
+
+    return dashboard.widgets
+      .filter((widget) => !hiddenWidgetIds.has(widget.id))
+      .map((widget) =>
+        applyWidgetTypeOverride(
+          widget,
+          document.present.typeOverrides[widget.id],
+        ),
+      );
+  }, [dashboard.widgets, document.present]);
+  const layouts = useMemo<ResponsiveLayouts<EditorBreakpoint>>(() => {
+    const visibleWidgetIds = new Set(widgets.map((widget) => widget.id));
+
+    return {
+      lg: document.present.layouts.lg.filter((item) =>
+        visibleWidgetIds.has(item.i),
+      ),
+      md: document.present.layouts.md.filter((item) =>
+        visibleWidgetIds.has(item.i),
+      ),
+      sm: document.present.layouts.sm.filter((item) =>
+        visibleWidgetIds.has(item.i),
+      ),
+    };
+  }, [document.present.layouts, widgets]);
+  const datasetsById = useMemo(
+    () => new Map(datasets.map((dataset) => [dataset.queryId, dataset])),
+    [datasets],
+  );
+  const findingsById = useMemo(
+    () => new Map(findings.map((finding) => [finding.id, finding])),
+    [findings],
+  );
+
+  function commitLayout(layout: Layout) {
+    useDashboardEditorStore
+      .getState()
+      .commitLayout(dashboard.id, currentBreakpoint.current, layout);
+  }
+
+  return (
+    <section aria-labelledby="analysis-dashboard-title" className="mt-7">
+      <DashboardHeader dashboard={dashboard} />
+      <EditorToolbar
+        dashboard={dashboard}
+        isEditing={isEditing}
+        onEditingChange={setIsEditing}
+      />
+
+      <div className="dashboard-grid-container" ref={containerRef}>
+        {!hasHydrated || !mounted ? (
+          <DashboardWidgetGrid
+            datasets={datasets}
+            findings={findings}
+            widgets={widgets}
+          />
+        ) : widgets.length === 0 ? (
+          <div className="mt-5 rounded-xl border border-dashed border-[#c9ccd2] bg-white px-6 py-12 text-center">
+            <p className="text-sm font-semibold text-[#191c1e]">
+              표시할 위젯이 없습니다.
+            </p>
+            <p className="mt-2 text-[12px] text-[#595e6b]">
+              실행 취소 또는 초기화로 위젯을 다시 불러올 수 있습니다.
+            </p>
+          </div>
+        ) : (
+          <ResponsiveGridLayout<EditorBreakpoint>
+            breakpoints={editorBreakpoints}
+            className={`mt-5 ${isEditing ? "is-editing" : ""}`}
+            cols={editorGridColumns}
+            compactor={verticalCompactor}
+            containerPadding={[0, 0]}
+            dragConfig={isEditing ? activeDragConfig : inactiveDragConfig}
+            layouts={layouts}
+            margin={[20, 20]}
+            onBreakpointChange={(breakpoint) => {
+              currentBreakpoint.current = breakpoint;
+            }}
+            onDragStop={commitLayout}
+            onResizeStop={commitLayout}
+            resizeConfig={isEditing ? activeResizeConfig : inactiveResizeConfig}
+            rowHeight={28}
+            width={width}
+          >
+            {widgets.map((widget) => (
+              <div key={widget.id}>
+                <DashboardWidgetCard
+                  cardClassName="h-full overflow-auto lg:col-span-12"
+                  controls={
+                    isEditing ? (
+                      <WidgetEditorControls
+                        dashboardId={dashboard.id}
+                        widget={widget}
+                      />
+                    ) : undefined
+                  }
+                  datasetsById={datasetsById}
+                  findingsById={findingsById}
+                  widget={widget}
+                />
+              </div>
+            ))}
+          </ResponsiveGridLayout>
+        )}
+      </div>
+    </section>
+  );
+}

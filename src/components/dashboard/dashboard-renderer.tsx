@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import type { Finding } from "@/lib/analytics/findings";
@@ -25,6 +25,8 @@ type DashboardWidgetProps = {
   widget: DashboardWidget;
   datasetsById: ReadonlyMap<string, AnalyticsDataset>;
   findingsById: ReadonlyMap<string, Finding>;
+  cardClassName?: string;
+  controls?: ReactNode;
 };
 
 function getWidgetWidth(size: DashboardWidget["size"]): string {
@@ -40,15 +42,19 @@ function getWidgetWidth(size: DashboardWidget["size"]): string {
 
 function WidgetFrame({
   children,
+  className,
+  controls,
   widget,
 }: {
   children: ReactNode;
+  className?: string;
+  controls?: ReactNode;
   widget: DashboardWidget;
 }) {
   return (
     <section
       aria-labelledby={`${widget.id}-title`}
-      className={`rounded-xl border border-[#e1e2e4] bg-white p-5 ${getWidgetWidth(widget.size)}`}
+      className={`rounded-xl border border-[#e1e2e4] bg-white p-5 ${getWidgetWidth(widget.size)} ${className ?? ""}`}
       id={widget.id}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -63,9 +69,12 @@ function WidgetFrame({
             {widget.title}
           </h2>
         </div>
-        <span className="rounded border border-[#dde2e8] bg-[#f8f9fb] px-2 py-1 text-[9px] text-[#777587]">
-          {widget.queryIds.length} data ref
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded border border-[#dde2e8] bg-[#f8f9fb] px-2 py-1 text-[9px] text-[#777587]">
+            {widget.queryIds.length} data ref
+          </span>
+          {controls}
+        </div>
       </div>
       {widget.description ? (
         <p className="mt-2 text-[12px] leading-5 text-[#595e6b]">
@@ -77,7 +86,12 @@ function WidgetFrame({
   );
 }
 
-function MetricWidget({ widget, datasetsById }: DashboardWidgetProps) {
+function MetricWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
   if (widget.type !== "metric") {
     return null;
   }
@@ -86,7 +100,7 @@ function MetricWidget({ widget, datasetsById }: DashboardWidgetProps) {
   const change = dataset?.points[0]?.percentChange ?? null;
 
   return (
-    <WidgetFrame widget={widget}>
+    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <p className="text-3xl font-semibold tracking-[-0.045em] text-[#191c1e] sm:text-[34px]">
         {formatMetricValue(widget.config.metric, dataset?.currentTotal)}
       </p>
@@ -104,7 +118,12 @@ function MetricWidget({ widget, datasetsById }: DashboardWidgetProps) {
   );
 }
 
-function TimeSeriesWidget({ widget, datasetsById }: DashboardWidgetProps) {
+function TimeSeriesWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
   if (widget.type !== "timeSeries") {
     return null;
   }
@@ -125,7 +144,7 @@ function TimeSeriesWidget({ widget, datasetsById }: DashboardWidgetProps) {
     .join(" ");
 
   return (
-    <WidgetFrame widget={widget}>
+    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <div className="rounded-lg border border-[#eef0f2] bg-[#fbfcfd] px-3 py-3">
         <svg
           aria-label={`${widget.title} 선 그래프`}
@@ -181,8 +200,13 @@ function TimeSeriesWidget({ widget, datasetsById }: DashboardWidgetProps) {
   );
 }
 
-function CategoryBarWidget({ widget, datasetsById }: DashboardWidgetProps) {
-  if (widget.type !== "categoryBar" && widget.type !== "donut") {
+function CategoryBarWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
+  if (widget.type !== "categoryBar") {
     return null;
   }
 
@@ -193,7 +217,7 @@ function CategoryBarWidget({ widget, datasetsById }: DashboardWidgetProps) {
   );
 
   return (
-    <WidgetFrame widget={widget}>
+    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <ul className="space-y-3.5">
         {(dataset?.points ?? []).map((point) => {
           const width = (
@@ -230,7 +254,105 @@ function CategoryBarWidget({ widget, datasetsById }: DashboardWidgetProps) {
   );
 }
 
-function TableWidget({ widget, datasetsById }: DashboardWidgetProps) {
+const donutColors = ["#4f46e5", "#3b82f6", "#17835c", "#c88616"] as const;
+
+function DonutWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
+  if (widget.type !== "donut") {
+    return null;
+  }
+
+  const dataset = datasetsById.get(widget.config.queryId);
+  const points = dataset?.points ?? [];
+  const total = points.reduce(
+    (sum, point) => sum + Math.abs(point.value ?? 0),
+    0,
+  );
+  const segments = points.reduce<
+    Array<{
+      color: string;
+      end: number;
+      percentage: number;
+      point: (typeof points)[number];
+      start: number;
+    }>
+  >((currentSegments, point, index) => {
+    const percentage =
+      total > 0 ? (Math.abs(point.value ?? 0) / total) * 100 : 0;
+    const start = currentSegments.at(-1)?.end ?? 0;
+
+    return [
+      ...currentSegments,
+      {
+        color: donutColors[index % donutColors.length],
+        end: start + percentage,
+        percentage,
+        point,
+        start,
+      },
+    ];
+  }, []);
+  const background =
+    segments.length > 0
+      ? `conic-gradient(${segments
+          .map(
+            (segment) =>
+              `${segment.color} ${segment.start.toFixed(2)}% ${segment.end.toFixed(2)}%`,
+          )
+          .join(", ")})`
+      : "#eef0f2";
+
+  return (
+    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
+      <div className="grid items-center gap-5 sm:grid-cols-[minmax(8rem,0.8fr)_minmax(0,1.2fr)]">
+        <div
+          aria-label={`${widget.title} 도넛 그래프`}
+          className="relative mx-auto aspect-square w-full max-w-44 rounded-full"
+          role="img"
+          style={{ background }}
+        >
+          <div className="absolute inset-[24%] grid place-items-center rounded-full bg-white text-center">
+            <span className="text-[10px] font-medium text-[#777587]">합계</span>
+            <strong className="mt-0.5 block text-[13px] text-[#191c1e]">
+              {formatMetricValue(dataset?.metric ?? "revenue", total)}
+            </strong>
+          </div>
+        </div>
+        <ul className="space-y-2.5">
+          {segments.map((segment) => (
+            <li
+              className="flex items-center justify-between gap-3 text-[11px]"
+              key={segment.point.label}
+            >
+              <span className="flex min-w-0 items-center gap-2 font-medium text-[#424753]">
+                <span
+                  aria-hidden="true"
+                  className="size-2.5 shrink-0 rounded-sm"
+                  style={{ backgroundColor: segment.color }}
+                />
+                <span className="truncate">{segment.point.label}</span>
+              </span>
+              <span className="shrink-0 text-[#595e6b]">
+                {segment.percentage.toFixed(1)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </WidgetFrame>
+  );
+}
+
+function TableWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
   if (widget.type !== "rankingTable" && widget.type !== "dataTable") {
     return null;
   }
@@ -238,19 +360,25 @@ function TableWidget({ widget, datasetsById }: DashboardWidgetProps) {
   const dataset = datasetsById.get(widget.config.queryId);
 
   return (
-    <WidgetFrame widget={widget}>
+    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-96 text-left text-[12px]">
           <thead className="border-b border-[#dde2e8] text-[9px] tracking-[0.1em] text-[#777587] uppercase">
             <tr>
+              {widget.type === "rankingTable" ? (
+                <th className="w-12 pb-3 font-medium">순위</th>
+              ) : null}
               <th className="pb-3 font-medium">세그먼트</th>
               <th className="pb-3 text-right font-medium">현재</th>
               <th className="pb-3 text-right font-medium">변화</th>
             </tr>
           </thead>
           <tbody>
-            {(dataset?.points ?? []).map((point) => (
+            {(dataset?.points ?? []).map((point, index) => (
               <tr className="border-b border-[#eef0f2]" key={point.label}>
+                {widget.type === "rankingTable" ? (
+                  <td className="py-3 font-mono text-[#777587]">{index + 1}</td>
+                ) : null}
                 <td className="py-3 font-medium text-[#191c1e]">
                   {point.label}
                 </td>
@@ -269,7 +397,12 @@ function TableWidget({ widget, datasetsById }: DashboardWidgetProps) {
   );
 }
 
-function InsightWidget({ widget, findingsById }: DashboardWidgetProps) {
+function InsightWidget({
+  widget,
+  findingsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
   if (widget.type !== "insight") {
     return null;
   }
@@ -283,7 +416,7 @@ function InsightWidget({ widget, findingsById }: DashboardWidgetProps) {
   };
 
   return (
-    <WidgetFrame widget={widget}>
+    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <div className={`rounded-lg border p-4 ${toneClass[widget.config.tone]}`}>
         <p className="text-[13px] leading-6 text-[#191c1e]">
           {finding?.fallbackText ?? "검증된 Finding을 찾지 못했습니다."}
@@ -300,7 +433,7 @@ const componentRegistry = {
   metric: MetricWidget,
   timeSeries: TimeSeriesWidget,
   categoryBar: CategoryBarWidget,
-  donut: CategoryBarWidget,
+  donut: DonutWidget,
   rankingTable: TableWidget,
   dataTable: TableWidget,
   insight: InsightWidget,
@@ -309,11 +442,59 @@ const componentRegistry = {
   (props: DashboardWidgetProps) => ReactNode
 >;
 
-export function DashboardRenderer({
-  dashboard,
+export const DashboardWidgetCard = memo(function DashboardWidgetCard(
+  props: DashboardWidgetProps,
+) {
+  const Widget = componentRegistry[props.widget.type];
+
+  return <Widget {...props} />;
+});
+
+export function DashboardHeader({ dashboard }: { dashboard: DashboardSpec }) {
+  return (
+    <div className="py-2 sm:py-3">
+      <p className="text-[10px] font-semibold tracking-[0.12em] text-[#4f46e5] uppercase">
+        Generated from verified refs
+      </p>
+      <h1
+        className="mt-2 max-w-4xl text-[28px] leading-tight font-semibold tracking-[-0.04em] text-[#191c1e] sm:text-[34px]"
+        id="analysis-dashboard-title"
+      >
+        {dashboard.title}
+      </h1>
+      <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[#595e6b]">
+        {dashboard.subtitle}
+      </p>
+      <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#777587]">
+        {dashboard.summary}
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2 text-[10px] text-[#595e6b]">
+        <span className="rounded border border-[#dde2e8] bg-white px-2.5 py-1.5">
+          {dashboard.context.period.preset}
+        </span>
+        <span className="rounded border border-[#dde2e8] bg-white px-2.5 py-1.5">
+          {getComparisonLabel(dashboard.context.compareWith)}
+        </span>
+        {dashboard.context.filters.map((filter) => (
+          <span
+            className="rounded border border-[#c3c0ff] bg-[#eef2ff] px-2.5 py-1.5 text-[#3525cd]"
+            key={`${filter.dimension}-${filter.operator}-${filter.values.join("-")}`}
+          >
+            {filter.dimension}: {filter.values.join(", ")}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function DashboardWidgetGrid({
+  widgets,
   datasets,
   findings,
-}: DashboardRendererProps) {
+}: Pick<DashboardRendererProps, "datasets" | "findings"> & {
+  widgets: readonly DashboardWidget[];
+}) {
   const datasetsById = new Map(
     datasets.map((dataset) => [dataset.queryId, dataset]),
   );
@@ -322,55 +503,32 @@ export function DashboardRenderer({
   );
 
   return (
+    <div className="mt-5 grid gap-5 lg:grid-cols-12">
+      {widgets.map((widget) => (
+        <DashboardWidgetCard
+          datasetsById={datasetsById}
+          findingsById={findingsById}
+          key={widget.id}
+          widget={widget}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function DashboardRenderer({
+  dashboard,
+  datasets,
+  findings,
+}: DashboardRendererProps) {
+  return (
     <section aria-labelledby="analysis-dashboard-title" className="mt-7">
-      <div className="py-2 sm:py-3">
-        <p className="text-[10px] font-semibold tracking-[0.12em] text-[#4f46e5] uppercase">
-          Generated from verified refs
-        </p>
-        <h1
-          className="mt-2 max-w-4xl text-[28px] leading-tight font-semibold tracking-[-0.04em] text-[#191c1e] sm:text-[34px]"
-          id="analysis-dashboard-title"
-        >
-          {dashboard.title}
-        </h1>
-        <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[#595e6b]">
-          {dashboard.subtitle}
-        </p>
-        <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#777587]">
-          {dashboard.summary}
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2 text-[10px] text-[#595e6b]">
-          <span className="rounded border border-[#dde2e8] bg-white px-2.5 py-1.5">
-            {dashboard.context.period.preset}
-          </span>
-          <span className="rounded border border-[#dde2e8] bg-white px-2.5 py-1.5">
-            {getComparisonLabel(dashboard.context.compareWith)}
-          </span>
-          {dashboard.context.filters.map((filter) => (
-            <span
-              className="rounded border border-[#c3c0ff] bg-[#eef2ff] px-2.5 py-1.5 text-[#3525cd]"
-              key={`${filter.dimension}-${filter.operator}-${filter.values.join("-")}`}
-            >
-              {filter.dimension}: {filter.values.join(", ")}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-5 lg:grid-cols-12">
-        {dashboard.widgets.map((widget) => {
-          const Widget = componentRegistry[widget.type];
-
-          return (
-            <Widget
-              datasetsById={datasetsById}
-              findingsById={findingsById}
-              key={widget.id}
-              widget={widget}
-            />
-          );
-        })}
-      </div>
+      <DashboardHeader dashboard={dashboard} />
+      <DashboardWidgetGrid
+        datasets={datasets}
+        findings={findings}
+        widgets={dashboard.widgets}
+      />
     </section>
   );
 }
