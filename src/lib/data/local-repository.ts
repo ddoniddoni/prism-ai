@@ -1,4 +1,6 @@
 import localAnalyticsDailyRows from "@/data/analytics-daily.json";
+import { executeAnalyticsQuery } from "@/lib/analytics/query-engine";
+import type { AnalyticsQuery } from "@/lib/analytics/query-schema";
 import {
   analyticsDailyRowsSchema,
   type AnalyticsDataRange,
@@ -40,6 +42,10 @@ const dataRange = resolveDataRange();
 export class LocalAnalyticsRepository implements AnalyticsRepository {
   async getRows() {
     return rows;
+  }
+
+  async execute(query: AnalyticsQuery) {
+    return executeAnalyticsQuery(rows, query, dataRange);
   }
 
   async getDataRange() {

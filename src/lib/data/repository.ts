@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
+import type { AnalyticsQuery } from "@/lib/analytics/query-schema";
+
 export const deviceSchema = z.enum(["desktop", "mobile", "tablet"]);
 
 export const analyticsDailyRowSchema = z.object({
@@ -32,6 +35,7 @@ export type AnalyticsDataRange = {
 
 export interface AnalyticsRepository {
   getRows(): Promise<readonly AnalyticsDailyRow[]>;
+  execute(query: AnalyticsQuery): Promise<AnalyticsDataset>;
   getDataRange(): Promise<AnalyticsDataRange>;
   getDatasetVersion(): Promise<string>;
 }
