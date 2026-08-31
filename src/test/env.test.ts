@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseEnvironment } from "../lib/env";
+import { isGeminiConfigured, parseEnvironment } from "../lib/env";
 
 describe("parseEnvironment", () => {
   it("uses the local mock defaults without API keys", () => {
@@ -10,9 +10,21 @@ describe("parseEnvironment", () => {
     expect(environment.DATA_SOURCE).toBe("local");
   });
 
-  it("requires both Gemini settings when the live provider is selected", () => {
-    expect(() => parseEnvironment({ AI_PROVIDER: "gemini" })).toThrow(
-      "AI_PROVIDER=gemini requires GEMINI_API_KEY and GEMINI_MODEL",
-    );
+  it("marks incomplete Gemini settings as unavailable so the factory can fall back", () => {
+    expect(
+      isGeminiConfigured(parseEnvironment({ AI_PROVIDER: "gemini" })),
+    ).toBe(false);
+  });
+
+  it("recognizes complete server-only Gemini settings", () => {
+    expect(
+      isGeminiConfigured(
+        parseEnvironment({
+          AI_PROVIDER: "gemini",
+          GEMINI_API_KEY: "test-key",
+          GEMINI_MODEL: "gemini-test-model",
+        }),
+      ),
+    ).toBe(true);
   });
 });

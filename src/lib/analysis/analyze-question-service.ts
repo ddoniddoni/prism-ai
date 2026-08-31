@@ -2,13 +2,14 @@ import { buildFindings } from "@/lib/analytics/findings";
 import { createAIProvider } from "@/lib/ai/create-provider";
 import { sanitizeDashboardSpec } from "@/lib/ai/dashboard-sanitizer";
 import { UnsupportedQuestionError } from "@/lib/ai/mock-provider";
-import type { AIProvider } from "@/lib/ai/provider";
+import { createAICallBudget, type AIProvider } from "@/lib/ai/provider";
 import {
   mergeAnalysisContext,
   normalizeAnalysisPlan,
 } from "@/lib/ai/schemas/analysis-plan";
 import { LocalAnalyticsRepository } from "@/lib/data/local-repository";
 import type { AnalyticsRepository } from "@/lib/data/repository";
+import { env } from "@/lib/env";
 
 import {
   analyzeRequestSchema,
@@ -48,6 +49,7 @@ export class AnalyzeQuestionService {
   async execute(input: AnalyzeRequest): Promise<AnalyzeResponse> {
     const request = analyzeRequestSchema.parse(input);
     const startedAt = Date.now();
+    const callBudget = createAICallBudget(env.AI_MAX_CALLS_PER_ANALYSIS);
     let rawPlan;
 
     try {
@@ -56,6 +58,7 @@ export class AnalyzeQuestionService {
         ...(request.currentContext
           ? { currentContext: request.currentContext }
           : {}),
+        callBudget,
       });
     } catch (error) {
       if (error instanceof UnsupportedQuestionError) {
@@ -99,6 +102,7 @@ export class AnalyzeQuestionService {
         context,
         datasets,
         findings,
+        callBudget,
       });
     } catch {
       composerFallbackUsed = true;
@@ -131,11 +135,14 @@ export class AnalyzeQuestionService {
         ? "일부 Query를 제외한 검증된 결과를 표시합니다."
         : "질문을 검증된 Query와 결정론적 결과로 구성했습니다.",
       meta: {
-        provider: "mock",
-        model: null,
-        mockMode: true,
+        provider: this.dependencies.provider.metadata.provider,
+        model: this.dependencies.provider.metadata.model,
+        mockMode: this.dependencies.provider.metadata.mockMode,
         cacheHit: false,
-        fallbackUsed: composerFallbackUsed || sanitizedDashboard.fallbackUsed,
+        fallbackUsed:
+          this.dependencies.provider.metadata.fallbackUsed ||
+          composerFallbackUsed ||
+          sanitizedDashboard.fallbackUsed,
         partial,
         durationMs: Date.now() - startedAt,
       },

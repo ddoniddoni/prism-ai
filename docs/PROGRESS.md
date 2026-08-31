@@ -2,7 +2,7 @@
 
 ## 현재 Phase
 
-Phase 4: Follow-up Context와 History
+Phase 5: Gemini Provider
 
 ## 상태
 
@@ -39,6 +39,12 @@ Phase 4: Follow-up Context와 History
 - 검증된 전체 Analysis Response를 브라우저 Local Storage v1에 최근 20개까지 저장하고, Zod 검증을 통과한 기록만 History에서 다시 연다.
 - Local Storage는 `useSyncExternalStore` 경계로 구독해 Server Shell을 유지하면서 브라우저 저장소 변경을 반영한다.
 - Context 병합·Filter 교체/제거, Mock Follow-up, Service 순차 Follow-up, Local History 검증/20개 제한, Follow-up과 History 재열기 E2E 시나리오를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- 공식 `@google/genai` SDK 2.19.0을 추가하고 `GeminiAIProvider`를 Server-only Module로 구현했다.
+- Gemini Plan과 Dashboard Composition 요청에 JSON Schema를 제공하고, 응답 JSON을 Zod로 다시 검증한다. Schema 또는 Semantic 검증 실패 시 교정 요청은 최대 1회다.
+- Gemini Composer는 Dashboard ID와 검증된 Context를 생성하지 않는다. 서버가 값을 주입하며, 숫자를 포함한 모델 표시 문구는 거부하고 Mock Composer로 복구한다.
+- Analysis별 호출 Budget을 공유하고 기본 한도를 4회로 설정했다. 정상 Plan·Composer 2회와 각 단계의 교정 Retry 1회를 포함하는 상한이다.
+- `AI_PROVIDER=gemini`이지만 설정이 불완전하거나 Live 호출이 실패하면 Mock Provider로 안전하게 Fallback하고 Response Metadata에 상태를 남긴다.
+- Gemini Provider, Fallback, Provider Factory, 환경 선택에 대한 주입형 Unit Test를 추가했다. 실제 Gemini Key나 네트워크 호출은 사용하지 않는다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
@@ -64,6 +70,10 @@ Phase 4: Follow-up Context와 History
 | 2026-08-31 | `filters` Patch는 교체, 빈 배열은 제거로 해석 | 같은 Dimension의 상충 Filter가 AND 조건으로 결합되는 것을 막고 명시적 변경을 정확히 반영하기 위함 |
 | 2026-08-31 | Local History는 Zod-검증된 전체 Analysis Response를 Storage v1에 최대 20개 저장 | 재열기에서 API나 LLM을 다시 호출하지 않고 당시의 검증된 결과만 표시하기 위함 |
 | 2026-08-31 | Browser Storage는 `useSyncExternalStore`로 읽기 | Server Render와 Hydration을 보존하고 Effect 안의 동기 State 복사를 피하기 위함 |
+| 2026-08-31 | Gemini는 공식 `@google/genai` SDK와 Server-only Factory로 연결 | `GEMINI_API_KEY`가 Client Bundle이나 Component로 전달되지 않게 하기 위함 |
+| 2026-08-31 | Gemini Structured Output은 JSON Schema 요청 후 Zod와 Semantic 규칙으로 재검증 | SDK가 형식을 보조하더라도 Application Schema와 숫자 표시 금지 규칙을 최종 신뢰 경계로 유지하기 위함 |
+| 2026-08-31 | Live 요청 Budget은 기본 4회 | Plan·Composer의 정상 2회와 각 1회 교정 요청을 허용하면서 무한 Retry를 막기 위함 |
+| 2026-08-31 | Gemini 실패 시 Mock Provider로 Fallback | Key가 없거나 Live Provider가 실패해도 Local Demo와 기존 Dashboard 복구 흐름을 유지하기 위함 |
 
 ## 검증 결과
 
@@ -81,6 +91,13 @@ Phase 4: Follow-up Context와 History
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 5)
+- `npm run typecheck`: 통과 (Phase 5)
+- `npm run build`: 통과 (Phase 5, Next.js Webpack production build)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 - `npm run lint`: 통과 (Phase 3)
 - `npm run typecheck`: 통과 (Phase 3)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
@@ -96,10 +113,11 @@ Phase 4: Follow-up Context와 History
 
 ## 알려진 제한 사항
 
-- MockAIProvider만 구현했으며 Gemini Live Provider, Cache, Rate Limit, Partial Query 복구 정책은 이후 Phase에서 확장한다.
+- Live Gemini 호출은 사용자 Key와 실제 API Quota가 있어야 검증할 수 있다. SDK Abort Signal은 클라이언트 대기를 중단하지만 Google 서비스 측 작업이나 사용량 청구를 보장해 취소하지는 않는다.
+- Cache, Rate Limit, Request Deduplication, Partial Query 복구 정책은 이후 Phase에서 확장한다.
 - Gemini와 Supabase는 `.env.example`에 설정 항목만 두었으며 아직 연동하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.
 
 ## 다음 권장 작업
 
-`docs/IMPLEMENTATION_PLAN.md`의 Phase 5를 진행해 Gemini Provider의 Structured Output, 검증, Timeout과 안전한 Mock Fallback을 구현한다.
+`docs/IMPLEMENTATION_PLAN.md`의 Phase 6을 진행해 Supabase Repository, Cache, Rate Limit, Request Deduplication과 운영 복구를 구현한다.

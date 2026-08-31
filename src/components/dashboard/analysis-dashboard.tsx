@@ -63,6 +63,18 @@ async function readResponseBody(response: Response): Promise<unknown> {
   }
 }
 
+function getProviderLabel(response: AnalyzeResponse): string {
+  if (response.meta.mockMode) {
+    return response.meta.fallbackUsed
+      ? "Mock AI · fallback active"
+      : "Mock AI · verified result";
+  }
+
+  return response.meta.fallbackUsed
+    ? "Gemini · mock fallback active"
+    : "Gemini · verified result";
+}
+
 export function AnalysisDashboard({
   dashboardId,
   question,
@@ -240,7 +252,7 @@ export function AnalysisDashboard({
       <div className="mt-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section className="border border-[#67d8c8]/50 bg-[#effdfb] p-4">
           <p className="font-mono text-[10px] font-semibold tracking-[0.16em] text-[#28776e] uppercase">
-            Mock AI · verified result
+            {getProviderLabel(activeResponse)}
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-700">
             {displayStatus === "loading"

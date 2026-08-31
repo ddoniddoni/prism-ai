@@ -10,6 +10,7 @@ import { normalizeAnalyticsFilters } from "@/lib/analytics/query-schema";
 import type { Finding } from "@/lib/analytics/findings";
 
 import type {
+  AIProviderMetadata,
   AIProvider,
   DashboardComposerInput,
   PlannerInput,
@@ -398,6 +399,17 @@ function createDashboardSpec(
 }
 
 export class MockAIProvider implements AIProvider {
+  readonly metadata: AIProviderMetadata;
+
+  constructor(options: { fallbackUsed?: boolean } = {}) {
+    this.metadata = {
+      provider: "mock",
+      model: null,
+      mockMode: true,
+      fallbackUsed: options.fallbackUsed ?? false,
+    };
+  }
+
   async createPlan(input: PlannerInput): Promise<AnalysisPlan> {
     const normalizedQuestion = normalizeQuestion(input.question);
     const definition = resolveDefinition(normalizedQuestion);
