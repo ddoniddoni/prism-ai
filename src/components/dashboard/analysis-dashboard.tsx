@@ -1,26 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   analyzeErrorResponseSchema,
   analyzeResponseSchema,
   type AnalyzeResponse,
 } from "@/lib/analysis/schemas";
+import type { AnalysisContext } from "@/lib/ai/schemas/analysis-plan";
+import {
+  createAnalysisHistoryEntry,
+  saveAnalysisHistory,
+} from "@/lib/history/local-analysis-history";
 
+import {
+  notifyLocalAnalysisHistoryChange,
+  useLocalAnalysisHistory,
+} from "@/components/history/use-local-analysis-history";
 import { AnalysisStatus } from "@/components/status/analysis-status";
 
 import { DashboardRenderer } from "./dashboard-renderer";
+import { FollowUpPrompt } from "./follow-up-prompt";
 
 type AnalysisDashboardProps = {
   dashboardId: string;
   question: string;
+  historyEntryId?: string;
 };
 
-type AnalysisState =
-  | { status: "loading" }
-  | { status: "success"; response: AnalyzeResponse }
-  | { status: "error"; message: string };
+type PendingAnalysis = {
+  question: string;
+  currentContext?: AnalysisContext;
+  sessionId?: string;
+};
+
+type AnalysisStatusName = "loading" | "ready" | "error";
 
 function createRequestId(dashboardId: string): string {
   if (
@@ -52,24 +66,58 @@ async function readResponseBody(response: Response): Promise<unknown> {
 export function AnalysisDashboard({
   dashboardId,
   question,
+  historyEntryId,
 }: AnalysisDashboardProps) {
-  const [state, setState] = useState<AnalysisState>({ status: "loading" });
-  const [attempt, setAttempt] = useState(0);
+  const [response, setResponse] = useState<AnalyzeResponse | null>(null);
+  const [status, setStatus] = useState<AnalysisStatusName>("loading");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingAnalysis, setPendingAnalysis] =
+    useState<PendingAnalysis | null>(() =>
+      historyEntryId ? null : { question },
+    );
+  const { entries: historyEntries, isReady: isHistoryReady } =
+    useLocalAnalysisHistory();
+  const savedEntry = historyEntryId
+    ? historyEntries.find((entry) => entry.id === historyEntryId)
+    : undefined;
+  const historyFallback = useMemo<PendingAnalysis | null>(() => {
+    if (!historyEntryId || !isHistoryReady || savedEntry || response) {
+      return null;
+    }
+
+    return { question };
+  }, [historyEntryId, isHistoryReady, question, response, savedEntry]);
+  const activePendingAnalysis = pendingAnalysis ?? historyFallback;
+  const activeResponse = response ?? savedEntry?.response ?? null;
+  const displayStatus =
+    savedEntry && !response && !pendingAnalysis ? "ready" : status;
 
   useEffect(() => {
+    if (!activePendingAnalysis) {
+      return;
+    }
+
     const controller = new AbortController();
+    const activeAnalysis = activePendingAnalysis;
 
     async function analyzeQuestion() {
-      setState({ status: "loading" });
+      setStatus("loading");
+      setErrorMessage(null);
 
       try {
         const response = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            question,
+            question: activeAnalysis.question,
             requestId: createRequestId(dashboardId),
             dashboardId,
+            ...(activeAnalysis.sessionId
+              ? { sessionId: activeAnalysis.sessionId }
+              : {}),
+            ...(activeAnalysis.currentContext
+              ? { currentContext: activeAnalysis.currentContext }
+              : {}),
           }),
           signal: controller.signal,
         });
@@ -85,31 +133,62 @@ export function AnalysisDashboard({
           );
         }
 
-        setState({
-          status: "success",
-          response: analyzeResponseSchema.parse(body),
-        });
+        const parsedResponse = analyzeResponseSchema.parse(body);
+
+        saveAnalysisHistory(
+          window.localStorage,
+          createAnalysisHistoryEntry(activeAnalysis.question, parsedResponse),
+        );
+        notifyLocalAnalysisHistoryChange();
+        setResponse(parsedResponse);
+        setPendingAnalysis(null);
+        setStatus("ready");
       } catch (error) {
         if (controller.signal.aborted) {
           return;
         }
 
-        setState({
-          status: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "분석 요청을 처리하지 못했습니다.",
-        });
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "분석 요청을 처리하지 못했습니다.",
+        );
+        setStatus("error");
       }
     }
 
     void analyzeQuestion();
 
     return () => controller.abort();
-  }, [attempt, dashboardId, question]);
+  }, [activePendingAnalysis, dashboardId, historyFallback]);
 
-  if (state.status === "loading") {
+  function retryAnalysis() {
+    const retryTarget = pendingAnalysis ?? historyFallback;
+
+    if (!retryTarget) {
+      return;
+    }
+
+    setPendingAnalysis({ ...retryTarget });
+    setErrorMessage(null);
+    setStatus("loading");
+  }
+
+  function startFollowUp(nextQuestion: string) {
+    if (!activeResponse) {
+      return;
+    }
+
+    setPendingAnalysis({
+      question: nextQuestion,
+      currentContext: activeResponse.context,
+      sessionId: activeResponse.sessionId,
+    });
+    setErrorMessage(null);
+    setStatus("loading");
+  }
+
+  if (displayStatus === "loading" && !activeResponse) {
     return (
       <section className="mt-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="border border-slate-900/10 bg-white p-6">
@@ -126,7 +205,7 @@ export function AnalysisDashboard({
     );
   }
 
-  if (state.status === "error") {
+  if (displayStatus === "error" && !activeResponse) {
     return (
       <section
         className="mt-10 border border-rose-200 bg-rose-50 p-6"
@@ -139,17 +218,21 @@ export function AnalysisDashboard({
           분석을 완성하지 못했습니다.
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-700">
-          {state.message}
+          {errorMessage}
         </p>
         <button
           className="mt-5 bg-[#151a2d] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6657dd] focus-visible:ring-2 focus-visible:ring-[#6657dd] focus-visible:ring-offset-2 focus-visible:outline-none"
-          onClick={() => setAttempt((current) => current + 1)}
+          onClick={retryAnalysis}
           type="button"
         >
           분석 다시 시도
         </button>
       </section>
     );
+  }
+
+  if (!activeResponse) {
+    return null;
   }
 
   return (
@@ -160,16 +243,41 @@ export function AnalysisDashboard({
             Mock AI · verified result
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-700">
-            {state.response.assistantMessage}
+            {displayStatus === "loading"
+              ? "기존 분석을 유지한 채 후속 질문을 검증하고 있습니다."
+              : activeResponse.assistantMessage}
           </p>
         </section>
-        <AnalysisStatus stage="ready" />
+        <AnalysisStatus
+          stage={displayStatus === "loading" ? "planning" : "ready"}
+        />
       </div>
+      {displayStatus === "error" ? (
+        <section
+          className="mt-4 border border-rose-200 bg-rose-50 p-4"
+          role="alert"
+        >
+          <p className="text-sm leading-6 text-rose-800">{errorMessage}</p>
+          <button
+            className="mt-3 text-sm font-semibold text-rose-800 underline decoration-rose-300 underline-offset-4 focus-visible:ring-2 focus-visible:ring-[#6657dd] focus-visible:ring-offset-2 focus-visible:outline-none"
+            onClick={retryAnalysis}
+            type="button"
+          >
+            후속 분석 다시 시도
+          </button>
+        </section>
+      ) : null}
       <DashboardRenderer
-        dashboard={state.response.dashboard}
-        datasets={state.response.datasets}
-        findings={state.response.findings}
+        dashboard={activeResponse.dashboard}
+        datasets={activeResponse.datasets}
+        findings={activeResponse.findings}
       />
+      <div className="mt-6">
+        <FollowUpPrompt
+          disabled={displayStatus === "loading"}
+          onSubmit={startFollowUp}
+        />
+      </div>
     </>
   );
 }

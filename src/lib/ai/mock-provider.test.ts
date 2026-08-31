@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { MockAIProvider } from "./mock-provider";
-import { analysisPlanSchema } from "./schemas/analysis-plan";
+import {
+  analysisPlanSchema,
+  mergeAnalysisContext,
+  resolveInitialAnalysisContext,
+} from "./schemas/analysis-plan";
 
 const supportedQuestions = [
   "지난달 매출이 왜 감소했어?",
@@ -38,5 +42,54 @@ describe("MockAIProvider", () => {
     expect(plan.queries.every((query) => "value" in query === false)).toBe(
       true,
     );
+  });
+
+  it("keeps the active period and metric across mobile and prior-year follow-ups", async () => {
+    const provider = new MockAIProvider();
+    const initialPlan = await provider.createPlan({
+      question: "이번 달 성과를 보여줘.",
+    });
+    const initialContext = resolveInitialAnalysisContext(initialPlan);
+    const mobilePlan = await provider.createPlan({
+      question: "모바일만 자세히 분석해줘.",
+      currentContext: initialContext,
+    });
+    const mobileContext = mergeAnalysisContext(initialContext, mobilePlan);
+    const previousYearPlan = await provider.createPlan({
+      question: "작년 같은 기간과 비교해줘.",
+      currentContext: mobileContext,
+    });
+
+    expect(mobilePlan.contextPatch).toEqual({
+      filters: [{ dimension: "device", operator: "eq", values: ["mobile"] }],
+      focusDimension: "category",
+    });
+    expect(
+      mobilePlan.queries.every(
+        (query) =>
+          query.metric === "revenue" &&
+          query.period.preset === "thisMonth" &&
+          query.compareWith === "previousPeriod" &&
+          query.filters.some(
+            (filter) =>
+              filter.dimension === "device" && filter.values.includes("mobile"),
+          ),
+      ),
+    ).toBe(true);
+    expect(previousYearPlan.contextPatch).toEqual({
+      compareWith: "previousYear",
+    });
+    expect(
+      previousYearPlan.queries.every(
+        (query) =>
+          query.metric === "revenue" &&
+          query.period.preset === "thisMonth" &&
+          query.compareWith === "previousYear" &&
+          query.filters.some(
+            (filter) =>
+              filter.dimension === "device" && filter.values.includes("mobile"),
+          ),
+      ),
+    ).toBe(true);
   });
 });

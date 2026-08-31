@@ -24,4 +24,37 @@ describe("AnalyzeQuestionService", () => {
       ),
     ).toBe(true);
   });
+
+  it("preserves validated context through sequential follow-up analysis", async () => {
+    const service = new AnalyzeQuestionService();
+    const initial = await service.execute({
+      question: "이번 달 성과를 보여줘.",
+      requestId: "followup-initial-request",
+    });
+    const mobile = await service.execute({
+      question: "모바일만 자세히 분석해줘.",
+      requestId: "followup-mobile-request",
+      sessionId: initial.sessionId,
+      currentContext: initial.context,
+    });
+    const previousYear = await service.execute({
+      question: "작년 같은 기간과 비교해줘.",
+      requestId: "followup-previous-year-request",
+      sessionId: mobile.sessionId,
+      currentContext: mobile.context,
+    });
+
+    expect(mobile.context).toMatchObject({
+      primaryMetric: "revenue",
+      period: { preset: "thisMonth" },
+      compareWith: "previousPeriod",
+      filters: [{ dimension: "device", operator: "eq", values: ["mobile"] }],
+    });
+    expect(previousYear.context).toMatchObject({
+      primaryMetric: "revenue",
+      period: { preset: "thisMonth" },
+      compareWith: "previousYear",
+      filters: [{ dimension: "device", operator: "eq", values: ["mobile"] }],
+    });
+  });
 });

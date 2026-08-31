@@ -8,12 +8,14 @@ type DashboardShellProps = {
   dashboardId: string;
   dataRange: AnalyticsDataRange;
   question: string;
+  historyEntryId?: string;
 };
 
 export function DashboardShell({
   dashboardId,
   dataRange,
   question,
+  historyEntryId,
 }: DashboardShellProps) {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f6f7fb] px-5 py-10 sm:px-8 lg:py-14">
@@ -69,7 +71,12 @@ export function DashboardShell({
           </aside>
         </div>
 
-        <AnalysisDashboard dashboardId={dashboardId} question={question} />
+        <AnalysisDashboard
+          dashboardId={dashboardId}
+          historyEntryId={historyEntryId}
+          key={`${dashboardId}-${historyEntryId ?? "new"}`}
+          question={question}
+        />
       </div>
     </main>
   );

@@ -4,8 +4,8 @@ import { sanitizeDashboardSpec } from "@/lib/ai/dashboard-sanitizer";
 import { UnsupportedQuestionError } from "@/lib/ai/mock-provider";
 import type { AIProvider } from "@/lib/ai/provider";
 import {
+  mergeAnalysisContext,
   normalizeAnalysisPlan,
-  resolveInitialAnalysisContext,
 } from "@/lib/ai/schemas/analysis-plan";
 import { LocalAnalyticsRepository } from "@/lib/data/local-repository";
 import type { AnalyticsRepository } from "@/lib/data/repository";
@@ -53,6 +53,9 @@ export class AnalyzeQuestionService {
     try {
       rawPlan = await this.dependencies.provider.createPlan({
         question: request.question,
+        ...(request.currentContext
+          ? { currentContext: request.currentContext }
+          : {}),
       });
     } catch (error) {
       if (error instanceof UnsupportedQuestionError) {
@@ -69,7 +72,7 @@ export class AnalyzeQuestionService {
     }
 
     const plan = normalizeAnalysisPlan(rawPlan);
-    const context = resolveInitialAnalysisContext(plan);
+    const context = mergeAnalysisContext(request.currentContext, plan);
     const queryResults = await Promise.allSettled(
       plan.queries.map((query) => this.dependencies.repository.execute(query)),
     );

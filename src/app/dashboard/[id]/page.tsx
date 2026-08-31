@@ -4,7 +4,10 @@ import { LocalAnalyticsRepository } from "@/lib/data/local-repository";
 
 type DashboardPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ question?: string | string[] }>;
+  searchParams: Promise<{
+    question?: string | string[];
+    historyId?: string | string[];
+  }>;
 };
 
 function readQuestion(value: string | string[] | undefined) {
@@ -13,6 +16,14 @@ function readQuestion(value: string | string[] | undefined) {
   }
 
   return "지난달 매출이 왜 감소했어?";
+}
+
+function readHistoryEntryId(value: string | string[] | undefined) {
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.trim().slice(0, 160);
+  }
+
+  return undefined;
 }
 
 export default async function DashboardPage({
@@ -32,6 +43,7 @@ export default async function DashboardPage({
       <DashboardShell
         dashboardId={id}
         dataRange={dataRange}
+        historyEntryId={readHistoryEntryId(query.historyId)}
         question={readQuestion(query.question)}
       />
     </div>

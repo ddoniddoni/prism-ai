@@ -74,6 +74,13 @@ export function normalizeAnalysisPlan(input: unknown): AnalysisPlan {
 export function resolveInitialAnalysisContext(
   plan: AnalysisPlan,
 ): AnalysisContext {
+  return mergeAnalysisContext(undefined, plan);
+}
+
+export function mergeAnalysisContext(
+  currentContext: AnalysisContext | undefined,
+  plan: AnalysisPlan,
+): AnalysisContext {
   const primaryQuery = plan.queries[0];
 
   if (!primaryQuery) {
@@ -81,16 +88,27 @@ export function resolveInitialAnalysisContext(
   }
 
   return analysisContextSchema.parse({
-    primaryMetric: plan.contextPatch.primaryMetric ?? primaryQuery.metric,
-    period: plan.contextPatch.period ?? primaryQuery.period,
-    compareWith: plan.contextPatch.compareWith ?? primaryQuery.compareWith,
+    primaryMetric:
+      plan.contextPatch.primaryMetric ??
+      currentContext?.primaryMetric ??
+      primaryQuery.metric,
+    period:
+      plan.contextPatch.period ?? currentContext?.period ?? primaryQuery.period,
+    compareWith:
+      plan.contextPatch.compareWith ??
+      currentContext?.compareWith ??
+      primaryQuery.compareWith,
     filters: normalizeAnalyticsFilters(
-      plan.contextPatch.filters ?? primaryQuery.filters,
+      plan.contextPatch.filters ??
+        currentContext?.filters ??
+        primaryQuery.filters,
     ),
     ...(plan.contextPatch.focusDimension
       ? { focusDimension: plan.contextPatch.focusDimension }
-      : primaryQuery.groupBy
-        ? { focusDimension: primaryQuery.groupBy }
-        : {}),
+      : currentContext?.focusDimension
+        ? { focusDimension: currentContext.focusDimension }
+        : primaryQuery.groupBy
+          ? { focusDimension: primaryQuery.groupBy }
+          : {}),
   });
 }

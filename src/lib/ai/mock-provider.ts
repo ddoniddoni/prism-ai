@@ -6,6 +6,7 @@ import type {
   AnalyticsQuery,
   CompareMode,
 } from "@/lib/analytics/query-schema";
+import { normalizeAnalyticsFilters } from "@/lib/analytics/query-schema";
 import type { Finding } from "@/lib/analytics/findings";
 
 import type {
@@ -15,6 +16,8 @@ import type {
 } from "./provider";
 import {
   analysisPlanSchema,
+  type AnalysisContext,
+  type AnalysisContextPatch,
   type AnalysisIntent,
   type AnalysisPlan,
 } from "./schemas/analysis-plan";
@@ -215,6 +218,68 @@ function createQueries(definition: MockAnalysisDefinition): AnalyticsQuery[] {
   return queries;
 }
 
+function createInitialContextPatch(
+  definition: MockAnalysisDefinition,
+): AnalysisContextPatch {
+  return {
+    primaryMetric: definition.primaryMetric,
+    period: definition.period,
+    compareWith: definition.compareWith,
+    filters: definition.filters,
+    ...(definition.focusDimension
+      ? { focusDimension: definition.focusDimension }
+      : {}),
+  };
+}
+
+function createFollowUpContextPatch(
+  normalizedQuestion: string,
+): AnalysisContextPatch {
+  const patch: AnalysisContextPatch = {};
+
+  if (normalizedQuestion.includes("모바일")) {
+    patch.filters = [
+      { dimension: "device", operator: "eq", values: ["mobile"] },
+    ];
+    patch.focusDimension = "category";
+  }
+
+  if (
+    normalizedQuestion.includes("작년") &&
+    normalizedQuestion.includes("비교")
+  ) {
+    patch.compareWith = "previousYear";
+  }
+
+  return patch;
+}
+
+function applyContextPatch(
+  definition: MockAnalysisDefinition,
+  currentContext: AnalysisContext | undefined,
+  patch: AnalysisContextPatch,
+): MockAnalysisDefinition {
+  return {
+    ...definition,
+    primaryMetric:
+      patch.primaryMetric ??
+      currentContext?.primaryMetric ??
+      definition.primaryMetric,
+    period: patch.period ?? currentContext?.period ?? definition.period,
+    compareWith:
+      patch.compareWith ??
+      currentContext?.compareWith ??
+      definition.compareWith,
+    filters: normalizeAnalyticsFilters(
+      patch.filters ?? currentContext?.filters ?? definition.filters,
+    ),
+    focusDimension:
+      patch.focusDimension ??
+      currentContext?.focusDimension ??
+      definition.focusDimension,
+  };
+}
+
 function getInsightTone(
   finding: Finding,
 ): "neutral" | "positive" | "warning" | "critical" {
@@ -336,20 +401,20 @@ export class MockAIProvider implements AIProvider {
   async createPlan(input: PlannerInput): Promise<AnalysisPlan> {
     const normalizedQuestion = normalizeQuestion(input.question);
     const definition = resolveDefinition(normalizedQuestion);
+    const contextPatch = input.currentContext
+      ? createFollowUpContextPatch(normalizedQuestion)
+      : createInitialContextPatch(definition);
+    const effectiveDefinition = applyContextPatch(
+      definition,
+      input.currentContext,
+      contextPatch,
+    );
 
     return analysisPlanSchema.parse({
       intent: definition.intent,
       normalizedQuestion,
-      contextPatch: {
-        primaryMetric: definition.primaryMetric,
-        period: definition.period,
-        compareWith: definition.compareWith,
-        filters: definition.filters,
-        ...(definition.focusDimension
-          ? { focusDimension: definition.focusDimension }
-          : {}),
-      },
-      queries: createQueries(definition),
+      contextPatch,
+      queries: createQueries(effectiveDefinition),
       analysisGoal: definition.goal,
     });
   }

@@ -33,4 +33,25 @@ describe("POST /api/analyze", () => {
 
     expect(response.status).toBe(400);
   });
+
+  it("rejects an invalid follow-up context at the HTTP boundary", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: "모바일만 자세히 분석해줘.",
+          requestId: "invalid-context-request",
+          currentContext: {
+            primaryMetric: "profit",
+            period: { preset: "lastMonth" },
+            compareWith: "previousPeriod",
+            filters: [],
+          },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+  });
 });

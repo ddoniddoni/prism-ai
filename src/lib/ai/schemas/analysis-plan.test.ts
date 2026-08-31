@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   analysisPlanSchema,
+  mergeAnalysisContext,
   normalizeAnalysisPlan,
   resolveInitialAnalysisContext,
 } from "./analysis-plan";
@@ -55,5 +56,81 @@ describe("Analysis Plan schema", () => {
       analysisPlanSchema.safeParse({ ...validPlan, unsafeSql: "select *" })
         .success,
     ).toBe(false);
+  });
+
+  it("applies only a follow-up patch while retaining the current context", () => {
+    const currentContext = resolveInitialAnalysisContext(
+      normalizeAnalysisPlan(validPlan),
+    );
+    const mobilePlan = normalizeAnalysisPlan({
+      ...validPlan,
+      contextPatch: {
+        filters: [{ dimension: "device", operator: "eq", values: ["mobile"] }],
+        focusDimension: "category",
+      },
+      queries: [
+        {
+          ...validPlan.queries[0],
+          filters: [
+            { dimension: "device", operator: "eq", values: ["mobile"] },
+          ],
+          groupBy: "category",
+        },
+      ],
+    });
+
+    const mobileContext = mergeAnalysisContext(currentContext, mobilePlan);
+    const previousYearPlan = normalizeAnalysisPlan({
+      ...validPlan,
+      contextPatch: { compareWith: "previousYear" },
+      queries: [
+        {
+          ...validPlan.queries[0],
+          compareWith: "previousYear",
+          filters: mobileContext.filters,
+        },
+      ],
+    });
+
+    expect(mobileContext).toMatchObject({
+      primaryMetric: "revenue",
+      period: { preset: "thisMonth" },
+      compareWith: "previousPeriod",
+      focusDimension: "category",
+      filters: [{ dimension: "device", operator: "eq", values: ["mobile"] }],
+    });
+    expect(mergeAnalysisContext(mobileContext, previousYearPlan)).toMatchObject(
+      {
+        primaryMetric: "revenue",
+        period: { preset: "thisMonth" },
+        compareWith: "previousYear",
+        focusDimension: "category",
+        filters: [{ dimension: "device", operator: "eq", values: ["mobile"] }],
+      },
+    );
+
+    const replacementPlan = normalizeAnalysisPlan({
+      ...validPlan,
+      contextPatch: {
+        filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+      },
+      queries: [
+        {
+          ...validPlan.queries[0],
+          filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+        },
+      ],
+    });
+    const removalPlan = normalizeAnalysisPlan({
+      ...validPlan,
+      contextPatch: { filters: [] },
+    });
+
+    expect(
+      mergeAnalysisContext(mobileContext, replacementPlan).filters,
+    ).toEqual([{ dimension: "region", operator: "eq", values: ["Seoul"] }]);
+    expect(mergeAnalysisContext(mobileContext, removalPlan).filters).toEqual(
+      [],
+    );
   });
 });

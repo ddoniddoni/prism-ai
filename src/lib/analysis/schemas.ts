@@ -14,6 +14,7 @@ export const analyzeRequestSchema = z
     requestId: z.string().trim().min(8).max(120),
     sessionId: z.string().trim().min(1).max(120).optional(),
     dashboardId: z.string().trim().min(1).max(120).optional(),
+    currentContext: analysisContextSchema.optional(),
   })
   .strict();
 

@@ -2,7 +2,7 @@
 
 ## 현재 Phase
 
-Phase 3: Mock AI와 Dynamic Dashboard
+Phase 4: Follow-up Context와 History
 
 ## 상태
 
@@ -32,6 +32,13 @@ Phase 3: Mock AI와 Dynamic Dashboard
 - `AnalyzeQuestionService`가 Planner, Local Repository, Finding, Composer를 조율하고 `POST /api/analyze`가 안전한 HTTP Boundary를 제공하도록 구현했다.
 - Dashboard Route가 Client에서 검증된 API Response를 요청하고, Component Registry가 Metric, SVG Time Series, Segment Bar, Table, Insight Widget을 렌더링하도록 연결했다.
 - API, Service, Mock Provider, Schema, Sanitizer Test와 새 Dynamic Dashboard E2E 기대값을 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- `currentContext`를 Analyze API 입력으로 다시 Zod 검증하고, Provider가 낸 `contextPatch`의 명시된 필드만 병합하도록 구현했다.
+- Follow-up에서 `filters` Patch는 교체하며 빈 배열은 제거로 처리하고, Patch에 없는 기간·지표·비교 조건·필터는 현재 Context를 유지한다.
+- Mock Provider가 `모바일만 자세히 분석해줘`와 `작년 같은 기간과 비교해줘`를 순차 Context Patch로 처리하도록 구현했다.
+- Dashboard에 Follow-up Prompt를 추가했고, 요청 중이나 Recoverable Error 중에도 직전의 검증된 Dashboard를 유지한다.
+- 검증된 전체 Analysis Response를 브라우저 Local Storage v1에 최근 20개까지 저장하고, Zod 검증을 통과한 기록만 History에서 다시 연다.
+- Local Storage는 `useSyncExternalStore` 경계로 구독해 Server Shell을 유지하면서 브라우저 저장소 변경을 반영한다.
+- Context 병합·Filter 교체/제거, Mock Follow-up, Service 순차 Follow-up, Local History 검증/20개 제한, Follow-up과 History 재열기 E2E 시나리오를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
@@ -53,6 +60,10 @@ Phase 3: Mock AI와 Dynamic Dashboard
 | 2026-08-31 | 이상치 탐지는 7개 선행 관측치와 \|z\| ≥ 2.5의 Rolling Z-score를 사용 | 고정 Seed Data에서 외부 모델 없이 재현 가능한 기준을 제공하기 위함 |
 | 2026-08-31 | Phase 3 Chart는 새 Production Dependency 대신 검증된 Dataset을 그리는 경량 SVG와 접근 가능한 Table 대체 보기를 사용 | 현재 Widget 범위에서 Client Bundle과 의존성을 늘리지 않고도 Chart 근거를 제공하기 위함 |
 | 2026-08-31 | Dashboard Client는 API Response도 Zod로 다시 검증 | Network Boundary 이후의 잘못된 Payload가 UI Renderer까지 도달하지 않게 하기 위함 |
+| 2026-08-31 | Follow-up은 현재 검증 Context와 명시적 Patch만 사용 | 언급하지 않은 분석 조건을 유지하고 LLM이 임의로 상태를 재설정하지 못하게 하기 위함 |
+| 2026-08-31 | `filters` Patch는 교체, 빈 배열은 제거로 해석 | 같은 Dimension의 상충 Filter가 AND 조건으로 결합되는 것을 막고 명시적 변경을 정확히 반영하기 위함 |
+| 2026-08-31 | Local History는 Zod-검증된 전체 Analysis Response를 Storage v1에 최대 20개 저장 | 재열기에서 API나 LLM을 다시 호출하지 않고 당시의 검증된 결과만 표시하기 위함 |
+| 2026-08-31 | Browser Storage는 `useSyncExternalStore`로 읽기 | Server Render와 Hydration을 보존하고 Effect 안의 동기 State 복사를 피하기 위함 |
 
 ## 검증 결과
 
@@ -76,14 +87,19 @@ Phase 3: Mock AI와 Dynamic Dashboard
 - `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 4)
+- `npm run typecheck`: 통과 (Phase 4)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 ## 알려진 제한 사항
 
-- 첫 질문은 동적 Dashboard로 렌더링하지만 Follow-up Context 병합과 Local Storage History는 다음 Phase에서 구현한다.
 - MockAIProvider만 구현했으며 Gemini Live Provider, Cache, Rate Limit, Partial Query 복구 정책은 이후 Phase에서 확장한다.
 - Gemini와 Supabase는 `.env.example`에 설정 항목만 두었으며 아직 연동하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.
 
 ## 다음 권장 작업
 
-`docs/IMPLEMENTATION_PLAN.md`의 Phase 4를 진행해 Follow-up Context Patch, 기존 결과 유지, Local Storage History와 Dashboard 재열기를 구현한다.
+`docs/IMPLEMENTATION_PLAN.md`의 Phase 5를 진행해 Gemini Provider의 Structured Output, 검증, Timeout과 안전한 Mock Fallback을 구현한다.
