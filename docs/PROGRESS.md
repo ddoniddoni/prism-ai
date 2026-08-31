@@ -6,7 +6,7 @@ Phase 8: Portfolio 완성
 
 ## 상태
 
-Phase 7 Dashboard Editing 구현 완료 · Phase 8 진행 전 · 테스트 실행 보류
+Phase 8 접근성·반응형 1차 보완 완료 · Portfolio 문서와 성능 측정 진행 전 · 테스트 실행 보류
 
 ## 완료
 
@@ -68,10 +68,15 @@ Phase 7 Dashboard Editing 구현 완료 · Phase 8 진행 전 · 테스트 실�
 - 후속 분석은 같은 Widget ID의 사용자 편집을 보존하고, 새 Widget은 아래에 추가하며, 서버에서 제거되거나 Family가 바뀐 Widget의 오래된 편집은 버리는 명시적 Reconcile Policy를 사용한다.
 - 분석 API 응답과 요청 상태는 TanStack Query가 소유하고, Zustand는 사용자 편집 상태만 소유하도록 Client State 경계를 정리했다.
 - 편집 상태 Model Unit Test와 편집·복구·새로고침 보존 E2E 시나리오를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- 모든 Workspace 화면에 본문 건너뛰기 Link, 일관된 `:focus-visible`, Heading Anchor Scroll Margin, Mobile Touch Target, Reduced Motion Fallback을 적용했다.
+- Home·Follow-up Form에 `name`·`autocomplete`·Enter Key Hint를 추가하고, 유효성 오류가 발생하면 해당 입력칸에 다시 Focus하도록 보완했다.
+- 차트에 Screen Reader용 계산 요약과 Table Caption을 추가하고, 증감률은 색상뿐 아니라 상승·하락·변화 없음 텍스트를 함께 표시한다.
+- Dashboard Editor 조작과 History 검색 결과를 Live Region으로 알리고, History 삭제는 8초 실행 취소 창을 제공하도록 바꿨다.
+- 접근성 보완에 대한 Formatter·History Storage Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
-- Phase 8 Portfolio 완성은 아직 시작하지 않았다.
+- Phase 8의 Accessibility·Responsive 1차 보완을 마쳤다. Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
 
 ## 결정 사항
 
@@ -106,6 +111,8 @@ Phase 7 Dashboard Editing 구현 완료 · Phase 8 진행 전 · 테스트 실�
 | 2026-09-01 | Server Analysis State는 TanStack Query, 사용자 Dashboard 편집은 Zustand가 소유 | API 응답과 Local UI Override를 분리해 후속 분석 실패 중에도 성공 Dashboard와 사용자 Layout을 독립적으로 보존하기 위함 |
 | 2026-09-01 | Editor Persistence는 Widget ID 기반 최소 Override와 명시적 Reconcile Policy를 사용 | AI가 후속 Widget을 다시 구성해도 같은 Widget의 편집은 유지하고 오래되거나 호환되지 않는 편집만 안전하게 제거하기 위함 |
 | 2026-09-01 | Dashboard Grid는 `react-grid-layout` 2.2.4를 동적 로드 | Drag·Resize와 반응형 Layout을 직접 재구현하지 않고 Editor Bundle을 분석 완료 전 경로에서 분리하기 위함 |
+| 2026-09-01 | 삭제 작업은 가능한 경우 즉시 영구 제거 대신 Undo Window를 제공 | Local History와 Dashboard Widget 삭제가 실수로 발생해도 사용자가 같은 흐름 안에서 복구할 수 있게 하기 위함 |
+| 2026-09-01 | 차트의 시각 상태는 텍스트 요약·표·상승/하락 문구로 중복 전달 | 색상, SVG만 읽을 수 없는 환경에서도 결정론적 Dataset 근거와 변화 방향을 이해할 수 있게 하기 위함 |
 
 ## 검증 결과
 
@@ -128,6 +135,13 @@ Phase 7 Dashboard Editing 구현 완료 · Phase 8 진행 전 · 테스트 실�
 - `npm run build`: 통과 (Phase 7 Dashboard Editing, Next.js Webpack production build)
 - 변경 파일 대상 `prettier --check`: 통과 (Phase 7 Dashboard Editing)
 - `npm run format:check`: 미통과 (이번 변경과 무관한 기존 `src/lib/data/supabase-repository.test.ts` 포맷 불일치 1건)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 Accessibility·Responsive)
+- `npm run typecheck`: 통과 (Phase 8 Accessibility·Responsive)
+- `npm run build`: 통과 (Phase 8 Accessibility·Responsive, Next.js Webpack production build)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)

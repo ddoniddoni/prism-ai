@@ -2,10 +2,11 @@
 
 import { ArrowUpRight, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   removeAnalysisHistoryEntry,
+  saveAnalysisHistory,
   type AnalysisHistoryEntry,
 } from "@/lib/history/local-analysis-history";
 
@@ -93,7 +94,7 @@ function EmptyHistory({ filtered }: { filtered: boolean }) {
       </p>
       {!filtered ? (
         <Link
-          className="mt-6 inline-flex h-9 items-center rounded-lg bg-[#4f46e5] px-4 text-[13px] font-semibold text-white hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+          className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-[#4f46e5] px-4 text-[13px] font-semibold text-white hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
           href="/"
         >
           새 분석 시작
@@ -154,10 +155,53 @@ export function HistoryList() {
   const { entries, isReady } = useLocalAnalysisHistory();
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<HistoryMode>("all");
+  const [lastRemovedEntry, setLastRemovedEntry] =
+    useState<AnalysisHistoryEntry | null>(null);
+  const [historyStatus, setHistoryStatus] = useState("");
+  const undoTimeoutId = useRef<number | null>(null);
 
-  function handleRemove(id: string) {
-    removeAnalysisHistoryEntry(window.localStorage, id);
+  useEffect(
+    () => () => {
+      if (undoTimeoutId.current !== null) {
+        window.clearTimeout(undoTimeoutId.current);
+      }
+    },
+    [],
+  );
+
+  function clearUndoTimeout() {
+    if (undoTimeoutId.current === null) {
+      return;
+    }
+
+    window.clearTimeout(undoTimeoutId.current);
+    undoTimeoutId.current = null;
+  }
+
+  function handleRemove(entry: AnalysisHistoryEntry) {
+    clearUndoTimeout();
+    removeAnalysisHistoryEntry(window.localStorage, entry.id);
     notifyLocalAnalysisHistoryChange();
+    setLastRemovedEntry(entry);
+    setHistoryStatus(`${entry.response.dashboard.title} 기록을 삭제했습니다.`);
+    undoTimeoutId.current = window.setTimeout(() => {
+      setLastRemovedEntry(null);
+      undoTimeoutId.current = null;
+    }, 8000);
+  }
+
+  function restoreLastRemovedEntry() {
+    if (!lastRemovedEntry) {
+      return;
+    }
+
+    clearUndoTimeout();
+    saveAnalysisHistory(window.localStorage, lastRemovedEntry);
+    notifyLocalAnalysisHistoryChange();
+    setHistoryStatus(
+      `${lastRemovedEntry.response.dashboard.title} 기록을 복원했습니다.`,
+    );
+    setLastRemovedEntry(null);
   }
 
   if (!isReady) {
@@ -183,6 +227,23 @@ export function HistoryList() {
 
   return (
     <section aria-label="저장된 분석 기록" className="mt-8">
+      <p aria-live="polite" className="sr-only" role="status">
+        {historyStatus}
+      </p>
+      {lastRemovedEntry ? (
+        <div className="mb-3 flex flex-col gap-2 rounded-lg border border-[#c3c0ff] bg-[#eef2ff] px-4 py-3 text-[12px] text-[#3525cd] sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {lastRemovedEntry.response.dashboard.title} 기록을 삭제했습니다.
+          </p>
+          <button
+            className="min-h-11 self-start rounded-md border border-[#a8a3ff] bg-white px-3 text-[12px] font-semibold text-[#3525cd] hover:bg-[#f8f9fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] sm:self-auto"
+            onClick={restoreLastRemovedEntry}
+            type="button"
+          >
+            실행 취소
+          </button>
+        </div>
+      ) : null}
       <div className="overflow-hidden rounded-lg border border-[#dde2e8] bg-white">
         <div className="flex flex-col gap-3 border-b border-[#dde2e8] bg-[#f8f9fb] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <label className="relative block w-full sm:max-w-72">
@@ -192,9 +253,11 @@ export function HistoryList() {
               className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#777587]"
             />
             <input
-              className="h-9 w-full rounded border border-[#dde2e8] bg-white pr-3 pl-9 text-[13px] text-[#191c1e] outline-none placeholder:text-[#9296a0] focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10"
+              autoComplete="off"
+              className="h-11 w-full rounded border border-[#dde2e8] bg-white pr-3 pl-9 text-[13px] text-[#191c1e] outline-none placeholder:text-[#9296a0] focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10"
+              name="history-search"
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search history..."
+              placeholder="Search history…"
               type="search"
               value={query}
             />
@@ -202,7 +265,8 @@ export function HistoryList() {
           <label className="flex items-center gap-2 text-[12px] font-medium text-[#595e6b]">
             <span>Mode</span>
             <select
-              className="h-9 rounded border border-[#dde2e8] bg-white px-3 text-[13px] text-[#191c1e] outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10"
+              className="h-11 rounded border border-[#dde2e8] bg-white px-3 text-[13px] text-[#191c1e] outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10"
+              name="history-mode"
               onChange={(event) => setMode(event.target.value as HistoryMode)}
               value={mode}
             >
@@ -220,6 +284,7 @@ export function HistoryList() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] border-collapse text-left">
+              <caption className="sr-only">저장된 분석 기록</caption>
               <thead>
                 <tr className="border-b border-[#dde2e8] bg-[#f2f4f6] text-[10px] font-semibold tracking-[0.09em] text-[#595e6b] uppercase">
                   <th className="w-5/12 px-6 py-3 font-semibold">
@@ -274,8 +339,8 @@ export function HistoryList() {
                           <ModeBadge entry={entry} />
                           <button
                             aria-label={`${entry.question} 기록 삭제`}
-                            className="grid size-8 place-items-center rounded text-[#9296a0] hover:bg-[#ffdad6] hover:text-[#ba1a1a] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#4f46e5]"
-                            onClick={() => handleRemove(entry.id)}
+                            className="grid size-11 place-items-center rounded text-[#9296a0] hover:bg-[#ffdad6] hover:text-[#ba1a1a] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#4f46e5]"
+                            onClick={() => handleRemove(entry)}
                             type="button"
                           >
                             <Trash2 aria-hidden="true" className="size-3.5" />
@@ -290,7 +355,10 @@ export function HistoryList() {
           </div>
         )}
 
-        <div className="border-t border-[#dde2e8] bg-[#f8f9fb] px-6 py-3 text-[11px] text-[#595e6b]">
+        <div
+          aria-live="polite"
+          className="border-t border-[#dde2e8] bg-[#f8f9fb] px-6 py-3 text-[11px] text-[#595e6b]"
+        >
           {visibleEntries.length} of {entries.length} analyses
         </div>
       </div>

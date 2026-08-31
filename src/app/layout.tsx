@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { QueryProvider } from "@/providers/query-provider";
 import "react-grid-layout/css/styles.css";
@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   title: "Prism AI | Ask your data. Build your dashboard.",
   description:
     "A generative analytics workspace built on deterministic data analysis.",
+};
+
+export const viewport: Viewport = {
+  colorScheme: "light",
+  themeColor: "#f8f9fb",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

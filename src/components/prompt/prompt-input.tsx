@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 import { ArrowUpRight, DatabaseZap } from "lucide-react";
 
 const MINIMUM_QUESTION_LENGTH = 2;
@@ -16,6 +16,7 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
   const [question, setQuestion] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const questionInputRef = useRef<HTMLTextAreaElement>(null);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,11 +25,13 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
 
     if (normalizedQuestion.length < MINIMUM_QUESTION_LENGTH) {
       setError("분석할 질문을 두 글자 이상 입력해 주세요.");
+      questionInputRef.current?.focus();
       return;
     }
 
     if (normalizedQuestion.length > MAXIMUM_QUESTION_LENGTH) {
       setError("질문은 300자 이내로 입력해 주세요.");
+      questionInputRef.current?.focus();
       return;
     }
 
@@ -47,7 +50,7 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
 
   return (
     <div>
-      <form aria-describedby="prompt-description" onSubmit={handleSubmit}>
+      <form aria-busy={isPending} onSubmit={handleSubmit}>
         <label className="sr-only" htmlFor="analysis-question">
           분석할 질문
         </label>
@@ -61,27 +64,33 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
             className="size-5 shrink-0 text-[#777587]"
           />
           <textarea
-            aria-invalid={error ? true : undefined}
-            aria-errormessage={error ? "question-error" : undefined}
+            autoComplete="off"
+            aria-describedby={
+              error ? "prompt-description question-error" : "prompt-description"
+            }
+            aria-invalid={Boolean(error)}
             className="max-h-32 min-h-[70px] w-full resize-none bg-transparent py-5 text-[15px] leading-7 text-[#191c1e] outline-none placeholder:text-[#9296a0]"
+            enterKeyHint="send"
             id="analysis-question"
             maxLength={MAXIMUM_QUESTION_LENGTH}
+            name="question"
             onChange={(event) => setQuestion(event.target.value)}
-            placeholder="예: 지난달 매출이 감소한 이유를 분석해줘"
+            placeholder="예: 지난달 매출이 감소한 이유를 분석해줘…"
+            ref={questionInputRef}
             value={question}
           />
           <button
             aria-label={isPending ? "분석 화면을 여는 중" : "분석 시작하기"}
-            className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#4f46e5] text-white transition-colors duration-100 hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] disabled:cursor-wait disabled:opacity-60"
+            className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#4f46e5] text-white transition-colors duration-100 hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] disabled:cursor-wait disabled:opacity-60"
             disabled={isPending}
             type="submit"
           >
             <ArrowUpRight aria-hidden="true" className="size-[18px]" />
           </button>
         </div>
-        <span className="sr-only" aria-live="polite">
-          {isPending ? "대시보드 셸을 여는 중" : `${question.length}자 입력됨`}
-        </span>
+        <p aria-live="polite" className="sr-only" role="status">
+          {isPending ? "대시보드 셸을 여는 중" : ""}
+        </p>
         {error ? (
           <p
             className="mt-2 text-sm font-medium text-rose-700"
@@ -100,7 +109,7 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
         <div className="flex flex-wrap justify-center gap-2">
           {recommendedQuestions.map((recommendedQuestion) => (
             <button
-              className="rounded border border-[#dde2e8] bg-white px-3 py-1.5 text-left text-[12px] text-[#595e6b] transition-colors duration-100 hover:border-[#c3c0ff] hover:bg-[#f2f4f6] hover:text-[#3525cd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+              className="min-h-11 rounded border border-[#dde2e8] bg-white px-3 py-1.5 text-left text-[12px] text-[#595e6b] transition-colors duration-100 hover:border-[#c3c0ff] hover:bg-[#f2f4f6] hover:text-[#3525cd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
               key={recommendedQuestion}
               onClick={() => chooseQuestion(recommendedQuestion)}
               type="button"

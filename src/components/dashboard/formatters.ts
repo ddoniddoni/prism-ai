@@ -46,6 +46,18 @@ export function formatChange(value: number | null | undefined): string {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 }
 
+export function formatChangeWithDirection(
+  value: number | null | undefined,
+): string {
+  if (value === null || value === undefined) {
+    return formatChange(value);
+  }
+
+  const direction = value > 0 ? "상승" : value < 0 ? "하락" : "변화 없음";
+
+  return `${formatChange(value)} ${direction}`;
+}
+
 export function getComparisonLabel(compareWith: CompareMode): string {
   const labels: Record<CompareMode, string> = {
     none: "비교 없음",

@@ -91,9 +91,11 @@ function isEditableWidgetType(value: string): value is EditableWidgetType {
 
 function WidgetEditorControls({
   dashboardId,
+  onAction,
   widget,
 }: {
   dashboardId: string;
+  onAction: (message: string) => void;
   widget: DashboardWidget;
 }) {
   const compatibleTypes = getCompatibleWidgetTypes(widget);
@@ -102,6 +104,9 @@ function WidgetEditorControls({
     useDashboardEditorStore
       .getState()
       .moveWidget(dashboardId, widget.id, direction);
+    onAction(
+      `${widget.title}을 ${direction === "backward" ? "앞" : "뒤"} 순서로 이동했습니다.`,
+    );
   }
 
   function changeType(value: string) {
@@ -112,11 +117,15 @@ function WidgetEditorControls({
     useDashboardEditorStore
       .getState()
       .setWidgetType(dashboardId, widget.id, value);
+    onAction(
+      `${widget.title} 표시 형식을 ${widgetTypeLabels[value]}로 바꿨습니다.`,
+    );
   }
 
   return (
     <div
       aria-label={`${widget.title} 편집 도구`}
+      aria-describedby={`${widget.id}-editor-instructions`}
       className="flex flex-wrap items-center justify-end gap-1"
       role="group"
     >
@@ -158,22 +167,27 @@ function WidgetEditorControls({
       <button
         aria-label={`${widget.title} 삭제`}
         className="dashboard-control-button text-[#93000a]"
-        onClick={() =>
-          useDashboardEditorStore.getState().hideWidget(dashboardId, widget.id)
-        }
+        onClick={() => {
+          useDashboardEditorStore.getState().hideWidget(dashboardId, widget.id);
+          onAction(
+            `${widget.title}을 삭제했습니다. 실행 취소로 복원할 수 있습니다.`,
+          );
+        }}
         title="위젯 삭제"
         type="button"
       >
         <Trash2 aria-hidden="true" className="size-3.5" />
       </button>
-      <button
-        aria-label={`${widget.title} 드래그하여 이동`}
+      <span
+        aria-hidden="true"
         className="dashboard-control-button dashboard-drag-handle cursor-grab active:cursor-grabbing"
         title="드래그하여 이동"
-        type="button"
       >
         <GripVertical aria-hidden="true" className="size-3.5" />
-      </button>
+      </span>
+      <p className="sr-only" id={`${widget.id}-editor-instructions`}>
+        위젯은 드래그하거나 앞뒤 이동 버튼으로 순서를 바꿀 수 있습니다.
+      </p>
     </div>
   );
 }
@@ -181,10 +195,12 @@ function WidgetEditorControls({
 function EditorToolbar({
   dashboard,
   isEditing,
+  onAction,
   onEditingChange,
 }: {
   dashboard: DashboardSpec;
   isEditing: boolean;
+  onAction: (message: string) => void;
   onEditingChange: (isEditing: boolean) => void;
 }) {
   const document = useDashboardEditorStore(
@@ -210,9 +226,10 @@ function EditorToolbar({
               aria-label="대시보드 편집 실행 취소"
               className="dashboard-toolbar-button"
               disabled={!document || document.past.length === 0}
-              onClick={() =>
-                useDashboardEditorStore.getState().undo(dashboard.id)
-              }
+              onClick={() => {
+                useDashboardEditorStore.getState().undo(dashboard.id);
+                onAction("마지막 대시보드 편집을 실행 취소했습니다.");
+              }}
               type="button"
             >
               <Undo2 aria-hidden="true" className="size-3.5" />
@@ -222,9 +239,10 @@ function EditorToolbar({
               aria-label="대시보드 편집 다시 실행"
               className="dashboard-toolbar-button"
               disabled={!document || document.future.length === 0}
-              onClick={() =>
-                useDashboardEditorStore.getState().redo(dashboard.id)
-              }
+              onClick={() => {
+                useDashboardEditorStore.getState().redo(dashboard.id);
+                onAction("마지막 대시보드 편집을 다시 실행했습니다.");
+              }}
               type="button"
             >
               <Redo2 aria-hidden="true" className="size-3.5" />
@@ -232,11 +250,12 @@ function EditorToolbar({
             </button>
             <button
               className="dashboard-toolbar-button"
-              onClick={() =>
+              onClick={() => {
                 useDashboardEditorStore
                   .getState()
-                  .resetDashboard(dashboard.id, dashboard.widgets)
-              }
+                  .resetDashboard(dashboard.id, dashboard.widgets);
+                onAction("대시보드 레이아웃을 기본값으로 초기화했습니다.");
+              }}
               type="button"
             >
               <RotateCcw aria-hidden="true" className="size-3.5" />
@@ -245,8 +264,15 @@ function EditorToolbar({
           </>
         ) : null}
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4f46e5] px-3.5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
-          onClick={() => onEditingChange(!isEditing)}
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#4f46e5] px-3.5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+          onClick={() => {
+            onEditingChange(!isEditing);
+            onAction(
+              isEditing
+                ? "대시보드 편집을 마쳤습니다."
+                : "대시보드 편집을 시작했습니다.",
+            );
+          }}
           type="button"
         >
           {isEditing ? (
@@ -267,6 +293,7 @@ export function DashboardEditor({
   findings,
 }: DashboardEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [editorStatus, setEditorStatus] = useState("");
   const currentBreakpoint = useRef<EditorBreakpoint>("lg");
   const { width, containerRef, mounted } = useContainerWidth({
     measureBeforeMount: true,
@@ -356,8 +383,12 @@ export function DashboardEditor({
       <EditorToolbar
         dashboard={dashboard}
         isEditing={isEditing}
+        onAction={setEditorStatus}
         onEditingChange={setIsEditing}
       />
+      <p aria-live="polite" className="sr-only" role="status">
+        {editorStatus}
+      </p>
 
       <div className="dashboard-grid-container" ref={containerRef}>
         {!hasHydrated || !mounted ? (
@@ -402,6 +433,7 @@ export function DashboardEditor({
                     isEditing ? (
                       <WidgetEditorControls
                         dashboardId={dashboard.id}
+                        onAction={setEditorStatus}
                         widget={widget}
                       />
                     ) : undefined

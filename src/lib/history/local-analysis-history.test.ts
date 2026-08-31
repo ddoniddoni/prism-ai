@@ -8,6 +8,7 @@ import {
   createAnalysisHistoryEntry,
   findAnalysisHistoryEntry,
   readAnalysisHistory,
+  removeAnalysisHistoryEntry,
   saveAnalysisHistory,
   type LocalStorageLike,
 } from "./local-analysis-history";
@@ -73,5 +74,20 @@ describe("local analysis history", () => {
     expect(history).toHaveLength(ANALYSIS_HISTORY_LIMIT);
     expect(history[0]?.id).toBe(`analysis-history-${ANALYSIS_HISTORY_LIMIT}`);
     expect(history.at(-1)?.id).toBe("analysis-history-1");
+  });
+
+  it("can restore an entry after a reversible removal", async () => {
+    const storage = new MemoryStorage();
+    const response = await createResponse();
+    const entry = createAnalysisHistoryEntry(
+      response.plan.normalizedQuestion,
+      response,
+    );
+
+    saveAnalysisHistory(storage, entry);
+    removeAnalysisHistoryEntry(storage, entry.id);
+    saveAnalysisHistory(storage, entry);
+
+    expect(findAnalysisHistoryEntry(storage, entry.id)).toEqual(entry);
   });
 });

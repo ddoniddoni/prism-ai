@@ -40,6 +40,12 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   return (
     <div className="min-h-screen bg-[#f8f9fb] text-[#191c1e]">
+      <a
+        className="sr-only fixed top-3 left-3 z-[60] rounded-md bg-[#191c1e] px-3 py-2 text-sm font-semibold text-white focus:not-sr-only focus:outline-2 focus:outline-offset-2 focus:outline-[#4f46e5]"
+        href="#main-content"
+      >
+        본문으로 건너뛰기
+      </a>
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-[232px] flex-col border-r border-white/8 bg-[#292c2f] md:flex">
         <div className="flex h-[88px] items-center gap-3 px-6">
           <span className="grid size-8 place-items-center rounded-full bg-white text-[#292c2f]">
@@ -133,13 +139,13 @@ export function WorkspaceShell({
           </kbd>
         </div>
 
-        <nav
+        <div
           aria-label="워크스페이스 보기"
           className="absolute inset-y-0 left-1/2 hidden -translate-x-1/2 items-center gap-6 xl:flex"
+          role="group"
         >
           {workspaceTabs.map((tab) => (
             <span
-              aria-current={tab.key === activeTab ? "page" : undefined}
               className={`flex h-full items-center border-b-2 pt-0.5 text-[11px] font-semibold tracking-[0.08em] uppercase ${
                 tab.key === activeTab
                   ? "border-[#4f46e5] text-[#3525cd]"
@@ -148,14 +154,17 @@ export function WorkspaceShell({
               key={tab.key}
             >
               {tab.label}
+              {tab.key === activeTab ? (
+                <span className="sr-only"> 현재 보기</span>
+              ) : null}
             </span>
           ))}
-        </nav>
+        </div>
 
         <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
           <Link
             aria-label="분석 기록"
-            className="grid size-9 place-items-center rounded-lg text-[#777587] hover:bg-[#f2f4f6] hover:text-[#4f46e5] md:hidden"
+            className="grid size-11 place-items-center rounded-lg text-[#777587] hover:bg-[#f2f4f6] hover:text-[#4f46e5] md:hidden"
             href="/history"
           >
             <History aria-hidden="true" className="size-[18px]" />
@@ -169,7 +178,7 @@ export function WorkspaceShell({
             className="hidden size-[18px] text-[#777587] sm:block"
           />
           <Link
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#4f46e5] px-3.5 text-[13px] font-semibold text-white transition-colors duration-100 hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#4f46e5] px-3.5 text-[13px] font-semibold text-white transition-colors duration-100 hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
             href="/"
           >
             <Plus aria-hidden="true" className="size-4" />
@@ -179,7 +188,9 @@ export function WorkspaceShell({
         </div>
       </header>
 
-      <div className="pt-[60px] md:pl-[232px]">{children}</div>
+      <div id="main-content" className="pt-[60px] md:pl-[232px]">
+        {children}
+      </div>
     </div>
   );
 }

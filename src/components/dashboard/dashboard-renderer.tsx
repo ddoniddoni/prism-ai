@@ -10,7 +10,7 @@ import type {
 } from "@/lib/ai/schemas/dashboard-spec";
 
 import {
-  formatChange,
+  formatChangeWithDirection,
   formatMetricValue,
   getComparisonLabel,
 } from "./formatters";
@@ -58,12 +58,12 @@ function WidgetFrame({
       id={widget.id}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-[9px] font-semibold tracking-[0.11em] text-[#777587] uppercase">
             {widget.type}
           </p>
           <h2
-            className="mt-1.5 text-[15px] font-semibold tracking-[-0.02em] text-[#191c1e]"
+            className="mt-1.5 text-[15px] font-semibold tracking-[-0.02em] break-words text-[#191c1e]"
             id={`${widget.id}-title`}
           >
             {widget.title}
@@ -77,7 +77,7 @@ function WidgetFrame({
         </div>
       </div>
       {widget.description ? (
-        <p className="mt-2 text-[12px] leading-5 text-[#595e6b]">
+        <p className="mt-2 text-[12px] leading-5 break-words text-[#595e6b]">
           {widget.description}
         </p>
       ) : null}
@@ -111,7 +111,7 @@ function MetricWidget({
         <span
           className={`text-[12px] font-semibold ${change !== null && change < 0 ? "text-[#ba1a1a]" : "text-[#17835c]"}`}
         >
-          {formatChange(change)}
+          {formatChangeWithDirection(change)}
         </span>
       </div>
     </WidgetFrame>
@@ -142,11 +142,25 @@ function TimeSeriesWidget({
       return `${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(" ");
+  const summaryId = `${widget.id}-chart-summary`;
+  const firstPoint = values.at(0);
+  const lastPoint = values.at(-1);
+  const chartSummary =
+    firstPoint && lastPoint
+      ? `${widget.title}: ${firstPoint.label} ${formatMetricValue(
+          dataset?.metric ?? "revenue",
+          firstPoint.value,
+        )}에서 ${lastPoint.label} ${formatMetricValue(
+          dataset?.metric ?? "revenue",
+          lastPoint.value,
+        )}까지의 흐름입니다.`
+      : `${widget.title} 차트에 표시할 데이터가 없습니다.`;
 
   return (
     <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <div className="rounded-lg border border-[#eef0f2] bg-[#fbfcfd] px-3 py-3">
         <svg
+          aria-describedby={summaryId}
           aria-label={`${widget.title} 선 그래프`}
           className="h-40 w-full"
           role="img"
@@ -168,12 +182,16 @@ function TimeSeriesWidget({
           />
         </svg>
       </div>
+      <p className="sr-only" id={summaryId}>
+        {chartSummary}
+      </p>
       <details className="mt-4 border-t border-[#eef0f2] pt-3 text-[12px] text-[#595e6b]">
-        <summary className="cursor-pointer font-medium text-[#4f46e5]">
+        <summary className="cursor-pointer font-medium text-[#4f46e5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]">
           차트 데이터 표 보기
         </summary>
         <div className="mt-3 max-h-48 overflow-auto">
           <table className="w-full text-left text-xs">
+            <caption className="sr-only">{widget.title} 원본 데이터</caption>
             <thead className="text-[#777587]">
               <tr>
                 <th className="pb-2 font-medium">날짜</th>
@@ -243,7 +261,7 @@ function CategoryBarWidget({
               </div>
               {point.percentChange !== undefined ? (
                 <p className="mt-1 text-[10px] text-[#777587]">
-                  {formatChange(point.percentChange)} 비교 변화
+                  {formatChangeWithDirection(point.percentChange)} 비교 변화
                 </p>
               ) : null}
             </li>
@@ -305,12 +323,24 @@ function DonutWidget({
           )
           .join(", ")})`
       : "#eef0f2";
+  const chartSummary =
+    segments.length > 0
+      ? `${widget.title} 도넛 그래프. 총 ${formatMetricValue(
+          dataset?.metric ?? "revenue",
+          total,
+        )}. ${segments
+          .map(
+            (segment) =>
+              `${segment.point.label} ${segment.percentage.toFixed(1)}%`,
+          )
+          .join(", ")}.`
+      : `${widget.title} 차트에 표시할 데이터가 없습니다.`;
 
   return (
     <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <div className="grid items-center gap-5 sm:grid-cols-[minmax(8rem,0.8fr)_minmax(0,1.2fr)]">
         <div
-          aria-label={`${widget.title} 도넛 그래프`}
+          aria-label={chartSummary}
           className="relative mx-auto aspect-square w-full max-w-44 rounded-full"
           role="img"
           style={{ background }}
@@ -363,6 +393,7 @@ function TableWidget({
     <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-96 text-left text-[12px]">
+          <caption className="sr-only">{widget.title} 데이터 표</caption>
           <thead className="border-b border-[#dde2e8] text-[9px] tracking-[0.1em] text-[#777587] uppercase">
             <tr>
               {widget.type === "rankingTable" ? (
@@ -386,7 +417,7 @@ function TableWidget({
                   {formatMetricValue(dataset?.metric ?? "revenue", point.value)}
                 </td>
                 <td className="py-3 text-right text-[#595e6b]">
-                  {formatChange(point.percentChange)}
+                  {formatChangeWithDirection(point.percentChange)}
                 </td>
               </tr>
             ))}

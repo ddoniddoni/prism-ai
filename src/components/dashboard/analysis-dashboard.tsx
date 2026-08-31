@@ -125,12 +125,12 @@ function DashboardLoadingState() {
             aria-hidden="true"
             className="size-2.5 rounded-full bg-[#4f46e5] shadow-[0_0_0_5px_rgba(79,70,229,0.1)]"
           />
-          <h2
+          <h1
             className="text-xl font-semibold tracking-[-0.025em] text-[#191c1e]"
             id="analysis-loading-title"
           >
             분석 결과를 구성하고 있습니다
-          </h2>
+          </h1>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[12px] text-[#777587]">
           <span className="font-semibold text-[#4f46e5]">질문 이해</span>
@@ -312,14 +312,14 @@ export function AnalysisDashboard({
         <p className="text-[10px] font-semibold tracking-[0.12em] text-[#ba1a1a] uppercase">
           Recoverable analysis error
         </p>
-        <h2 className="mt-3 text-xl font-semibold text-[#191c1e]">
+        <h1 className="mt-3 text-xl font-semibold text-[#191c1e]">
           분석을 완성하지 못했습니다.
-        </h2>
+        </h1>
         <p className="mt-3 max-w-2xl text-[13px] leading-6 text-[#595e6b]">
           {errorMessage}
         </p>
         <button
-          className="mt-5 rounded-lg bg-[#4f46e5] px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+          className="mt-5 min-h-11 rounded-lg bg-[#4f46e5] px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
           onClick={retryAnalysis}
           type="button"
         >
@@ -369,7 +369,7 @@ export function AnalysisDashboard({
         >
           <p className="text-[13px] leading-6 text-[#93000a]">{errorMessage}</p>
           <button
-            className="mt-3 text-[13px] font-semibold text-[#93000a] underline decoration-[#f0b8b4] underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+            className="mt-3 inline-flex min-h-11 items-center text-[13px] font-semibold text-[#93000a] underline decoration-[#f0b8b4] underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
             onClick={retryAnalysis}
             type="button"
           >

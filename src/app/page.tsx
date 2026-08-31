@@ -69,7 +69,7 @@ export default async function Home() {
                 </h2>
               </div>
               <Link
-                className="text-[13px] font-medium text-[#4f46e5] hover:text-[#3525cd]"
+                className="inline-flex min-h-11 items-center text-[13px] font-medium text-[#4f46e5] hover:text-[#3525cd]"
                 href="/history"
               >
                 전체 기록 보기
