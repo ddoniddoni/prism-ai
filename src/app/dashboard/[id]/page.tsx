@@ -30,6 +30,7 @@ export default async function DashboardPage({
     >
       <SiteHeader />
       <DashboardShell
+        dashboardId={id}
         dataRange={dataRange}
         question={readQuestion(query.question)}
       />

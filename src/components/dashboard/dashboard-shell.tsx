@@ -1,15 +1,20 @@
 import Link from "next/link";
 
-import { AnalysisStatus } from "@/components/status/analysis-status";
+import { AnalysisDashboard } from "@/components/dashboard/analysis-dashboard";
 import { formatDataRange } from "@/lib/data/date-range";
 import type { AnalyticsDataRange } from "@/lib/data/repository";
 
 type DashboardShellProps = {
+  dashboardId: string;
   dataRange: AnalyticsDataRange;
   question: string;
 };
 
-export function DashboardShell({ dataRange, question }: DashboardShellProps) {
+export function DashboardShell({
+  dashboardId,
+  dataRange,
+  question,
+}: DashboardShellProps) {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f6f7fb] px-5 py-10 sm:px-8 lg:py-14">
       <div className="mx-auto w-full max-w-7xl">
@@ -23,14 +28,14 @@ export function DashboardShell({ dataRange, question }: DashboardShellProps) {
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
           <section>
             <p className="font-mono text-[11px] font-semibold tracking-[0.16em] text-[#6657dd] uppercase">
-              Mock dashboard route
+              Mock analysis route
             </p>
             <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-[-0.055em] text-[#151a2d] sm:text-5xl">
-              분석 작업대를 준비했습니다.
+              질문을 검증된 분석으로 연결합니다.
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-              지금은 Product Shell 단계입니다. 다음 Phase에서 이 질문을 검증된
-              분석 계획과 실제 위젯으로 연결합니다.
+              Mock Planner는 허용된 Query만 선택하고, 화면에 표시되는 수치는
+              Local Dataset에서 결정론적으로 계산합니다.
             </p>
 
             <section
@@ -49,8 +54,7 @@ export function DashboardShell({ dataRange, question }: DashboardShellProps) {
             </section>
           </section>
 
-          <aside className="space-y-4" aria-label="분석 준비 상태">
-            <AnalysisStatus stage="planning" />
+          <aside className="space-y-4" aria-label="분석 데이터 정보">
             <section className="border border-slate-900/10 bg-[#151a2d] p-5 text-white">
               <p className="font-mono text-[10px] font-semibold tracking-[0.15em] text-[#a9a0ff] uppercase">
                 Dataset window
@@ -65,44 +69,7 @@ export function DashboardShell({ dataRange, question }: DashboardShellProps) {
           </aside>
         </div>
 
-        <section
-          aria-labelledby="next-up-title"
-          className="mt-12 border-t border-slate-900/10 pt-6"
-        >
-          <p
-            className="font-mono text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase"
-            id="next-up-title"
-          >
-            Connected in later phases
-          </p>
-          <ol className="mt-4 grid gap-px overflow-hidden border border-slate-900/10 bg-slate-900/10 sm:grid-cols-3">
-            <li className="bg-[#f6f7fb] p-5">
-              <p className="font-mono text-xs text-[#6657dd]">01</p>
-              <p className="mt-4 font-semibold text-[#151a2d]">Query DSL</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                허용된 지표와 차원으로 질문을 해석합니다.
-              </p>
-            </li>
-            <li className="bg-[#f6f7fb] p-5">
-              <p className="font-mono text-xs text-[#6657dd]">02</p>
-              <p className="mt-4 font-semibold text-[#151a2d]">
-                Deterministic findings
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                실제 데이터에서 변화와 근거를 계산합니다.
-              </p>
-            </li>
-            <li className="bg-[#f6f7fb] p-5">
-              <p className="font-mono text-xs text-[#6657dd]">03</p>
-              <p className="mt-4 font-semibold text-[#151a2d]">
-                Dashboard registry
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                검증된 참조만으로 결과를 렌더링합니다.
-              </p>
-            </li>
-          </ol>
-        </section>
+        <AnalysisDashboard dashboardId={dashboardId} question={question} />
       </div>
     </main>
   );

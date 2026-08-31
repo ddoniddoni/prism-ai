@@ -2,7 +2,7 @@
 
 ## 현재 Phase
 
-Phase 2: Analytics Engine
+Phase 3: Mock AI와 Dynamic Dashboard
 
 ## 상태
 
@@ -26,6 +26,12 @@ Phase 2: Analytics Engine
 - 증감률, 기여도, 순위, 7개 선행 관측치 기준 Rolling Z-score 이상치 탐지와 Evidence 기반 Finding 생성을 구현했다.
 - `LocalAnalyticsRepository.execute()`가 순수 Analytics Engine으로 Local Dataset Query를 실행하도록 연결했다.
 - Query DSL, 기간, 통계, Query Engine, Finding에 대한 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- `AIProvider` Interface와 7개 지원 질문을 처리하는 `MockAIProvider`를 추가했다. Mock은 Query와 Widget 구조만 선택하며 Business Value를 만들지 않는다.
+- Analysis Plan, Analysis Context, DashboardSpec, API Request/Response의 Zod Schema를 추가했다.
+- 존재하지 않는 Dataset/Finding 참조 Widget을 제거하고, 모두 제거되면 결정론적 Fallback Dashboard를 만드는 Semantic Sanitizer를 추가했다.
+- `AnalyzeQuestionService`가 Planner, Local Repository, Finding, Composer를 조율하고 `POST /api/analyze`가 안전한 HTTP Boundary를 제공하도록 구현했다.
+- Dashboard Route가 Client에서 검증된 API Response를 요청하고, Component Registry가 Metric, SVG Time Series, Segment Bar, Table, Insight Widget을 렌더링하도록 연결했다.
+- API, Service, Mock Provider, Schema, Sanitizer Test와 새 Dynamic Dashboard E2E 기대값을 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
@@ -45,6 +51,8 @@ Phase 2: Analytics Engine
 | 2026-08-31 | Production Build는 Webpack을 사용 | 현재 Next.js 16.3.3 Turbopack Build가 실행 환경에서 포트 바인딩 오류로 중단되어, 공식 지원되는 Webpack 빌더로 안정적인 검증 경로를 유지하기 위함 |
 | 2026-08-31 | 고객 수는 Local Daily Aggregate의 `customers` 합계로 계산 | 현재 Synthetic Dataset에 Customer ID가 없어 기간 전체 Unique Customer 재계산은 불가능하며, 의미를 과장하지 않기 위함 |
 | 2026-08-31 | 이상치 탐지는 7개 선행 관측치와 \|z\| ≥ 2.5의 Rolling Z-score를 사용 | 고정 Seed Data에서 외부 모델 없이 재현 가능한 기준을 제공하기 위함 |
+| 2026-08-31 | Phase 3 Chart는 새 Production Dependency 대신 검증된 Dataset을 그리는 경량 SVG와 접근 가능한 Table 대체 보기를 사용 | 현재 Widget 범위에서 Client Bundle과 의존성을 늘리지 않고도 Chart 근거를 제공하기 위함 |
+| 2026-08-31 | Dashboard Client는 API Response도 Zod로 다시 검증 | Network Boundary 이후의 잘못된 Payload가 UI Renderer까지 도달하지 않게 하기 위함 |
 
 ## 검증 결과
 
@@ -62,14 +70,20 @@ Phase 2: Analytics Engine
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 3)
+- `npm run typecheck`: 통과 (Phase 3)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 ## 알려진 제한 사항
 
-- Dashboard와 History는 Product Shell이며 Analytics Engine 결과 렌더링과 Local Storage 저장은 다음 Phase에서 구현한다.
-- MockAIProvider, `POST /api/analyze`, Dynamic Dashboard Registry는 아직 구현하지 않았다.
+- 첫 질문은 동적 Dashboard로 렌더링하지만 Follow-up Context 병합과 Local Storage History는 다음 Phase에서 구현한다.
+- MockAIProvider만 구현했으며 Gemini Live Provider, Cache, Rate Limit, Partial Query 복구 정책은 이후 Phase에서 확장한다.
 - Gemini와 Supabase는 `.env.example`에 설정 항목만 두었으며 아직 연동하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.
 
 ## 다음 권장 작업
 
-`docs/IMPLEMENTATION_PLAN.md`의 Phase 3를 진행해 MockAIProvider, 안전한 Analysis Plan·Dashboard Schema, API Orchestrator와 Dynamic Dashboard Renderer를 구현한다.
+`docs/IMPLEMENTATION_PLAN.md`의 Phase 4를 진행해 Follow-up Context Patch, 기존 결과 유지, Local Storage History와 Dashboard 재열기를 구현한다.

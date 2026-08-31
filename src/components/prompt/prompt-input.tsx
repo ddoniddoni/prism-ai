@@ -57,7 +57,7 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
           className="mt-1 text-sm leading-6 text-slate-600"
           id="prompt-description"
         >
-          자연어로 질문하면 다음 단계에서 검증된 분석 계획과 대시보드로
+          자연어 질문을 허용된 분석 계획과 데이터 근거가 있는 대시보드로
           연결합니다.
         </p>
         <div className="mt-4 border border-slate-900/15 bg-white shadow-[0_20px_45px_-36px_rgba(21,26,45,0.7)] transition-shadow focus-within:border-[#6657dd]/55 focus-within:shadow-[0_20px_45px_-32px_rgba(102,87,221,0.5)]">
@@ -85,7 +85,7 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
               disabled={isPending}
               type="submit"
             >
-              대시보드 초안 만들기
+              분석 시작하기
             </button>
           </div>
         </div>

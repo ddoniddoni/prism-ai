@@ -1,6 +1,9 @@
+import { z } from "zod";
+
 import type { AnalyticsDailyRow } from "@/lib/data/repository";
 
-import { metricCatalog, type MetricKey } from "./metric-catalog";
+import { dimensionKeys } from "./dimension-catalog";
+import { metricCatalog, metricKeys, type MetricKey } from "./metric-catalog";
 import {
   resolveComparisonPeriod,
   resolvePeriod,
@@ -18,26 +21,40 @@ import {
   calculateRanking,
 } from "./statistics";
 
-export type DataPoint = {
-  label: string;
-  value: number | null;
-  previousValue?: number | null;
-  absoluteChange?: number | null;
-  percentChange?: number | null;
-};
+export const dataPointSchema = z
+  .object({
+    label: z.string().min(1),
+    value: z.number().finite().nullable(),
+    previousValue: z.number().finite().nullable().optional(),
+    absoluteChange: z.number().finite().nullable().optional(),
+    percentChange: z.number().finite().nullable().optional(),
+  })
+  .strict();
 
-export type AnalyticsDataset = {
-  queryId: string;
-  metric: MetricKey;
-  groupBy?: AnalyticsQuery["groupBy"];
-  currentTotal: number | null;
-  previousTotal?: number | null;
-  points: DataPoint[];
-  dataRange: ResolvedPeriod;
-  comparisonRange?: ResolvedPeriod;
-  empty: boolean;
-  warnings: string[];
-};
+const resolvedPeriodSchema = z
+  .object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  })
+  .strict();
+
+export const analyticsDatasetSchema = z
+  .object({
+    queryId: z.string().min(1),
+    metric: z.enum(metricKeys),
+    groupBy: z.enum(dimensionKeys).optional(),
+    currentTotal: z.number().finite().nullable(),
+    previousTotal: z.number().finite().nullable().optional(),
+    points: z.array(dataPointSchema),
+    dataRange: resolvedPeriodSchema,
+    comparisonRange: resolvedPeriodSchema.optional(),
+    empty: z.boolean(),
+    warnings: z.array(z.string().min(1)),
+  })
+  .strict();
+
+export type DataPoint = z.infer<typeof dataPointSchema>;
+export type AnalyticsDataset = z.infer<typeof analyticsDatasetSchema>;
 
 type QueryEngineDataRange = {
   minDate: string;
