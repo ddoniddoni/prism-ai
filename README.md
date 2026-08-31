@@ -9,7 +9,9 @@ code calculates every displayed business number.
 
 ## Status
 
-Phase 0 (Bootstrap) is complete. The project runs with local, mock-first
+Phase 1 (Product Shell and Local Data) is complete. The project includes a
+fixed-seed, 24-month synthetic e-commerce dataset, Local Analytics Repository,
+and Home, Dashboard, and History route shells. It runs with local, mock-first
 defaults and does not require a Gemini or Supabase key.
 
 ## Stack

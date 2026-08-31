@@ -1,12 +1,45 @@
 import { expect, test } from "@playwright/test";
 
-test("renders the Prism AI bootstrap page", async ({ page }) => {
+test("starts an analysis from a recommended question and opens the dashboard shell", async ({
+  page,
+}) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "Prism AI", level: 1 }),
+    page.getByRole("heading", {
+      name: "질문을 신호로, 데이터를 다음 결정으로.",
+      level: 1,
+    }),
   ).toBeVisible();
   await expect(
-    page.getByText("Ask your data. Build your dashboard."),
+    page.getByRole("heading", { name: "분석 가능한 합성 데이터", level: 2 }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "지난달 매출이 왜 감소했어?" })
+    .click();
+  await page.getByRole("button", { name: "대시보드 초안 만들기" }).click();
+
+  await expect(page).toHaveURL(/\/dashboard\/mock-preview\?question=/);
+  await expect(
+    page.getByRole("heading", {
+      name: "분석 작업대를 준비했습니다.",
+      level: 1,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("지난달 매출이 왜 감소했어?")).toBeVisible();
+});
+
+test("renders the empty history shell", async ({ page }) => {
+  await page.goto("/history");
+
+  await expect(
+    page.getByRole("heading", { name: "최근 분석", level: 1 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "첫 질문으로 분석 기록을 시작하세요.",
+      level: 2,
+    }),
   ).toBeVisible();
 });
