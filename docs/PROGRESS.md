@@ -74,13 +74,19 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 - Dashboard Editor 조작과 History 검색 결과를 Live Region으로 알리고, History 삭제는 8초 실행 취소 창을 제공하도록 바꿨다.
 - 접근성 보완에 대한 Formatter·History Storage Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - MIT 라이선스인 `@nivo/line`으로 `PrismTrendChart`를 구성했다. Chart Bundle은 Dashboard에서만 동적으로 로드한다.
-- Trend Chart는 Gradient Area, Spring Transition, Comparison Line, Tooltip, Focusable Data Point와 Reduced Motion Fallback을 제공하며 원본 데이터 표는 유지한다.
+- Trend Chart는 Gradient Area, Spring Transition, Comparison Line, Tooltip, Crosshair와 Reduced Motion Fallback을 제공하며 원본 데이터 표는 유지한다.
 - PrismTrendChart의 Nivo Series·X Axis Tick 변환 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - Trend Chart의 Y Axis는 지표에 따라 K·M·B 축약 표기를 사용하고, Tooltip은 날짜와 현재·비교 기간의 실제 값을 표시한다. 밀집된 데이터 Point는 숨기고 Crosshair로만 강조한다.
+- MIT 라이선스의 `@nivo/pie`로 `PrismDonutChart`를 구성해 기존 CSS Conic Gradient를 대체했다. 이 Bundle도 Dashboard에서만 동적으로 로드한다.
+- Donut Chart는 분리된 Rounded Arc, Reduced Motion Fallback, 중앙 합계, 범례의 실제 값·구성비, Hover Tooltip과 Screen Reader용 계산 요약을 제공한다. Null·0 값은 그릴 수 있는 Segment에서 제외한다.
+- Donut Chart의 넓은 Desktop Card에서도 도넛·세그먼트 정보가 벌어지지 않도록 최대 폭을 제한했다. 바깥 WidgetFrame을 유일한 카드로 유지하고, 내부 배경 Card와 세그먼트별 Card 테두리는 제거해 Dashboard 밀도를 높였다. 범례는 이름·실제 금액·비중·가느다란 비중 Bar를 구분선 기반 행으로 묶고, 중앙 합계는 지표명을 포함한 축약 표기로 빠르게 읽을 수 있게 했다.
+- Dashboard Editor는 기존 표시 타입 기준의 고정 Height와 `overflow-auto` 때문에 확장된 Donut 범례에 내부 Scroll이 생겼다. 타입 Override를 적용한 실제 Widget으로 Layout을 정규화하고, 컴팩트한 Donut의 기본·최소 Height는 8행으로 고정해 내부 Scroll 없이 카드 점유를 줄였다.
+- Dashboard Grid의 기본 Stretch가 같은 Row의 큰 Chart 높이만큼 Donut Card까지 늘리고, 이전 Scroll Fix의 전역 `overflow-visible`이 다른 Chart를 Card 밖으로 넘치게 한 회귀를 수정했다. WidgetFrame은 `self-start`로 콘텐츠 높이를 유지하며, Editor에서만 Donut은 자연 높이·다른 Widget은 기존 고정 높이와 Overflow 규칙을 사용한다.
+- PrismDonutChart의 Nivo Datum 변환과 합계·구성비 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
-- Phase 8의 Accessibility·Responsive 1차 보완과 Nivo 기반 `PrismTrendChart`를 마쳤다. 다음 Custom Chart, Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
+- Phase 8의 Accessibility·Responsive 1차 보완과 Nivo 기반 `PrismTrendChart`·`PrismDonutChart`를 마쳤다. 다음 Custom Chart, Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
 
 ## 결정 사항
 
@@ -118,6 +124,7 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 | 2026-09-01 | 삭제 작업은 가능한 경우 즉시 영구 제거 대신 Undo Window를 제공 | Local History와 Dashboard Widget 삭제가 실수로 발생해도 사용자가 같은 흐름 안에서 복구할 수 있게 하기 위함 |
 | 2026-09-01 | 차트의 시각 상태는 텍스트 요약·표·상승/하락 문구로 중복 전달 | 색상, SVG만 읽을 수 없는 환경에서도 결정론적 Dataset 근거와 변화 방향을 이해할 수 있게 하기 위함 |
 | 2026-09-01 | Trend Chart는 MIT 라이선스의 Nivo를 동적 로드 | D3·react-spring 기반의 높은 시각 완성도와 Tooltip·접근성 기능을 사용하면서 초기 Dashboard Bundle을 키우지 않기 위함 |
+| 2026-09-01 | Donut Chart도 Nivo Pie를 동적 로드 | 기존 Conic Gradient보다 Arc 간격·Hover·Motion을 정교하게 제어하면서 Trend Chart와 같은 검증된 시각화 경로를 유지하기 위함 |
 
 ## 검증 결과
 
@@ -206,6 +213,46 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 - `npm run lint`: 통과 (Phase 4)
 - `npm run typecheck`: 통과 (Phase 4)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 PrismDonutChart)
+- `npm run typecheck`: 통과 (Phase 8 PrismDonutChart)
+- `npm run build`: 통과 (Phase 8 PrismDonutChart, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 PrismDonutChart)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 PrismDonutChart Layout Polish)
+- `npm run typecheck`: 통과 (Phase 8 PrismDonutChart Layout Polish)
+- `npm run build`: 통과 (Phase 8 PrismDonutChart Layout Polish, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 PrismDonutChart Layout Polish)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 PrismDonutChart Scroll Fix)
+- `npm run typecheck`: 통과 (Phase 8 PrismDonutChart Scroll Fix)
+- `npm run build`: 통과 (Phase 8 PrismDonutChart Scroll Fix, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 PrismDonutChart Scroll Fix)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 PrismDonutChart Compact Layout)
+- `npm run typecheck`: 통과 (Phase 8 PrismDonutChart Compact Layout)
+- `npm run build`: 통과 (Phase 8 PrismDonutChart Compact Layout, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 PrismDonutChart Compact Layout)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 Dashboard Card Sizing Fix)
+- `npm run typecheck`: 통과 (Phase 8 Dashboard Card Sizing Fix)
+- `npm run build`: 통과 (Phase 8 Dashboard Card Sizing Fix, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 Dashboard Card Sizing Fix)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)

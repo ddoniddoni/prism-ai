@@ -106,4 +106,29 @@ describe("dashboard editor model", () => {
       metricWidget,
     );
   });
+
+  it("prevents a donut layout from shrinking below the compact chart height", () => {
+    const donutWidget = applyWidgetTypeOverride(widgets[1], "donut");
+    const document = createDashboardEditorDocument([widgets[0], donutWidget]);
+    const legacyDocument = {
+      ...document,
+      present: {
+        ...document.present,
+        layouts: {
+          ...document.present.layouts,
+          lg: document.present.layouts.lg.map((item) =>
+            item.i === "segments" ? { ...item, h: 6, minH: 6 } : item,
+          ),
+        },
+      },
+    };
+    const reconciled = reconcileDashboardEditorDocument(legacyDocument, [
+      widgets[0],
+      donutWidget,
+    ]);
+
+    expect(
+      reconciled.present.layouts.lg.find((item) => item.i === "segments"),
+    ).toMatchObject({ h: 8, minH: 8 });
+  });
 });

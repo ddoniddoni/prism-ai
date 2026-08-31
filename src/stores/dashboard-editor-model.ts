@@ -99,6 +99,14 @@ function getWidgetHeight(widget: DashboardWidget): number {
   return heights[widget.type];
 }
 
+function getMinimumWidgetHeight(widget: DashboardWidget): number {
+  if (widget.type === "donut") {
+    return getWidgetHeight(widget);
+  }
+
+  return Math.max(3, getWidgetHeight(widget) - 2);
+}
+
 function getWidgetWidth(
   widget: DashboardWidget,
   breakpoint: EditorBreakpoint,
@@ -160,7 +168,7 @@ function createLayoutItem(
     w: width,
     h: height,
     minW: getMinimumWidgetWidth(widget, breakpoint),
-    minH: Math.max(3, height - 2),
+    minH: getMinimumWidgetHeight(widget),
     maxW: columns,
     maxH: 16,
   };
@@ -307,7 +315,7 @@ function normalizeExistingLayoutItem(
 ): EditorLayoutItem {
   const columns = editorGridColumns[breakpoint];
   const minimumWidth = getMinimumWidgetWidth(widget, breakpoint);
-  const minimumHeight = Math.max(3, getWidgetHeight(widget) - 2);
+  const minimumHeight = getMinimumWidgetHeight(widget);
   const width = clamp(item.w, minimumWidth, columns);
   const height = clamp(item.h, minimumHeight, 16);
 

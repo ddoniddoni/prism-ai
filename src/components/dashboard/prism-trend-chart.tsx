@@ -1,7 +1,7 @@
 "use client";
 
 import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
-import { useId, useMemo, useSyncExternalStore } from "react";
+import { useId, useMemo } from "react";
 
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import type { MetricKey } from "@/lib/analytics/metric-catalog";
@@ -12,14 +12,13 @@ import {
   getPrismTrendTickValues,
   type PrismTrendChartSeries,
 } from "./prism-trend-chart-data";
+import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type PrismTrendChartProps = {
   metric: MetricKey;
   points: readonly DataPoint[];
   title: string;
 };
-
-const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 
 const nivoTheme = {
   axis: {
@@ -50,26 +49,6 @@ const nivoTheme = {
     },
   },
 } as const;
-
-function subscribeToReducedMotion(onStoreChange: () => void) {
-  const mediaQuery = window.matchMedia(reducedMotionQuery);
-
-  mediaQuery.addEventListener("change", onStoreChange);
-
-  return () => mediaQuery.removeEventListener("change", onStoreChange);
-}
-
-function getReducedMotionSnapshot() {
-  return window.matchMedia(reducedMotionQuery).matches;
-}
-
-function usePrefersReducedMotion() {
-  return useSyncExternalStore(
-    subscribeToReducedMotion,
-    getReducedMotionSnapshot,
-    () => true,
-  );
-}
 
 function formatAxisLabel(label: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(label);

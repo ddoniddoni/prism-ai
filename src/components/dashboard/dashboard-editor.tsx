@@ -32,6 +32,7 @@ import {
   editorGridColumns,
   getCompatibleWidgetTypes,
   reconcileDashboardEditorDocument,
+  reconcileDashboardEditorSnapshot,
   type EditorBreakpoint,
   type EditableWidgetType,
 } from "@/stores/dashboard-editor-model";
@@ -335,33 +336,40 @@ export function DashboardEditor({
       ),
     [dashboard.widgets, storedDocument],
   );
-  const widgets = useMemo(() => {
-    const hiddenWidgetIds = new Set(document.present.hiddenWidgetIds);
-
-    return dashboard.widgets
-      .filter((widget) => !hiddenWidgetIds.has(widget.id))
-      .map((widget) =>
+  const resolvedWidgets = useMemo(
+    () =>
+      dashboard.widgets.map((widget) =>
         applyWidgetTypeOverride(
           widget,
           document.present.typeOverrides[widget.id],
         ),
-      );
-  }, [dashboard.widgets, document.present]);
+      ),
+    [dashboard.widgets, document.present.typeOverrides],
+  );
+  const widgets = useMemo(() => {
+    const hiddenWidgetIds = new Set(document.present.hiddenWidgetIds);
+
+    return resolvedWidgets.filter((widget) => !hiddenWidgetIds.has(widget.id));
+  }, [document.present.hiddenWidgetIds, resolvedWidgets]);
   const layouts = useMemo<ResponsiveLayouts<EditorBreakpoint>>(() => {
+    const reconciledSnapshot = reconcileDashboardEditorSnapshot(
+      document.present,
+      resolvedWidgets,
+    );
     const visibleWidgetIds = new Set(widgets.map((widget) => widget.id));
 
     return {
-      lg: document.present.layouts.lg.filter((item) =>
+      lg: reconciledSnapshot.layouts.lg.filter((item) =>
         visibleWidgetIds.has(item.i),
       ),
-      md: document.present.layouts.md.filter((item) =>
+      md: reconciledSnapshot.layouts.md.filter((item) =>
         visibleWidgetIds.has(item.i),
       ),
-      sm: document.present.layouts.sm.filter((item) =>
+      sm: reconciledSnapshot.layouts.sm.filter((item) =>
         visibleWidgetIds.has(item.i),
       ),
     };
-  }, [document.present.layouts, widgets]);
+  }, [document.present, resolvedWidgets, widgets]);
   const datasetsById = useMemo(
     () => new Map(datasets.map((dataset) => [dataset.queryId, dataset])),
     [datasets],
@@ -428,7 +436,11 @@ export function DashboardEditor({
             {widgets.map((widget) => (
               <div key={widget.id}>
                 <DashboardWidgetCard
-                  cardClassName="h-full overflow-auto lg:col-span-12"
+                  cardClassName={
+                    widget.type === "donut"
+                      ? "overflow-visible lg:col-span-12"
+                      : "h-full overflow-auto lg:col-span-12"
+                  }
                   controls={
                     isEditing ? (
                       <WidgetEditorControls

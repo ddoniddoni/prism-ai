@@ -29,6 +29,19 @@ const PrismTrendChart = dynamic(
   },
 );
 
+const PrismDonutChart = dynamic(
+  () => import("./prism-donut-chart").then((module) => module.PrismDonutChart),
+  {
+    loading: () => (
+      <div
+        aria-label="구성비 차트를 불러오는 중"
+        className="prism-skeleton h-60 rounded-xl"
+      />
+    ),
+    ssr: false,
+  },
+);
+
 type DashboardRendererProps = {
   dashboard: DashboardSpec;
   datasets: readonly AnalyticsDataset[];
@@ -68,7 +81,7 @@ function WidgetFrame({
   return (
     <section
       aria-labelledby={`${widget.id}-title`}
-      className={`rounded-xl border border-[#e1e2e4] bg-white p-5 ${getWidgetWidth(widget.size)} ${className ?? ""}`}
+      className={`self-start rounded-xl border border-[#e1e2e4] bg-white p-5 ${getWidgetWidth(widget.size)} ${className ?? ""}`}
       id={widget.id}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -238,8 +251,6 @@ function CategoryBarWidget({
   );
 }
 
-const donutColors = ["#4f46e5", "#3b82f6", "#17835c", "#c88616"] as const;
-
 function DonutWidget({
   widget,
   datasetsById,
@@ -251,94 +262,14 @@ function DonutWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
-  const points = dataset?.points ?? [];
-  const total = points.reduce(
-    (sum, point) => sum + Math.abs(point.value ?? 0),
-    0,
-  );
-  const segments = points.reduce<
-    Array<{
-      color: string;
-      end: number;
-      percentage: number;
-      point: (typeof points)[number];
-      start: number;
-    }>
-  >((currentSegments, point, index) => {
-    const percentage =
-      total > 0 ? (Math.abs(point.value ?? 0) / total) * 100 : 0;
-    const start = currentSegments.at(-1)?.end ?? 0;
-
-    return [
-      ...currentSegments,
-      {
-        color: donutColors[index % donutColors.length],
-        end: start + percentage,
-        percentage,
-        point,
-        start,
-      },
-    ];
-  }, []);
-  const background =
-    segments.length > 0
-      ? `conic-gradient(${segments
-          .map(
-            (segment) =>
-              `${segment.color} ${segment.start.toFixed(2)}% ${segment.end.toFixed(2)}%`,
-          )
-          .join(", ")})`
-      : "#eef0f2";
-  const chartSummary =
-    segments.length > 0
-      ? `${widget.title} 도넛 그래프. 총 ${formatMetricValue(
-          dataset?.metric ?? "revenue",
-          total,
-        )}. ${segments
-          .map(
-            (segment) =>
-              `${segment.point.label} ${segment.percentage.toFixed(1)}%`,
-          )
-          .join(", ")}.`
-      : `${widget.title} 차트에 표시할 데이터가 없습니다.`;
 
   return (
     <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
-      <div className="grid items-center gap-5 sm:grid-cols-[minmax(8rem,0.8fr)_minmax(0,1.2fr)]">
-        <div
-          aria-label={chartSummary}
-          className="relative mx-auto aspect-square w-full max-w-44 rounded-full"
-          role="img"
-          style={{ background }}
-        >
-          <div className="absolute inset-[24%] grid place-items-center rounded-full bg-white text-center">
-            <span className="text-[10px] font-medium text-[#777587]">합계</span>
-            <strong className="mt-0.5 block text-[13px] text-[#191c1e]">
-              {formatMetricValue(dataset?.metric ?? "revenue", total)}
-            </strong>
-          </div>
-        </div>
-        <ul className="space-y-2.5">
-          {segments.map((segment) => (
-            <li
-              className="flex items-center justify-between gap-3 text-[11px]"
-              key={segment.point.label}
-            >
-              <span className="flex min-w-0 items-center gap-2 font-medium text-[#424753]">
-                <span
-                  aria-hidden="true"
-                  className="size-2.5 shrink-0 rounded-sm"
-                  style={{ backgroundColor: segment.color }}
-                />
-                <span className="truncate">{segment.point.label}</span>
-              </span>
-              <span className="shrink-0 text-[#595e6b]">
-                {segment.percentage.toFixed(1)}%
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <PrismDonutChart
+        metric={dataset?.metric ?? "revenue"}
+        points={dataset?.points ?? []}
+        title={widget.title}
+      />
     </WidgetFrame>
   );
 }
