@@ -7,7 +7,7 @@ import {
   mergeAnalysisContext,
   normalizeAnalysisPlan,
 } from "@/lib/ai/schemas/analysis-plan";
-import { LocalAnalyticsRepository } from "@/lib/data/local-repository";
+import { createAnalyticsRepository } from "@/lib/data/create-repository";
 import type { AnalyticsRepository } from "@/lib/data/repository";
 import { env } from "@/lib/env";
 
@@ -36,7 +36,7 @@ export class AnalyzeQuestionServiceError extends Error {
 
 function createDefaultDependencies(): AnalyzeQuestionServiceDependencies {
   return {
-    repository: new LocalAnalyticsRepository(),
+    repository: createAnalyticsRepository(),
     provider: createAIProvider(),
   };
 }

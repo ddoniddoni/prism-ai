@@ -9,16 +9,18 @@ code calculates every displayed business number.
 
 ## Status
 
-Phase 1 (Product Shell and Local Data) is complete. The project includes a
-fixed-seed, 24-month synthetic e-commerce dataset, Local Analytics Repository,
-and Home, Dashboard, and History route shells. It runs with local, mock-first
-defaults and does not require a Gemini or Supabase key.
+Phase 6 (Supabase and operational recovery) is implemented. The project runs
+with fixed-seed local data and Mock AI by default, while Gemini and Supabase
+remain optional server-side integrations. It includes validated analysis,
+follow-up history, short-lived result caching, request deduplication, and a
+per-client public-demo limit.
 
 ## Stack
 
 - Next.js App Router, React, TypeScript strict, Tailwind CSS, and shadcn/ui
 - TanStack Query for server state
 - Zod for environment and AI-output validation
+- Gemini and Supabase server adapters with safe Mock/Local fallback
 - Vitest, React Testing Library, and Playwright
 
 ## Requirements
@@ -35,6 +37,20 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+### Optional Supabase data source
+
+Apply the migration in `supabase/migrations/` to a Supabase project, then set
+`DATA_SOURCE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, and the server-only
+`SUPABASE_SECRET_KEY` in `.env.local`. Seed the synthetic dataset with:
+
+```bash
+npm run seed:supabase
+```
+
+The migration enables RLS and grants no `anon` or `authenticated` table access;
+the app uses the server-only secret client. Set `PERSIST_ANALYSIS_HISTORY=true`
+only when durable server-side history is desired.
 
 ## Verification
 

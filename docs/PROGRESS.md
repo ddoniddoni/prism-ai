@@ -2,7 +2,7 @@
 
 ## 현재 Phase
 
-Phase 5: Gemini Provider
+Phase 6: Supabase와 운영 복구
 
 ## 상태
 
@@ -45,6 +45,15 @@ Phase 5: Gemini Provider
 - Analysis별 호출 Budget을 공유하고 기본 한도를 4회로 설정했다. 정상 Plan·Composer 2회와 각 단계의 교정 Retry 1회를 포함하는 상한이다.
 - `AI_PROVIDER=gemini`이지만 설정이 불완전하거나 Live 호출이 실패하면 Mock Provider로 안전하게 Fallback하고 Response Metadata에 상태를 남긴다.
 - Gemini Provider, Fallback, Provider Factory, 환경 선택에 대한 주입형 Unit Test를 추가했다. 실제 Gemini Key나 네트워크 호출은 사용하지 않는다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- 공식 Supabase SDK와 CLI를 lockfile에 고정하고, CLI로 Phase 6 migration을 생성했다.
+- `analytics_daily`, Dataset Metadata, 선택적 Persisted History, 운영 Event Table을 만드는 Supabase Migration을 추가했다. 네 Table 모두 RLS를 활성화하고 `anon`·`authenticated` 권한을 제거했다.
+- `SupabaseAnalyticsRepository`가 Local Repository와 동일한 Contract로 서버 전용 Secret Client에서 Row를 읽고, Snake Case DB Row를 검증된 Analytics Row로 변환한 뒤 같은 결정론적 Engine을 사용하도록 구현했다.
+- Supabase 설정이 불완전하면 `DATA_SOURCE=supabase`여도 Local Repository로 안전하게 복구한다. `npm run seed:supabase`는 Local Synthetic Data와 Dataset Version을 서버 Secret으로만 적재한다.
+- 의미상 같은 질문과 Context에 대해 LRU·TTL 메모리 Cache를 적용하고, Cached Response는 현재 Request·Session·Dashboard ID로 다시 묶어 식별자를 재사용하지 않는다.
+- Concurrent 동일 분석은 한 번만 실행하도록 Request Deduplication을 추가했다. Cache 확인은 Rate Limit보다 먼저 수행하며, 새 분석만 UTC 일 단위 Client Limit을 소비한다.
+- Gemini Live Kill Switch(`AI_LIVE_ENABLED=false`)가 즉시 Mock Provider로 복구하도록 추가했다.
+- 질문·IP·Secret을 로그나 Supabase Event에 저장하지 않고, 해시된 분석 Key와 Provider·Cache·Partial·Fallback·Duration Metadata만 기록한다. Persisted History는 명시적 Opt-in일 때만 저장한다.
+- Supabase Row 정규화, Cache 재결합·만료, Rate Limit, Request Deduplication, Coordinator Cache 우선순위, Kill Switch와 환경 선택에 대한 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
@@ -74,6 +83,10 @@ Phase 5: Gemini Provider
 | 2026-08-31 | Gemini Structured Output은 JSON Schema 요청 후 Zod와 Semantic 규칙으로 재검증 | SDK가 형식을 보조하더라도 Application Schema와 숫자 표시 금지 규칙을 최종 신뢰 경계로 유지하기 위함 |
 | 2026-08-31 | Live 요청 Budget은 기본 4회 | Plan·Composer의 정상 2회와 각 1회 교정 요청을 허용하면서 무한 Retry를 막기 위함 |
 | 2026-08-31 | Gemini 실패 시 Mock Provider로 Fallback | Key가 없거나 Live Provider가 실패해도 Local Demo와 기존 Dashboard 복구 흐름을 유지하기 위함 |
+| 2026-08-31 | Supabase는 서버 Secret Client와 RLS·권한 회수로만 접근 | 공개 Demo가 Data API를 통해 Raw Analytics·History·Operation Event에 접근하지 못하게 하기 위함 |
+| 2026-08-31 | 분석 Cache는 요청 식별자를 제외한 질문·Context·실행 Scope를 Key로 사용 | 같은 분석 작업을 재사용하면서도 Response의 Analysis·Session·Dashboard ID는 현재 요청에 귀속하기 위함 |
+| 2026-08-31 | Rate Limit은 Cache Miss에만 UTC 일 단위로 적용 | Cached Demo가 Limit이나 Provider 장애로 막히지 않게 하고, 새 분석의 비용만 제한하기 위함 |
+| 2026-08-31 | 운영 기록은 Raw Question 대신 SHA-256 분석 Key만 사용 | Prompt나 식별 정보를 보관하지 않고 복구 상태를 관측하기 위함 |
 
 ## 검증 결과
 
@@ -89,6 +102,15 @@ Phase 5: Gemini Provider
 - `npm run lint`: 통과 (Phase 2)
 - `npm run typecheck`: 통과 (Phase 2)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 6)
+- `npm run typecheck`: 통과 (Phase 6)
+- `npm run build`: 통과 (Phase 6, Next.js Webpack production build)
+- `npm audit signatures`: 통과 (757 registry signatures, 192 attestations verified)
+- `npm exec supabase -- migration list --local`: 미통과 (Local Supabase Docker/Postgres가 기동되지 않아 `127.0.0.1:54322` 연결 거부)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 - `npm run lint`: 통과 (Phase 5)
@@ -114,10 +136,10 @@ Phase 5: Gemini Provider
 ## 알려진 제한 사항
 
 - Live Gemini 호출은 사용자 Key와 실제 API Quota가 있어야 검증할 수 있다. SDK Abort Signal은 클라이언트 대기를 중단하지만 Google 서비스 측 작업이나 사용량 청구를 보장해 취소하지는 않는다.
-- Cache, Rate Limit, Request Deduplication, Partial Query 복구 정책은 이후 Phase에서 확장한다.
-- Gemini와 Supabase는 `.env.example`에 설정 항목만 두었으며 아직 연동하지 않았다.
+- In-memory Cache와 Rate Limit·Request Deduplication은 단일 Server Instance 범위다. 여러 Instance에서 공유하려면 Redis 또는 Platform Durable Cache가 필요하다.
+- Supabase Project·Key가 아직 제공되지 않아 Migration 적용, `seed:supabase`, 실제 Row Query, RLS Advisor와 Database Test는 실행하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.
 
 ## 다음 권장 작업
 
-`docs/IMPLEMENTATION_PLAN.md`의 Phase 6을 진행해 Supabase Repository, Cache, Rate Limit, Request Deduplication과 운영 복구를 구현한다.
+`docs/IMPLEMENTATION_PLAN.md`의 Phase 7을 진행해 Dashboard Editing과 Client Editor State를 구현한다.

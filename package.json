@@ -14,11 +14,14 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "seed:generate": "tsx scripts/generate-seed.ts",
+    "seed:supabase": "tsx scripts/seed-supabase.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@google/genai": "^2.19.0",
+    "@supabase/ssr": "0.12.5",
+    "@supabase/supabase-js": "2.112.4",
     "@tanstack/react-query": "^5.102.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -47,6 +50,7 @@
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
+    "supabase": "2.116.0",
     "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^4.1.11"

@@ -10,6 +10,10 @@ import { MockAIProvider } from "./mock-provider";
 export function createAIProvider(
   environment: AppEnvironment = env,
 ): AIProvider {
+  if (environment.AI_PROVIDER === "gemini" && !environment.AI_LIVE_ENABLED) {
+    return new MockAIProvider({ fallbackUsed: true });
+  }
+
   if (environment.AI_PROVIDER === "gemini" && isGeminiConfigured(environment)) {
     try {
       return new FallbackAIProvider(

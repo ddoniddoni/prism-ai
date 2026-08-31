@@ -1,7 +1,9 @@
+import { AnalyzeQuestionServiceError } from "@/lib/analysis/analyze-question-service";
 import {
-  AnalyzeQuestionService,
-  AnalyzeQuestionServiceError,
-} from "@/lib/analysis/analyze-question-service";
+  AnalyzeRequestCoordinator,
+  RateLimitExceededError,
+} from "@/lib/analysis/analyze-request-coordinator";
+import { getDemoClientIdentity } from "@/lib/rate-limit/daily-rate-limiter";
 import {
   analyzeErrorResponseSchema,
   analyzeRequestSchema,
@@ -11,14 +13,20 @@ function errorResponse(
   code: string,
   message: string,
   status: number,
+  headers?: HeadersInit,
 ): Response {
   return Response.json(
     analyzeErrorResponseSchema.parse({ error: { code, message } }),
     {
       status,
+      headers,
     },
   );
 }
+
+export const runtime = "nodejs";
+
+const coordinator = new AnalyzeRequestCoordinator();
 
 export async function POST(request: Request): Promise<Response> {
   let body: unknown;
@@ -44,10 +52,22 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const result = await new AnalyzeQuestionService().execute(input.data);
+    const result = await coordinator.execute(
+      input.data,
+      getDemoClientIdentity(request),
+    );
 
     return Response.json(result);
   } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      return errorResponse(
+        "RATE_LIMITED",
+        "오늘의 데모 분석 한도에 도달했습니다. 내일 다시 시도해 주세요.",
+        429,
+        { "Retry-After": String(error.retryAfterSeconds) },
+      );
+    }
+
     if (error instanceof AnalyzeQuestionServiceError) {
       const status =
         error.code === "UNSUPPORTED_QUESTION"

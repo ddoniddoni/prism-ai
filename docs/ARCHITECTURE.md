@@ -194,8 +194,17 @@ prism-ai/
 │  │  │  ├─ repository.ts
 │  │  │  ├─ local-repository.ts
 │  │  │  └─ supabase-repository.ts
+│  │  ├─ analysis/
+│  │  │  ├─ analyze-question-service.ts
+│  │  │  └─ analyze-request-coordinator.ts
 │  │  ├─ cache/
+│  │  │  └─ analysis-cache.ts
+│  │  ├─ operations/
+│  │  │  └─ supabase-analysis-operations.ts
 │  │  ├─ rate-limit/
+│  │  │  └─ daily-rate-limiter.ts
+│  │  ├─ request-dedup/
+│  │  │  └─ request-deduplicator.ts
 │  │  └─ env.ts
 │  ├─ data/
 │  │  └─ analytics-daily.json

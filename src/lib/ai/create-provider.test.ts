@@ -34,4 +34,22 @@ describe("createAIProvider", () => {
       fallbackUsed: false,
     });
   });
+
+  it("uses Mock Mode immediately when the live provider kill switch is disabled", () => {
+    const provider = createAIProvider(
+      parseEnvironment({
+        AI_PROVIDER: "gemini",
+        AI_LIVE_ENABLED: "false",
+        GEMINI_API_KEY: "test-key",
+        GEMINI_MODEL: "gemini-test-model",
+      }),
+    );
+
+    expect(provider.metadata).toEqual({
+      provider: "mock",
+      model: null,
+      mockMode: true,
+      fallbackUsed: true,
+    });
+  });
 });
