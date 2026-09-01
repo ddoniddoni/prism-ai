@@ -37,6 +37,12 @@ type DashboardEditorState = {
     breakpoint: EditorBreakpoint,
     layout: Layout,
   ) => void;
+  ensureWidgetHeight: (
+    dashboardId: string,
+    breakpoint: EditorBreakpoint,
+    widgetId: string,
+    height: number,
+  ) => void;
   hideWidget: (dashboardId: string, widgetId: string) => void;
   moveWidget: (
     dashboardId: string,
@@ -176,6 +182,7 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
 
           const nextSnapshot = {
             ...document.present,
+            layoutMode: "custom" as const,
             layouts: {
               ...document.present.layouts,
               [breakpoint]: mergeLayoutChange(
@@ -193,6 +200,51 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
             ),
           };
         }),
+      ensureWidgetHeight: (dashboardId, breakpoint, widgetId, height) =>
+        set((state) => {
+          const document = state.documents[dashboardId];
+
+          if (!document) {
+            return state;
+          }
+
+          const currentLayout = document.present.layouts[breakpoint];
+          const nextLayout = currentLayout.map((item) => {
+            if (item.i !== widgetId) {
+              return item;
+            }
+
+            const measuredHeight = Math.min(
+              item.maxH,
+              Math.max(item.minH, Math.round(height)),
+            );
+            const nextHeight =
+              document.present.layoutMode === "auto"
+                ? measuredHeight
+                : Math.max(item.h, measuredHeight);
+
+            return nextHeight === item.h ? item : { ...item, h: nextHeight };
+          });
+
+          if (
+            nextLayout.every((item, index) => item === currentLayout[index])
+          ) {
+            return state;
+          }
+
+          return {
+            documents: replaceDocument(state.documents, dashboardId, {
+              ...document,
+              present: {
+                ...document.present,
+                layouts: {
+                  ...document.present.layouts,
+                  [breakpoint]: nextLayout,
+                },
+              },
+            }),
+          };
+        }),
       hideWidget: (dashboardId, widgetId) =>
         set((state) => {
           const document = state.documents[dashboardId];
@@ -207,6 +259,7 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
           const nextSnapshot = {
             ...document.present,
             hiddenWidgetIds: [...document.present.hiddenWidgetIds, widgetId],
+            layoutMode: "custom" as const,
           };
 
           return {
@@ -248,7 +301,11 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
               document.present.hiddenWidgetIds,
             ),
           };
-          const nextSnapshot = { ...document.present, layouts };
+          const nextSnapshot = {
+            ...document.present,
+            layoutMode: "custom" as const,
+            layouts,
+          };
 
           return {
             documents: replaceDocument(
@@ -268,6 +325,7 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
 
           const nextSnapshot = {
             ...document.present,
+            layoutMode: "custom" as const,
             typeOverrides: {
               ...document.present.typeOverrides,
               [widgetId]: type,

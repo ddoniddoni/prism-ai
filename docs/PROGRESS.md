@@ -6,7 +6,7 @@ Phase 8: Portfolio 완성
 
 ## 상태
 
-Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio 문서와 성능 측정 진행 전 · 테스트 실행 보류
+Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측정 완료 · README·Architecture Diagram·Demo 자료 진행 전 · 테스트 실행 보류
 
 ## 완료
 
@@ -83,10 +83,32 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 - Dashboard Editor는 기존 표시 타입 기준의 고정 Height와 `overflow-auto` 때문에 확장된 Donut 범례에 내부 Scroll이 생겼다. 타입 Override를 적용한 실제 Widget으로 Layout을 정규화하고, 컴팩트한 Donut의 기본·최소 Height는 8행으로 고정해 내부 Scroll 없이 카드 점유를 줄였다.
 - Dashboard Grid의 기본 Stretch가 같은 Row의 큰 Chart 높이만큼 Donut Card까지 늘리고, 이전 Scroll Fix의 전역 `overflow-visible`이 다른 Chart를 Card 밖으로 넘치게 한 회귀를 수정했다. WidgetFrame은 `self-start`로 콘텐츠 높이를 유지하며, Editor에서만 Donut은 자연 높이·다른 Widget은 기존 고정 높이와 Overflow 규칙을 사용한다.
 - PrismDonutChart의 Nivo Datum 변환과 합계·구성비 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- MIT 라이선스의 `@nivo/bar`로 기존 CSS Category Bar를 `PrismRankedBarChart`로 대체했다. 이 Bundle도 Dashboard에서만 동적으로 로드한다.
+- Ranked Bar Chart는 값 기준 내림차순, 1위 Indigo 강조, 끝값의 K·M·B 축약 표기, Hover Tooltip, Keyboard Focus와 Screen Reader 순위 요약을 제공한다. 비교 데이터가 있으면 Tooltip에 상승·하락 문구를 함께 표시한다.
+- PrismRankedBarChart의 정렬·강조색·높이 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- `npm run analyze:bundle`과 Manifest 기반 측정기를 추가했다. Dashboard 초기 Client Asset과 지연 로드되는 Editor·Nivo Chart Bundle을 raw/gzip 크기로 재현 가능하게 기록했다.
+- `docs/PERFORMANCE.md`에 현재 production build의 실제 정적 Bundle 크기와, Chart별 크기는 공통 Chunk 때문에 합산하지 않는다는 해석 범위를 기록했다.
+- Dashboard Editor의 모든 Widget Card는 바깥 `overflow-auto`를 제거하고 `ResizeObserver`로 콘텐츠 높이에 맞춰 Grid 행을 자동 확장한다. Card 내부 Scroll이나 아래 Widget과의 겹침이 생기지 않으며, 원본 Data Table과 일반 Table의 필요한 내부 Scroll은 유지한다.
+- Dashboard는 실제 Widget 조합을 기준으로 단일 KPI+추이 4:8을 먼저 배치하고, 보조 분석을 KPI·추이 아래의 4:8 Lane에 차례로 쌓아 빈 영역을 줄인다. 단독 Insight는 전체 폭이며, 태블릿은 6열·모바일은 1열로 전환되고 Nivo Chart도 각 Card 폭과 높이에 맞춰 다시 그려진다.
+- Evidence Mosaic의 span 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- 기존에 저장된 Layout은 `auto`로 마이그레이션해 새 Mosaic 규칙으로 즉시 재배치한다. 이후 실제 Drag·Resize·표시 타입·숨김 편집 뒤에만 `custom` Layout으로 보존하며, 시스템이 측정해 확장한 Card 높이는 재배치 뒤에도 유지한다.
+- Mock Planner에 `서울에서 산 제품들 판매량만 보여줘` 예시를 추가했다. 한국어 지역명 `서울`을 Dataset의 허용 값 `Seoul`로 매핑하고, `unitsSold`를 상품별로 집계하는 검증된 Query DSL만 생성한다.
+- MIT 라이선스의 `@nivo/bar`로 `PrismStackedBarChart`를 추가했다. 이 Chart도 Dashboard에서만 동적으로 로드하며, 동일 기간의 Desktop·Mobile·Tablet 일자별 Query를 실제로 누적해 표시한다.
+- `stackedBar`를 Dashboard Schema·Sanitizer·Component Registry·Evidence Mosaic에 등록했다. 2개 미만의 유효한 Series 참조는 제거하며, 표시값은 각 Query가 결정론적으로 계산한 DataPoint만 사용한다.
+- Mock Planner가 `지난달 매출의 디바이스별 구성을 보여줘`를 3개의 독립된 디바이스 `date` Query로 변환하고, Home 추천 질문에서 바로 실행할 수 있게 했다.
+- `PrismStackedBarChart`는 상단 여유가 부족한 막대의 Tooltip을 `bottom` Anchor로, 나머지는 `top` Anchor로 렌더링한다. Nivo 기본 Bar Tooltip이 항상 `top` Anchor를 선택해 `overflow-hidden` Chart Panel 상단에서 잘리던 문제를 전용 Bar Renderer로 해결했고, 키보드 Focus에도 같은 배치 규칙을 적용했다.
+- 전용 Bar Renderer가 Nivo의 내부 Bar 객체를 Tooltip JSX에 전달할 때 React 전용 `key`를 제외했다. 개발 콘솔의 Key Spread 경고 없이 동일한 Tooltip 정보를 표시한다.
+- 시간대가 없는 일별 Dataset의 의미를 보존하기 위해 `PrismCalendarHeatmap`을 추가했다. 매출 시계열을 주차 × 요일 셀로 변환하고, 결정론적 DataPoint 값에 비례한 Indigo 색 농도로 집중일을 표시한다.
+- Calendar Heatmap은 Hover·Click·Keyboard Focus에서 선택 날짜와 실제 계산값을 안전한 고정 Detail Panel에 표시한다. 상단·하단 Tooltip이 Card 경계에서 잘리는 문제 없이 Screen Reader에도 선택 날짜를 알린다.
+- `calendarHeatmap`을 Dashboard Schema·Component Registry·Evidence Mosaic에 등록했고, `지난달 매출 집중도를 달력 히트맵으로 보여줘` 예시가 기존 일별 매출 Query를 재사용하도록 Mock Planner에 추가했다.
+- Calendar Heatmap은 큰 유동 셀 대신 28px/36px 고정 날짜 셀로 압축했다. 각 셀은 일자를 표시하고, 선택일자 Badge·주말 보조 톤·Active Ring으로 넓은 Dashboard Card 안에서도 작은 분석 캘린더를 의도적으로 읽을 수 있게 했다.
+- Calendar Heatmap은 4-column 컴팩트 보조 위젯으로 배치한다. 중첩된 바깥 패널과 장황한 설명을 없애고, 20px/24px 날짜 셀과 7-row Editor 높이로 줄여 캘린더 자체에 맞는 밀도를 유지한다. Auto Layout은 실제 렌더된 콘텐츠 높이를 다시 측정해, 기존에 저장된 큰 카드 높이도 축소한다.
+- 모든 Widget Card의 기본 패딩과 헤더 간격을 줄이고, 실제 분석 밀도에 맞춰 Chart Canvas와 Editor 기본 행 높이를 낮췄다. 추이·누적 막대·도넛·랭킹은 축·Tooltip·키보드 접근성을 유지하는 범위에서 작은 카드 비율로 재구성하며, 데이터 표와 사용자가 직접 조정한 카드의 높이는 강제 축소하지 않는다.
+- `KPI + Time Series + Calendar Heatmap + Comparison` 결과는 일반적인 좌측 세로 스택 대신 `KPI·캘린더`의 compact rail과 `추이·비교`의 wide canvas로 자동 배치한다. 초기 CSS Grid와 편집 가능 Grid가 같은 시각 순서를 사용해 로딩 직후에도 큰 빈 영역 없이 읽힌다.
 
 ## 진행 중
 
-- Phase 8의 Accessibility·Responsive 1차 보완과 Nivo 기반 `PrismTrendChart`·`PrismDonutChart`를 마쳤다. 다음 Custom Chart, Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
+- Phase 8의 Accessibility·Responsive 1차 보완, Nivo 기반 `PrismTrendChart`·`PrismDonutChart`·`PrismRankedBarChart`, 재현 가능한 정적 Bundle 측정을 마쳤다. 다음 README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
 
 ## 결정 사항
 
@@ -125,8 +147,82 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 | 2026-09-01 | 차트의 시각 상태는 텍스트 요약·표·상승/하락 문구로 중복 전달 | 색상, SVG만 읽을 수 없는 환경에서도 결정론적 Dataset 근거와 변화 방향을 이해할 수 있게 하기 위함 |
 | 2026-09-01 | Trend Chart는 MIT 라이선스의 Nivo를 동적 로드 | D3·react-spring 기반의 높은 시각 완성도와 Tooltip·접근성 기능을 사용하면서 초기 Dashboard Bundle을 키우지 않기 위함 |
 | 2026-09-01 | Donut Chart도 Nivo Pie를 동적 로드 | 기존 Conic Gradient보다 Arc 간격·Hover·Motion을 정교하게 제어하면서 Trend Chart와 같은 검증된 시각화 경로를 유지하기 위함 |
+| 2026-09-01 | Category Bar는 Nivo Bar를 동적 로드 | 같은 검증된 Chart Stack에서 순위·Tooltip·Keyboard 접근을 제공하고, 기존 CSS Progress Bar보다 정교한 순위 표현을 만들기 위함 |
+| 2026-09-01 | 성능은 Build Manifest의 raw·gzip Asset 크기로 반복 측정 | 브라우저 체감 성능을 추정하지 않고 초기 Dashboard와 지연 로드 Bundle 경계를 재현 가능한 수치로 기록하기 위함 |
+| 2026-09-01 | 모든 Widget Card는 콘텐츠 높이에 맞춰 Editor Grid 행을 자동 확장 | 바깥 Card Scroll을 제거하면서 고정 Grid 안의 콘텐츠 겹침을 막고, Table 전용 내부 Scroll은 유지하기 위함 |
+| 2026-09-01 | Dashboard는 질문 결과에 맞춰 Evidence Mosaic Layout을 사용 | 정해진 순서의 빈 Grid Cell 대신 KPI·추이·보조 분석·근거의 정보 우선순위에 따라 Canvas를 채우고, 1024px 이상 콘텐츠 영역에서는 Desktop Mosaic을 적용하기 위함 |
+| 2026-09-02 | 누적 막대는 Series별 검증된 Query를 쌓아서 렌더링 | 현재 Query DSL의 단일 Grouping 제약을 우회해 임의 비즈니스 값이나 잘못된 비교값을 합산하지 않고, 같은 날짜·지표의 결정론적 세그먼트 합계를 표현하기 위함 |
+| 2026-09-02 | 시간대 대신 주차 × 요일 캘린더 히트맵을 사용 | 현재 Dataset은 일별 Aggregate이므로 존재하지 않는 시간대 정보를 추정하지 않고, 실제 날짜 기반의 매출 집중도를 표현하기 위함 |
 
 ## 검증 결과
+
+- `npm run lint`: 통과 (Phase 8 PrismCalendarHeatmap)
+- `npm run typecheck`: 통과 (Phase 8 PrismCalendarHeatmap)
+- `npm run build`: 통과 (Phase 8 PrismCalendarHeatmap, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Phase 8 PrismCalendarHeatmap)
+- `npm run lint`: 통과 (Calendar Heatmap Compact Card Layout)
+- `npm run typecheck`: 통과 (Calendar Heatmap Compact Card Layout)
+- `npm run build`: 통과 (Calendar Heatmap Compact Card Layout, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Calendar Heatmap Compact Card Layout)
+- `npm run lint`: 통과 (Dashboard Compact Card Density)
+- `npm run typecheck`: 통과 (Dashboard Compact Card Density)
+- `npm run build`: 통과 (Dashboard Compact Card Density, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Dashboard Compact Card Density)
+- `npm run format:check`: 기존 `src/lib/data/supabase-repository.test.ts` 형식 경고로 미통과 (이번 변경 범위 밖, 파일 미수정)
+- `npm run lint`: 통과 (Dashboard Smart Mosaic Layout)
+- `npm run typecheck`: 통과 (Dashboard Smart Mosaic Layout)
+- `npm run build`: 통과 (Dashboard Smart Mosaic Layout, Next.js Webpack production build)
+- `npm run lint`: 통과 (PrismCalendarHeatmap Compact Date Cells)
+- `npm run typecheck`: 통과 (PrismCalendarHeatmap Compact Date Cells)
+- `npm run build`: 통과 (PrismCalendarHeatmap Compact Date Cells, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (PrismCalendarHeatmap Compact Date Cells)
+- 로컬 브라우저 시각 점검: 미실행 (현재 세션에 연결 가능한 Browser 없음)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
+- `npm run lint`: 통과 (Phase 8 PrismStackedBarChart)
+- `npm run typecheck`: 통과 (Phase 8 PrismStackedBarChart)
+- `npm run build`: 통과 (Phase 8 PrismStackedBarChart, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Phase 8 PrismStackedBarChart)
+- `npm run lint`: 통과 (PrismStackedBarChart Tooltip Anchor)
+- `npm run typecheck`: 통과 (PrismStackedBarChart Tooltip Anchor)
+- `npm run build`: 통과 (PrismStackedBarChart Tooltip Anchor, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (PrismStackedBarChart Tooltip Anchor)
+- `npm run lint`: 통과 (PrismStackedBarChart Tooltip Key Spread)
+- `npm run typecheck`: 통과 (PrismStackedBarChart Tooltip Key Spread)
+- `npm run build`: 통과 (PrismStackedBarChart Tooltip Key Spread, Next.js Webpack production build)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
+- `npm run lint`: 통과 (Phase 8 Evidence Mosaic Layout)
+- `npm run typecheck`: 통과 (Phase 8 Evidence Mosaic Layout)
+- `npm run build`: 통과 (Phase 8 Evidence Mosaic Layout, Next.js Webpack production build)
+- 로컬 브라우저 1440px Viewport (콘텐츠 영역 1144px): KPI 368px + 추이 756px의 4:8 Desktop Mosaic 적용 확인. 같은 개발 세션에서 분석 화면을 반복 새로고침한 뒤 Mock `/api/analyze` 요청 제한(429)이 발생해, 최종 계단형 배치의 추가 시각 재실행은 보류했다.
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
+- `npm run lint`: 통과 (Phase 8 Widget Card Scroll Removal)
+- `npm run typecheck`: 통과 (Phase 8 Widget Card Scroll Removal)
+- `npm run build`: 통과 (Phase 8 Widget Card Scroll Removal, Next.js Webpack production build)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
+- `npm run build`: 통과 (Phase 8 Bundle Measurement, Next.js Webpack production build)
+- `npm run analyze:bundle`: 통과 (Dashboard 초기 748.7 KiB raw / 223.6 KiB gzip, 상세 결과는 `docs/PERFORMANCE.md`)
+- `npm run lint`: 통과 (Phase 8 Bundle Measurement)
+- `npm run typecheck`: 통과 (Phase 8 Bundle Measurement)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run seed:generate`: 통과
 - `npm run lint`: 통과 (`npm run check`에서 실행)
@@ -257,6 +353,14 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 - `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 PrismRankedBarChart)
+- `npm run typecheck`: 통과 (Phase 8 PrismRankedBarChart)
+- `npm run build`: 통과 (Phase 8 PrismRankedBarChart, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 PrismRankedBarChart)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 ## 알려진 제한 사항
 
@@ -265,9 +369,10 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 - Supabase Project·Key가 아직 제공되지 않아 Migration 적용, `seed:supabase`, 실제 Row Query, RLS Advisor와 Database Test는 실행하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.
 - Stitch UI와 Dashboard Editing의 Runtime Browser·E2E 시각 검증은 사용자 요청에 따라 실행하지 않았다.
+- 정적 Bundle 크기만 기록했다. 배포 환경의 실제 Web Vitals와 Network Waterfall은 아직 측정하지 않았다.
 - Dashboard 편집값은 계정 동기화가 아닌 브라우저별 Local Storage에만 저장된다.
 - Repository 전체 `format:check`는 기존 `src/lib/data/supabase-repository.test.ts` 포맷 불일치 1건 때문에 실패한다. Phase 7 변경 파일은 별도 검사에서 모두 통과했다.
 
 ## 다음 권장 작업
 
-`docs/IMPLEMENTATION_PLAN.md`의 Phase 8을 진행해 Accessibility Audit, Performance 측정, README, Architecture Diagram과 Portfolio Demo 자료를 완성한다.
+README에서 Frontend·AI·성능 설계 결정을 정리한 뒤 Architecture Diagram과 Portfolio Demo 자료를 완성한다.

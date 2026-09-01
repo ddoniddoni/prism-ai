@@ -37,7 +37,40 @@ type MockAnalysisDefinition = {
   focusDimension?: DimensionKey;
   title: string;
   subtitle: string;
+  widgetTitles?: {
+    primary?: string;
+    trend?: string;
+    focus?: string;
+    stacked?: string;
+    heatmap?: string;
+  };
+  calendarHeatmap?: boolean;
+  stackedSeries?: readonly StackedSeriesDefinition[];
 };
+
+type StackedSeriesDefinition = {
+  id: string;
+  label: string;
+  filter: AnalyticsFilter;
+};
+
+const deviceStackedSeries = [
+  {
+    id: "desktop",
+    label: "Desktop",
+    filter: { dimension: "device", operator: "eq", values: ["desktop"] },
+  },
+  {
+    id: "mobile",
+    label: "Mobile",
+    filter: { dimension: "device", operator: "eq", values: ["mobile"] },
+  },
+  {
+    id: "tablet",
+    label: "Tablet",
+    filter: { dimension: "device", operator: "eq", values: ["tablet"] },
+  },
+] as const satisfies readonly StackedSeriesDefinition[];
 
 export class UnsupportedQuestionError extends Error {
   constructor() {
@@ -83,6 +116,86 @@ function rootCauseDefinition(): MockAnalysisDefinition {
 }
 
 function resolveDefinition(question: string): MockAnalysisDefinition {
+  if (
+    question.includes("매출") &&
+    (question.includes("히트맵") ||
+      question.includes("집중도") ||
+      question.includes("달력"))
+  ) {
+    return {
+      intent: "trend",
+      goal: "지난달의 일별 매출 집중도를 캘린더 히트맵으로 확인합니다.",
+      primaryMetric: "revenue",
+      period: { preset: "lastMonth" },
+      compareWith: "none",
+      filters: [],
+      focusDimension: "category",
+      title: "지난달 매출 집중도",
+      subtitle:
+        "날짜별 매출 강도를 캘린더 형태로 보고 집중된 날을 빠르게 찾습니다.",
+      widgetTitles: {
+        primary: "지난달 총매출",
+        trend: "기간별 전체 매출",
+        focus: "카테고리별 매출",
+        heatmap: "일자별 매출 집중도",
+      },
+      calendarHeatmap: true,
+    };
+  }
+
+  if (
+    (question.includes("디바이스") || question.includes("기기")) &&
+    question.includes("매출") &&
+    (question.includes("구성") ||
+      question.includes("누적") ||
+      question.includes("쌓") ||
+      question.includes("비중"))
+  ) {
+    return {
+      intent: "segmentAnalysis",
+      goal: "지난달 매출의 일자별 디바이스 구성을 누적해 확인합니다.",
+      primaryMetric: "revenue",
+      period: { preset: "lastMonth" },
+      compareWith: "none",
+      filters: [],
+      focusDimension: "device",
+      title: "지난달 디바이스 매출 구성",
+      subtitle:
+        "일자별 매출을 디바이스 구성으로 나누어 흐름과 비중을 함께 봅니다.",
+      widgetTitles: {
+        primary: "지난달 총매출",
+        trend: "기간별 전체 매출",
+        focus: "디바이스별 총매출",
+        stacked: "일자별 디바이스 매출 구성",
+      },
+      stackedSeries: deviceStackedSeries,
+    };
+  }
+
+  if (
+    (question.includes("서울") || question.includes("seoul")) &&
+    (question.includes("제품") || question.includes("상품")) &&
+    (question.includes("판매량") || question.includes("판매 수량"))
+  ) {
+    return {
+      intent: "ranking",
+      goal: "서울에서 발생한 주문의 상품별 판매 수량을 확인합니다.",
+      primaryMetric: "unitsSold",
+      period: { preset: "lastMonth" },
+      compareWith: "none",
+      filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+      focusDimension: "product",
+      title: "서울 판매 상품 수량",
+      subtitle:
+        "서울에서 발생한 주문만 대상으로 상품별 판매 수량을 확인합니다.",
+      widgetTitles: {
+        primary: "서울 상품 판매량",
+        trend: "기간별 서울 판매량",
+        focus: "서울 상품별 판매량",
+      },
+    };
+  }
+
   if (question.includes("환불") && question.includes("지역")) {
     return {
       intent: "ranking",
@@ -203,6 +316,21 @@ function createQueries(definition: MockAnalysisDefinition): AnalyticsQuery[] {
     );
   }
 
+  if (definition.stackedSeries) {
+    queries.push(
+      ...definition.stackedSeries.map((series) =>
+        createQuery(
+          `stack-${series.id}`,
+          primaryMetric,
+          period,
+          "none",
+          normalizeAnalyticsFilters([...filters, series.filter]),
+          "date",
+        ),
+      ),
+    );
+  }
+
   if (definition.intent === "rootCause" || definition.intent === "comparison") {
     queries.push(
       createQuery(
@@ -260,6 +388,10 @@ function applyContextPatch(
   currentContext: AnalysisContext | undefined,
   patch: AnalysisContextPatch,
 ): MockAnalysisDefinition {
+  const filters = normalizeAnalyticsFilters(
+    patch.filters ?? currentContext?.filters ?? definition.filters,
+  );
+
   return {
     ...definition,
     primaryMetric:
@@ -271,13 +403,14 @@ function applyContextPatch(
       patch.compareWith ??
       currentContext?.compareWith ??
       definition.compareWith,
-    filters: normalizeAnalyticsFilters(
-      patch.filters ?? currentContext?.filters ?? definition.filters,
-    ),
+    filters,
     focusDimension:
       patch.focusDimension ??
       currentContext?.focusDimension ??
       definition.focusDimension,
+    ...(filters.some((filter) => filter.dimension === "device")
+      ? { stackedSeries: undefined }
+      : {}),
   };
 }
 
@@ -315,6 +448,16 @@ function createDashboardSpec(
   const categoryDataset = input.datasets.find(
     (dataset) => dataset.queryId === "category",
   );
+  const stackedSeries = (definition.stackedSeries ?? []).flatMap((series) =>
+    input.datasets.some((dataset) => dataset.queryId === `stack-${series.id}`)
+      ? [
+          {
+            queryId: `stack-${series.id}`,
+            label: series.label,
+          },
+        ]
+      : [],
+  );
   const leadFinding =
     input.findings.find(
       (finding) => finding.type === "driver" && finding.dimension !== "date",
@@ -327,7 +470,7 @@ function createDashboardSpec(
     widgets.push({
       id: "primary-metric",
       type: "metric",
-      title: "핵심 지표",
+      title: definition.widgetTitles?.primary ?? "핵심 지표",
       description: "선택 기간의 결정론적 계산 결과입니다.",
       queryIds: [primaryDataset.queryId],
       findingIds: [],
@@ -343,7 +486,7 @@ function createDashboardSpec(
     widgets.push({
       id: "performance-trend",
       type: "timeSeries",
-      title: "기간별 흐름",
+      title: definition.widgetTitles?.trend ?? "기간별 흐름",
       queryIds: [trendDataset.queryId],
       findingIds: [],
       size: "large",
@@ -355,11 +498,37 @@ function createDashboardSpec(
     widgets.push({
       id: "focus-segments",
       type: "categoryBar",
-      title: "주요 세그먼트 비교",
+      title: definition.widgetTitles?.focus ?? "주요 세그먼트 비교",
       queryIds: [focusDataset.queryId],
       findingIds: [],
       size: "medium",
       config: { queryId: focusDataset.queryId, orientation: "horizontal" },
+    });
+  }
+
+  if (stackedSeries.length >= 2) {
+    widgets.push({
+      id: "stacked-segment-trend",
+      type: "stackedBar",
+      title: definition.widgetTitles?.stacked ?? "기간별 세그먼트 구성",
+      description:
+        "같은 일자의 세그먼트 값을 누적해 전체와 구성을 함께 표시합니다.",
+      queryIds: stackedSeries.map((series) => series.queryId),
+      findingIds: [],
+      size: "large",
+      config: { series: stackedSeries, xKey: "label" },
+    });
+  }
+
+  if (definition.calendarHeatmap && trendDataset) {
+    widgets.push({
+      id: "calendar-heatmap",
+      type: "calendarHeatmap",
+      title: definition.widgetTitles?.heatmap ?? "일자별 집중도",
+      queryIds: [trendDataset.queryId],
+      findingIds: [],
+      size: "large",
+      config: { queryId: trendDataset.queryId, xKey: "label" },
     });
   }
 
@@ -432,7 +601,11 @@ export class MockAIProvider implements AIProvider {
   }
 
   async createDashboard(input: DashboardComposerInput): Promise<DashboardSpec> {
-    const definition = resolveDefinition(input.plan.normalizedQuestion);
+    const definition = applyContextPatch(
+      resolveDefinition(input.plan.normalizedQuestion),
+      input.context,
+      {},
+    );
 
     return createDashboardSpec(input, definition);
   }

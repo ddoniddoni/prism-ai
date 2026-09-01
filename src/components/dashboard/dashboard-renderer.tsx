@@ -9,6 +9,10 @@ import type {
   DashboardSpec,
   DashboardWidget,
 } from "@/lib/ai/schemas/dashboard-spec";
+import {
+  getDashboardWidgetSpan,
+  type DashboardLayoutBreakpoint,
+} from "@/stores/dashboard-layout";
 
 import {
   formatChangeWithDirection,
@@ -22,7 +26,7 @@ const PrismTrendChart = dynamic(
     loading: () => (
       <div
         aria-label="추이 차트를 불러오는 중"
-        className="prism-skeleton h-72 rounded-xl sm:h-80"
+        className="prism-skeleton h-52 rounded-xl sm:h-60"
       />
     ),
     ssr: false,
@@ -35,7 +39,55 @@ const PrismDonutChart = dynamic(
     loading: () => (
       <div
         aria-label="구성비 차트를 불러오는 중"
-        className="prism-skeleton h-60 rounded-xl"
+        className="prism-skeleton h-48 rounded-xl"
+      />
+    ),
+    ssr: false,
+  },
+);
+
+const PrismRankedBarChart = dynamic(
+  () =>
+    import("./prism-ranked-bar-chart").then(
+      (module) => module.PrismRankedBarChart,
+    ),
+  {
+    loading: () => (
+      <div
+        aria-label="랭킹 차트를 불러오는 중"
+        className="prism-skeleton h-44 rounded-xl"
+      />
+    ),
+    ssr: false,
+  },
+);
+
+const PrismStackedBarChart = dynamic(
+  () =>
+    import("./prism-stacked-bar-chart").then(
+      (module) => module.PrismStackedBarChart,
+    ),
+  {
+    loading: () => (
+      <div
+        aria-label="누적 막대 차트를 불러오는 중"
+        className="prism-skeleton h-48 rounded-xl sm:h-52"
+      />
+    ),
+    ssr: false,
+  },
+);
+
+const PrismCalendarHeatmap = dynamic(
+  () =>
+    import("./prism-calendar-heatmap").then(
+      (module) => module.PrismCalendarHeatmap,
+    ),
+  {
+    loading: () => (
+      <div
+        aria-label="캘린더 히트맵을 불러오는 중"
+        className="prism-skeleton h-40 rounded-xl"
       />
     ),
     ssr: false,
@@ -56,59 +108,121 @@ type DashboardWidgetProps = {
   controls?: ReactNode;
 };
 
-function getWidgetWidth(size: DashboardWidget["size"]): string {
-  const widths: Record<DashboardWidget["size"], string> = {
-    small: "lg:col-span-3",
-    medium: "lg:col-span-6",
-    large: "lg:col-span-8",
-    full: "lg:col-span-12",
-  };
+const gridSpanClassNames: Record<
+  Exclude<DashboardLayoutBreakpoint, "sm">,
+  Record<number, string>
+> = {
+  lg: {
+    1: "lg:col-span-1",
+    2: "lg:col-span-2",
+    3: "lg:col-span-3",
+    4: "lg:col-span-4",
+    5: "lg:col-span-5",
+    6: "lg:col-span-6",
+    7: "lg:col-span-7",
+    8: "lg:col-span-8",
+    9: "lg:col-span-9",
+    10: "lg:col-span-10",
+    11: "lg:col-span-11",
+    12: "lg:col-span-12",
+  },
+  md: {
+    1: "md:col-span-1",
+    2: "md:col-span-2",
+    3: "md:col-span-3",
+    4: "md:col-span-4",
+    5: "md:col-span-5",
+    6: "md:col-span-6",
+  },
+};
 
-  return widths[size];
+function getWidgetGridClassName(
+  widget: DashboardWidget,
+  widgets: readonly DashboardWidget[],
+): string {
+  const mdSpan = getDashboardWidgetSpan(widget, widgets, "md");
+  const lgSpan = getDashboardWidgetSpan(widget, widgets, "lg");
+
+  return `${gridSpanClassNames.md[mdSpan]} ${gridSpanClassNames.lg[lgSpan]}`;
+}
+
+function getDashboardGridWidgetOrder(
+  widgets: readonly DashboardWidget[],
+): readonly DashboardWidget[] {
+  const [metricWidget, trendWidget] = widgets;
+  const calendarHeatmapWidget = widgets.find(
+    (widget) => widget.type === "calendarHeatmap",
+  );
+
+  if (
+    metricWidget?.type !== "metric" ||
+    trendWidget?.type !== "timeSeries" ||
+    !calendarHeatmapWidget
+  ) {
+    return widgets;
+  }
+
+  return [
+    metricWidget,
+    trendWidget,
+    calendarHeatmapWidget,
+    ...widgets.filter(
+      (widget) =>
+        widget.id !== metricWidget.id &&
+        widget.id !== trendWidget.id &&
+        widget.id !== calendarHeatmapWidget.id,
+    ),
+  ];
 }
 
 function WidgetFrame({
   children,
   className,
   controls,
+  descriptionClassName,
+  density = "default",
   widget,
 }: {
   children: ReactNode;
   className?: string;
   controls?: ReactNode;
+  descriptionClassName?: string;
+  density?: "compact" | "default";
   widget: DashboardWidget;
 }) {
   return (
     <section
       aria-labelledby={`${widget.id}-title`}
-      className={`self-start rounded-xl border border-[#e1e2e4] bg-white p-5 ${getWidgetWidth(widget.size)} ${className ?? ""}`}
+      className={`w-full self-start rounded-xl border border-[#e1e2e4] bg-white ${density === "compact" ? "p-3" : "p-4"} ${className ?? ""}`}
       id={widget.id}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-2.5">
         <div className="min-w-0">
           <p className="text-[9px] font-semibold tracking-[0.11em] text-[#777587] uppercase">
             {widget.type}
           </p>
           <h2
-            className="mt-1.5 text-[15px] font-semibold tracking-[-0.02em] break-words text-[#191c1e]"
+            className="mt-1 text-[15px] font-semibold tracking-[-0.02em] break-words text-[#191c1e]"
             id={`${widget.id}-title`}
           >
             {widget.title}
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded border border-[#dde2e8] bg-[#f8f9fb] px-2 py-1 text-[9px] text-[#777587]">
+          <span className="rounded border border-[#dde2e8] bg-[#f8f9fb] px-1.5 py-0.5 text-[9px] text-[#777587]">
             {widget.queryIds.length} data ref
           </span>
           {controls}
         </div>
       </div>
       {widget.description ? (
-        <p className="mt-2 text-[12px] leading-5 break-words text-[#595e6b]">
+        <p
+          className={`mt-1.5 text-[12px] leading-5 break-words text-[#595e6b] ${descriptionClassName ?? ""}`}
+        >
           {widget.description}
         </p>
       ) : null}
-      <div className="mt-4">{children}</div>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
@@ -127,11 +241,17 @@ function MetricWidget({
   const change = dataset?.points[0]?.percentChange ?? null;
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
-      <p className="text-3xl font-semibold tracking-[-0.045em] text-[#191c1e] sm:text-[34px]">
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      density="compact"
+      descriptionClassName="sr-only"
+      widget={widget}
+    >
+      <p className="text-[28px] leading-none font-semibold tracking-[-0.045em] text-[#191c1e] sm:text-3xl">
         {formatMetricValue(widget.config.metric, dataset?.currentTotal)}
       </p>
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#eef0f2] pt-3">
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#eef0f2] pt-2.5">
         <span className="text-[11px] text-[#595e6b]">
           {dataset?.comparisonRange ? "비교 기간 대비" : "비교 없음"}
         </span>
@@ -164,11 +284,11 @@ function TimeSeriesWidget({
         points={dataset?.points ?? []}
         title={widget.title}
       />
-      <details className="mt-4 border-t border-[#eef0f2] pt-3 text-[12px] text-[#595e6b]">
+      <details className="mt-2 text-[11px] text-[#595e6b]">
         <summary className="cursor-pointer font-medium text-[#4f46e5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]">
           차트 데이터 표 보기
         </summary>
-        <div className="mt-3 max-h-48 overflow-auto">
+        <div className="mt-2 max-h-44 overflow-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">{widget.title} 원본 데이터</caption>
             <thead className="text-[#777587]">
@@ -208,45 +328,19 @@ function CategoryBarWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
-  const highestValue = Math.max(
-    1,
-    ...(dataset?.points.map((point) => Math.abs(point.value ?? 0)) ?? []),
-  );
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
-      <ul className="space-y-3.5">
-        {(dataset?.points ?? []).map((point) => {
-          const width = (
-            (Math.abs(point.value ?? 0) / highestValue) *
-            100
-          ).toFixed(1);
-
-          return (
-            <li key={point.label}>
-              <div className="flex items-baseline justify-between gap-4 text-[12px]">
-                <span className="font-medium text-[#191c1e]">
-                  {point.label}
-                </span>
-                <span className="text-[#595e6b]">
-                  {formatMetricValue(dataset?.metric ?? "revenue", point.value)}
-                </span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eef0f2]">
-                <div
-                  className="h-full rounded-full bg-[#4f46e5]"
-                  style={{ width: `${width}%` }}
-                />
-              </div>
-              {point.percentChange !== undefined ? (
-                <p className="mt-1 text-[10px] text-[#777587]">
-                  {formatChangeWithDirection(point.percentChange)} 비교 변화
-                </p>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      descriptionClassName="sr-only"
+      widget={widget}
+    >
+      <PrismRankedBarChart
+        metric={dataset?.metric ?? "revenue"}
+        points={dataset?.points ?? []}
+        title={widget.title}
+      />
     </WidgetFrame>
   );
 }
@@ -266,6 +360,71 @@ function DonutWidget({
   return (
     <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
       <PrismDonutChart
+        metric={dataset?.metric ?? "revenue"}
+        points={dataset?.points ?? []}
+        title={widget.title}
+      />
+    </WidgetFrame>
+  );
+}
+
+function StackedBarWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
+  if (widget.type !== "stackedBar") {
+    return null;
+  }
+
+  const series = widget.config.series.flatMap((item) => {
+    const dataset = datasetsById.get(item.queryId);
+
+    return dataset
+      ? [{ id: item.queryId, label: item.label, points: dataset.points }]
+      : [];
+  });
+  const metric =
+    datasetsById.get(widget.config.series[0]?.queryId ?? "")?.metric ??
+    "revenue";
+
+  return (
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      descriptionClassName="sr-only"
+      widget={widget}
+    >
+      <PrismStackedBarChart
+        metric={metric}
+        series={series}
+        title={widget.title}
+      />
+    </WidgetFrame>
+  );
+}
+
+function CalendarHeatmapWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
+  if (widget.type !== "calendarHeatmap") {
+    return null;
+  }
+
+  const dataset = datasetsById.get(widget.config.queryId);
+
+  return (
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      density="compact"
+      widget={widget}
+    >
+      <PrismCalendarHeatmap
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
         title={widget.title}
@@ -361,6 +520,8 @@ const componentRegistry = {
   metric: MetricWidget,
   timeSeries: TimeSeriesWidget,
   categoryBar: CategoryBarWidget,
+  stackedBar: StackedBarWidget,
+  calendarHeatmap: CalendarHeatmapWidget,
   donut: DonutWidget,
   rankingTable: TableWidget,
   dataTable: TableWidget,
@@ -429,16 +590,21 @@ export function DashboardWidgetGrid({
   const findingsById = new Map(
     findings.map((finding) => [finding.id, finding]),
   );
+  const orderedWidgets = getDashboardGridWidgetOrder(widgets);
 
   return (
-    <div className="mt-5 grid gap-5 lg:grid-cols-12">
-      {widgets.map((widget) => (
-        <DashboardWidgetCard
-          datasetsById={datasetsById}
-          findingsById={findingsById}
+    <div className="mt-5 grid gap-5 md:grid-cols-6 lg:grid-cols-12">
+      {orderedWidgets.map((widget) => (
+        <div
+          className={getWidgetGridClassName(widget, widgets)}
           key={widget.id}
-          widget={widget}
-        />
+        >
+          <DashboardWidgetCard
+            datasetsById={datasetsById}
+            findingsById={findingsById}
+            widget={widget}
+          />
+        </div>
       ))}
     </div>
   );

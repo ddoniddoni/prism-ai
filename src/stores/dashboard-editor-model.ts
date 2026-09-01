@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import type { DashboardWidget } from "@/lib/ai/schemas/dashboard-spec";
 
+import { getDashboardWidgetSpan } from "./dashboard-layout";
+
 export const editorBreakpoints = ["lg", "md", "sm"] as const;
 export const editableWidgetTypes = [
   "categoryBar",
@@ -9,9 +11,11 @@ export const editableWidgetTypes = [
   "rankingTable",
   "dataTable",
 ] as const;
+export const editorLayoutModes = ["auto", "custom"] as const;
 
 export type EditorBreakpoint = (typeof editorBreakpoints)[number];
 export type EditableWidgetType = (typeof editableWidgetTypes)[number];
+export type EditorLayoutMode = (typeof editorLayoutModes)[number];
 
 const MAX_HISTORY_LENGTH = 30;
 const MAX_PERSISTED_DASHBOARDS = 20;
@@ -46,6 +50,7 @@ export const dashboardEditorSnapshotSchema = z
   .object({
     layouts: editorLayoutsSchema,
     hiddenWidgetIds: z.array(z.string().trim().min(1).max(100)).max(8),
+    layoutMode: z.enum(editorLayoutModes).optional(),
     typeOverrides: z.record(
       z.string().trim().min(1).max(100),
       z.enum(editableWidgetTypes),
@@ -88,12 +93,14 @@ export type DashboardEditorDocument = z.infer<
 function getWidgetHeight(widget: DashboardWidget): number {
   const heights: Record<DashboardWidget["type"], number> = {
     metric: 4,
-    timeSeries: 9,
-    categoryBar: 8,
-    donut: 8,
-    rankingTable: 8,
-    dataTable: 8,
-    insight: 6,
+    timeSeries: 8,
+    categoryBar: 6,
+    stackedBar: 7,
+    calendarHeatmap: 6,
+    donut: 7,
+    rankingTable: 7,
+    dataTable: 7,
+    insight: 4,
   };
 
   return heights[widget.type];
@@ -107,25 +114,6 @@ function getMinimumWidgetHeight(widget: DashboardWidget): number {
   return Math.max(3, getWidgetHeight(widget) - 2);
 }
 
-function getWidgetWidth(
-  widget: DashboardWidget,
-  breakpoint: EditorBreakpoint,
-): number {
-  if (breakpoint === "sm") {
-    return 1;
-  }
-
-  const desktopWidths: Record<DashboardWidget["size"], number> = {
-    small: 3,
-    medium: 6,
-    large: 8,
-    full: 12,
-  };
-  const width = desktopWidths[widget.size];
-
-  return Math.min(width, editorGridColumns[breakpoint]);
-}
-
 function getMinimumWidgetWidth(
   widget: DashboardWidget,
   breakpoint: EditorBreakpoint,
@@ -134,10 +122,16 @@ function getMinimumWidgetWidth(
     return 1;
   }
 
+  if (widget.type === "calendarHeatmap") {
+    return breakpoint === "lg" ? 4 : 3;
+  }
+
   const minimumWidths: Record<DashboardWidget["type"], number> = {
     metric: 3,
     timeSeries: 6,
     categoryBar: 4,
+    stackedBar: 6,
+    calendarHeatmap: 3,
     donut: 4,
     rankingTable: 4,
     dataTable: 4,
@@ -153,13 +147,18 @@ function clamp(value: number, minimum: number, maximum: number): number {
 
 function createLayoutItem(
   widget: DashboardWidget,
+  widgets: readonly DashboardWidget[],
   breakpoint: EditorBreakpoint,
   x: number,
   y: number,
+  existingItem?: EditorLayoutItem,
 ): EditorLayoutItem {
   const columns = editorGridColumns[breakpoint];
-  const width = getWidgetWidth(widget, breakpoint);
-  const height = getWidgetHeight(widget);
+  const width = Math.min(
+    getDashboardWidgetSpan(widget, widgets, breakpoint),
+    columns,
+  );
+  const height = Math.max(getWidgetHeight(widget), existingItem?.h ?? 0);
 
   return {
     i: widget.id,
@@ -177,16 +176,158 @@ function createLayoutItem(
 function createBreakpointLayout(
   widgets: readonly DashboardWidget[],
   breakpoint: EditorBreakpoint,
+  existingLayout: readonly EditorLayoutItem[] = [],
 ): EditorLayoutItem[] {
   const columns = editorGridColumns[breakpoint];
+  const existingItemsById = new Map(
+    existingLayout.map((item) => [item.i, item]),
+  );
+
+  const supportingWidgetCount = widgets.filter(
+    (widget) =>
+      widget.type === "categoryBar" ||
+      widget.type === "stackedBar" ||
+      widget.type === "calendarHeatmap" ||
+      widget.type === "donut" ||
+      widget.type === "rankingTable" ||
+      widget.type === "dataTable",
+  ).length;
+  const usesStaggeredMosaic =
+    breakpoint === "lg" &&
+    widgets[0]?.type === "metric" &&
+    widgets[1]?.type === "timeSeries" &&
+    supportingWidgetCount > 0 &&
+    supportingWidgetCount <= 2;
+
+  if (usesStaggeredMosaic) {
+    const [metricWidget, trendWidget, ...remainingWidgets] = widgets;
+    const metricItem = createLayoutItem(
+      metricWidget,
+      widgets,
+      breakpoint,
+      0,
+      0,
+      existingItemsById.get(metricWidget.id),
+    );
+    const trendItem = createLayoutItem(
+      trendWidget,
+      widgets,
+      breakpoint,
+      metricItem.w,
+      0,
+      existingItemsById.get(trendWidget.id),
+    );
+    const layout = [metricItem, trendItem];
+    const calendarHeatmapWidget = remainingWidgets.find(
+      (widget) => widget.type === "calendarHeatmap",
+    );
+
+    if (calendarHeatmapWidget) {
+      let compactLaneBottom = metricItem.h;
+      let analysisLaneBottom = trendItem.h;
+
+      for (const widget of remainingWidgets) {
+        const existingItem = existingItemsById.get(widget.id);
+        const isCalendarHeatmap = widget.id === calendarHeatmapWidget.id;
+        const isSupportingWidget =
+          widget.type === "categoryBar" ||
+          widget.type === "stackedBar" ||
+          widget.type === "calendarHeatmap" ||
+          widget.type === "donut" ||
+          widget.type === "rankingTable" ||
+          widget.type === "dataTable";
+        const startsNewRow = !isSupportingWidget;
+        const item = createLayoutItem(
+          widget,
+          widgets,
+          breakpoint,
+          isCalendarHeatmap || startsNewRow ? 0 : metricItem.w,
+          isCalendarHeatmap
+            ? compactLaneBottom
+            : startsNewRow
+              ? Math.max(compactLaneBottom, analysisLaneBottom)
+              : analysisLaneBottom,
+          existingItem,
+        );
+
+        layout.push(item);
+
+        if (isCalendarHeatmap) {
+          compactLaneBottom += item.h;
+        } else if (isSupportingWidget) {
+          analysisLaneBottom += item.h;
+        } else {
+          const nextBottom = item.y + item.h;
+          compactLaneBottom = nextBottom;
+          analysisLaneBottom = nextBottom;
+        }
+      }
+
+      return layout;
+    }
+
+    let leftLaneBottom = metricItem.h;
+    let rightLaneBottom = trendItem.h;
+    let supportingWidgetIndex = 0;
+
+    for (const widget of remainingWidgets) {
+      const existingItem = existingItemsById.get(widget.id);
+      const isSupportingWidget =
+        widget.type === "categoryBar" ||
+        widget.type === "stackedBar" ||
+        widget.type === "calendarHeatmap" ||
+        widget.type === "donut" ||
+        widget.type === "rankingTable" ||
+        widget.type === "dataTable";
+      const isLeftLaneWidget =
+        isSupportingWidget &&
+        (supportingWidgetIndex === 0 || widget.type === "calendarHeatmap");
+      const startsNewRow = !isSupportingWidget;
+      const item = createLayoutItem(
+        widget,
+        widgets,
+        breakpoint,
+        isLeftLaneWidget || startsNewRow ? 0 : metricItem.w,
+        isLeftLaneWidget
+          ? leftLaneBottom
+          : startsNewRow
+            ? Math.max(leftLaneBottom, rightLaneBottom)
+            : rightLaneBottom,
+        existingItem,
+      );
+
+      layout.push(item);
+
+      if (isSupportingWidget) {
+        supportingWidgetIndex += 1;
+
+        if (isLeftLaneWidget) {
+          leftLaneBottom += item.h;
+        } else {
+          rightLaneBottom += item.h;
+        }
+      } else {
+        const nextBottom = item.y + item.h;
+        leftLaneBottom = nextBottom;
+        rightLaneBottom = nextBottom;
+      }
+    }
+
+    return layout;
+  }
+
   const layout: EditorLayoutItem[] = [];
   let cursorX = 0;
   let cursorY = 0;
   let currentRowHeight = 0;
 
   for (const widget of widgets) {
-    const width = getWidgetWidth(widget, breakpoint);
-    const height = getWidgetHeight(widget);
+    const existingItem = existingItemsById.get(widget.id);
+    const width = Math.min(
+      getDashboardWidgetSpan(widget, widgets, breakpoint),
+      columns,
+    );
+    const height = Math.max(getWidgetHeight(widget), existingItem?.h ?? 0);
 
     if (cursorX + width > columns) {
       cursorY += currentRowHeight;
@@ -194,7 +335,16 @@ function createBreakpointLayout(
       currentRowHeight = 0;
     }
 
-    layout.push(createLayoutItem(widget, breakpoint, cursorX, cursorY));
+    layout.push(
+      createLayoutItem(
+        widget,
+        widgets,
+        breakpoint,
+        cursorX,
+        cursorY,
+        existingItem,
+      ),
+    );
     cursorX += width;
     currentRowHeight = Math.max(currentRowHeight, height);
 
@@ -218,8 +368,20 @@ export function createDashboardEditorSnapshot(
       sm: createBreakpointLayout(widgets, "sm"),
     },
     hiddenWidgetIds: [],
+    layoutMode: "auto",
     typeOverrides: {},
   });
+}
+
+export function createBalancedDashboardEditorLayouts(
+  widgets: readonly DashboardWidget[],
+  layouts: EditorLayouts,
+): EditorLayouts {
+  return {
+    lg: createBreakpointLayout(widgets, "lg", layouts.lg),
+    md: createBreakpointLayout(widgets, "md", layouts.md),
+    sm: createBreakpointLayout(widgets, "sm", layouts.sm),
+  };
 }
 
 export function createDashboardEditorDocument(
@@ -359,7 +521,7 @@ function reconcileBreakpointLayout(
       continue;
     }
 
-    const item = createLayoutItem(widget, breakpoint, 0, nextY);
+    const item = createLayoutItem(widget, widgets, breakpoint, 0, nextY);
     reconciled.push(item);
     nextY += item.h;
   }
@@ -394,6 +556,7 @@ export function reconcileDashboardEditorSnapshot(
       sm: reconcileBreakpointLayout(snapshot.layouts.sm, widgets, "sm"),
     },
     hiddenWidgetIds: snapshot.hiddenWidgetIds.filter((id) => widgetIds.has(id)),
+    layoutMode: snapshot.layoutMode ?? "auto",
     typeOverrides,
   });
 }

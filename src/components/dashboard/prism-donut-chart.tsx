@@ -95,7 +95,7 @@ export function PrismDonutChart({
     return (
       <div
         aria-label={chartSummary}
-        className="grid h-60 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587]"
+        className="grid h-44 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587] sm:h-48"
         role="img"
       >
         표시할 구성비 데이터가 없습니다.
@@ -104,11 +104,11 @@ export function PrismDonutChart({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[38rem] items-center gap-5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-6">
+    <div className="mx-auto grid w-full max-w-3xl items-center gap-4 sm:grid-cols-[minmax(10rem,12rem)_minmax(0,1fr)] sm:gap-5">
       <div
         aria-describedby={summaryId}
         aria-label={`${title} 도넛 차트`}
-        className="relative mx-auto h-48 w-full max-w-48 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4"
+        className="relative mx-auto h-44 w-full max-w-44 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4 sm:h-48 sm:max-w-48"
         role="img"
         tabIndex={0}
       >
@@ -151,7 +151,7 @@ export function PrismDonutChart({
           const percentage = getPrismDonutPercentage(datum.value, total);
 
           return (
-            <li className="py-2.5" key={datum.id}>
+            <li className="py-2" key={datum.id}>
               <div className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-[#343844]">
                   <span
@@ -172,7 +172,7 @@ export function PrismDonutChart({
               </div>
               <div
                 aria-hidden="true"
-                className="mt-2 h-px overflow-hidden bg-[#e9ebf0]"
+                className="mt-1.5 h-px overflow-hidden bg-[#e9ebf0]"
               >
                 <div
                   className="h-full"

@@ -40,6 +40,23 @@ function sanitizeWidget(
     });
   }
 
+  if (widget.type === "stackedBar") {
+    const series = widget.config.series.filter((item) =>
+      queryIds.has(item.queryId),
+    );
+
+    if (series.length < 2) {
+      return undefined;
+    }
+
+    return dashboardWidgetSchema.parse({
+      ...widget,
+      queryIds: validQueryIds,
+      findingIds: validFindingIds,
+      config: { ...widget.config, series },
+    });
+  }
+
   if (!queryIds.has(widget.config.queryId)) {
     return undefined;
   }
