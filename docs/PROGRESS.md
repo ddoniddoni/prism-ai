@@ -6,7 +6,7 @@ Phase 8: Portfolio 완성
 
 ## 상태
 
-Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio 문서와 성능 측정 진행 전 · 테스트 실행 보류
+Phase 8 접근성·반응형 1차 보완과 Nivo Chart 3종 완료 · Portfolio 문서와 성능 측정 진행 전 · 테스트 실행 보류
 
 ## 완료
 
@@ -83,10 +83,13 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 - Dashboard Editor는 기존 표시 타입 기준의 고정 Height와 `overflow-auto` 때문에 확장된 Donut 범례에 내부 Scroll이 생겼다. 타입 Override를 적용한 실제 Widget으로 Layout을 정규화하고, 컴팩트한 Donut의 기본·최소 Height는 8행으로 고정해 내부 Scroll 없이 카드 점유를 줄였다.
 - Dashboard Grid의 기본 Stretch가 같은 Row의 큰 Chart 높이만큼 Donut Card까지 늘리고, 이전 Scroll Fix의 전역 `overflow-visible`이 다른 Chart를 Card 밖으로 넘치게 한 회귀를 수정했다. WidgetFrame은 `self-start`로 콘텐츠 높이를 유지하며, Editor에서만 Donut은 자연 높이·다른 Widget은 기존 고정 높이와 Overflow 규칙을 사용한다.
 - PrismDonutChart의 Nivo Datum 변환과 합계·구성비 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- MIT 라이선스의 `@nivo/bar`로 기존 CSS Category Bar를 `PrismRankedBarChart`로 대체했다. 이 Bundle도 Dashboard에서만 동적으로 로드한다.
+- Ranked Bar Chart는 값 기준 내림차순, 1위 Indigo 강조, 끝값의 K·M·B 축약 표기, Hover Tooltip, Keyboard Focus와 Screen Reader 순위 요약을 제공한다. 비교 데이터가 있으면 Tooltip에 상승·하락 문구를 함께 표시한다.
+- PrismRankedBarChart의 정렬·강조색·높이 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
-- Phase 8의 Accessibility·Responsive 1차 보완과 Nivo 기반 `PrismTrendChart`·`PrismDonutChart`를 마쳤다. 다음 Custom Chart, Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
+- Phase 8의 Accessibility·Responsive 1차 보완과 Nivo 기반 `PrismTrendChart`·`PrismDonutChart`·`PrismRankedBarChart`를 마쳤다. 다음 Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
 
 ## 결정 사항
 
@@ -125,6 +128,7 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 | 2026-09-01 | 차트의 시각 상태는 텍스트 요약·표·상승/하락 문구로 중복 전달 | 색상, SVG만 읽을 수 없는 환경에서도 결정론적 Dataset 근거와 변화 방향을 이해할 수 있게 하기 위함 |
 | 2026-09-01 | Trend Chart는 MIT 라이선스의 Nivo를 동적 로드 | D3·react-spring 기반의 높은 시각 완성도와 Tooltip·접근성 기능을 사용하면서 초기 Dashboard Bundle을 키우지 않기 위함 |
 | 2026-09-01 | Donut Chart도 Nivo Pie를 동적 로드 | 기존 Conic Gradient보다 Arc 간격·Hover·Motion을 정교하게 제어하면서 Trend Chart와 같은 검증된 시각화 경로를 유지하기 위함 |
+| 2026-09-01 | Category Bar는 Nivo Bar를 동적 로드 | 같은 검증된 Chart Stack에서 순위·Tooltip·Keyboard 접근을 제공하고, 기존 CSS Progress Bar보다 정교한 순위 표현을 만들기 위함 |
 
 ## 검증 결과
 
@@ -253,6 +257,14 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Trend Chart 완료 · Portfolio
 - `npm run typecheck`: 통과 (Phase 8 Dashboard Card Sizing Fix)
 - `npm run build`: 통과 (Phase 8 Dashboard Card Sizing Fix, Next.js Webpack production build)
 - 변경 파일 대상 `prettier --check`: 통과 (Phase 8 Dashboard Card Sizing Fix)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+- `npm run lint`: 통과 (Phase 8 PrismRankedBarChart)
+- `npm run typecheck`: 통과 (Phase 8 PrismRankedBarChart)
+- `npm run build`: 통과 (Phase 8 PrismRankedBarChart, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`: 통과 (Phase 8 PrismRankedBarChart)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)

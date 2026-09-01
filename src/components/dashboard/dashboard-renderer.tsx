@@ -42,6 +42,22 @@ const PrismDonutChart = dynamic(
   },
 );
 
+const PrismRankedBarChart = dynamic(
+  () =>
+    import("./prism-ranked-bar-chart").then(
+      (module) => module.PrismRankedBarChart,
+    ),
+  {
+    loading: () => (
+      <div
+        aria-label="랭킹 차트를 불러오는 중"
+        className="prism-skeleton h-52 rounded-xl"
+      />
+    ),
+    ssr: false,
+  },
+);
+
 type DashboardRendererProps = {
   dashboard: DashboardSpec;
   datasets: readonly AnalyticsDataset[];
@@ -208,45 +224,14 @@ function CategoryBarWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
-  const highestValue = Math.max(
-    1,
-    ...(dataset?.points.map((point) => Math.abs(point.value ?? 0)) ?? []),
-  );
 
   return (
     <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
-      <ul className="space-y-3.5">
-        {(dataset?.points ?? []).map((point) => {
-          const width = (
-            (Math.abs(point.value ?? 0) / highestValue) *
-            100
-          ).toFixed(1);
-
-          return (
-            <li key={point.label}>
-              <div className="flex items-baseline justify-between gap-4 text-[12px]">
-                <span className="font-medium text-[#191c1e]">
-                  {point.label}
-                </span>
-                <span className="text-[#595e6b]">
-                  {formatMetricValue(dataset?.metric ?? "revenue", point.value)}
-                </span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eef0f2]">
-                <div
-                  className="h-full rounded-full bg-[#4f46e5]"
-                  style={{ width: `${width}%` }}
-                />
-              </div>
-              {point.percentChange !== undefined ? (
-                <p className="mt-1 text-[10px] text-[#777587]">
-                  {formatChangeWithDirection(point.percentChange)} 비교 변화
-                </p>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+      <PrismRankedBarChart
+        metric={dataset?.metric ?? "revenue"}
+        points={dataset?.points ?? []}
+        title={widget.title}
+      />
     </WidgetFrame>
   );
 }
