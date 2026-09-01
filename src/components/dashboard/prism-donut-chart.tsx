@@ -5,6 +5,7 @@ import { useId, useMemo } from "react";
 
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import { metricCatalog, type MetricKey } from "@/lib/analytics/metric-catalog";
+import type { DashboardWidgetPresentation } from "@/stores/dashboard-layout";
 
 import { formatMetricAxisValue, formatMetricValue } from "./formatters";
 import {
@@ -18,7 +19,23 @@ import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 type PrismDonutChartProps = {
   metric: MetricKey;
   points: readonly DataPoint[];
+  presentation?: DashboardWidgetPresentation;
   title: string;
+};
+
+const donutLayoutClassNames: Record<DashboardWidgetPresentation, string> = {
+  compact:
+    "mx-auto grid w-full max-w-2xl items-center gap-3 sm:grid-cols-[minmax(8.5rem,10rem)_minmax(0,1fr)] sm:gap-4",
+  standard:
+    "mx-auto grid w-full max-w-3xl items-center gap-4 sm:grid-cols-[minmax(10rem,12rem)_minmax(0,1fr)] sm:gap-5",
+  feature:
+    "mx-auto grid w-full max-w-4xl items-center gap-5 sm:grid-cols-[minmax(13rem,15rem)_minmax(0,1fr)] sm:gap-7",
+};
+
+const donutSizeClassNames: Record<DashboardWidgetPresentation, string> = {
+  compact: "h-40 max-w-40 sm:h-44 sm:max-w-44",
+  standard: "h-44 max-w-44 sm:h-48 sm:max-w-48",
+  feature: "h-52 max-w-52 sm:h-60 sm:max-w-60",
 };
 
 const nivoTheme = {
@@ -69,6 +86,7 @@ function createPrismDonutTooltip(metric: MetricKey, total: number) {
 export function PrismDonutChart({
   metric,
   points,
+  presentation = "standard",
   title,
 }: PrismDonutChartProps) {
   const chartId = useId().replace(/:/g, "");
@@ -104,11 +122,11 @@ export function PrismDonutChart({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl items-center gap-4 sm:grid-cols-[minmax(10rem,12rem)_minmax(0,1fr)] sm:gap-5">
+    <div className={donutLayoutClassNames[presentation]}>
       <div
         aria-describedby={summaryId}
         aria-label={`${title} 도넛 차트`}
-        className="relative mx-auto h-44 w-full max-w-44 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4 sm:h-48 sm:max-w-48"
+        className={`relative mx-auto w-full rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4 ${donutSizeClassNames[presentation]}`}
         role="img"
         tabIndex={0}
       >

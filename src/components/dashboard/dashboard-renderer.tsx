@@ -10,8 +10,12 @@ import type {
   DashboardWidget,
 } from "@/lib/ai/schemas/dashboard-spec";
 import {
-  getDashboardWidgetSpan,
+  createDashboardLayoutPlan,
+  dashboardLayoutConstraints,
+  type DashboardLayoutDataDensity,
   type DashboardLayoutBreakpoint,
+  type DashboardLayoutPlan,
+  type DashboardWidgetPresentation,
 } from "@/stores/dashboard-layout";
 
 import {
@@ -106,6 +110,7 @@ type DashboardWidgetProps = {
   findingsById: ReadonlyMap<string, Finding>;
   cardClassName?: string;
   controls?: ReactNode;
+  presentation?: DashboardWidgetPresentation;
 };
 
 const gridSpanClassNames: Record<
@@ -138,41 +143,32 @@ const gridSpanClassNames: Record<
 
 function getWidgetGridClassName(
   widget: DashboardWidget,
-  widgets: readonly DashboardWidget[],
+  mdLayoutPlan: DashboardLayoutPlan,
+  lgLayoutPlan: DashboardLayoutPlan,
 ): string {
-  const mdSpan = getDashboardWidgetSpan(widget, widgets, "md");
-  const lgSpan = getDashboardWidgetSpan(widget, widgets, "lg");
+  const mdSpan = mdLayoutPlan.get(widget.id)?.w ?? 1;
+  const lgSpan = lgLayoutPlan.get(widget.id)?.w ?? 1;
 
   return `${gridSpanClassNames.md[mdSpan]} ${gridSpanClassNames.lg[lgSpan]}`;
 }
 
 function getDashboardGridWidgetOrder(
   widgets: readonly DashboardWidget[],
+  layoutPlan: DashboardLayoutPlan,
 ): readonly DashboardWidget[] {
-  const [metricWidget, trendWidget] = widgets;
-  const calendarHeatmapWidget = widgets.find(
-    (widget) => widget.type === "calendarHeatmap",
-  );
-
-  if (
-    metricWidget?.type !== "metric" ||
-    trendWidget?.type !== "timeSeries" ||
-    !calendarHeatmapWidget
-  ) {
-    return widgets;
-  }
-
-  return [
-    metricWidget,
-    trendWidget,
-    calendarHeatmapWidget,
-    ...widgets.filter(
-      (widget) =>
-        widget.id !== metricWidget.id &&
-        widget.id !== trendWidget.id &&
-        widget.id !== calendarHeatmapWidget.id,
-    ),
-  ];
+  return widgets
+    .map((widget, index) => ({
+      index,
+      layout: layoutPlan.get(widget.id),
+      widget,
+    }))
+    .toSorted(
+      (left, right) =>
+        (left.layout?.y ?? 0) - (right.layout?.y ?? 0) ||
+        (left.layout?.x ?? 0) - (right.layout?.x ?? 0) ||
+        left.index - right.index,
+    )
+    .map((item) => item.widget);
 }
 
 function WidgetFrame({
@@ -181,19 +177,28 @@ function WidgetFrame({
   controls,
   descriptionClassName,
   density = "default",
+  presentation = "standard",
   widget,
 }: {
   children: ReactNode;
   className?: string;
   controls?: ReactNode;
   descriptionClassName?: string;
-  density?: "compact" | "default";
+  density?: "compact" | "default" | "feature";
+  presentation?: DashboardWidgetPresentation;
   widget: DashboardWidget;
 }) {
+  const resolvedDensity =
+    density === "compact" || presentation === "compact"
+      ? "compact"
+      : density === "feature" || presentation === "feature"
+        ? "feature"
+        : "default";
+
   return (
     <section
       aria-labelledby={`${widget.id}-title`}
-      className={`w-full self-start rounded-xl border border-[#e1e2e4] bg-white ${density === "compact" ? "p-3" : "p-4"} ${className ?? ""}`}
+      className={`w-full self-start rounded-xl border border-[#e1e2e4] bg-white ${resolvedDensity === "compact" ? "p-3" : resolvedDensity === "feature" ? "p-4 sm:p-5" : "p-4"} ${className ?? ""}`}
       id={widget.id}
     >
       <div className="flex flex-wrap items-start justify-between gap-2.5">
@@ -232,6 +237,7 @@ function MetricWidget({
   datasetsById,
   cardClassName,
   controls,
+  presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "metric") {
     return null;
@@ -246,6 +252,7 @@ function MetricWidget({
       controls={controls}
       density="compact"
       descriptionClassName="sr-only"
+      presentation={presentation}
       widget={widget}
     >
       <p className="text-[28px] leading-none font-semibold tracking-[-0.045em] text-[#191c1e] sm:text-3xl">
@@ -270,6 +277,7 @@ function TimeSeriesWidget({
   datasetsById,
   cardClassName,
   controls,
+  presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "timeSeries") {
     return null;
@@ -278,10 +286,16 @@ function TimeSeriesWidget({
   const dataset = datasetsById.get(widget.config.queryId);
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      presentation={presentation}
+      widget={widget}
+    >
       <PrismTrendChart
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
+        presentation={presentation}
         title={widget.title}
       />
       <details className="mt-2 text-[11px] text-[#595e6b]">
@@ -322,6 +336,7 @@ function CategoryBarWidget({
   datasetsById,
   cardClassName,
   controls,
+  presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "categoryBar") {
     return null;
@@ -334,11 +349,13 @@ function CategoryBarWidget({
       className={cardClassName}
       controls={controls}
       descriptionClassName="sr-only"
+      presentation={presentation}
       widget={widget}
     >
       <PrismRankedBarChart
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
+        presentation={presentation}
         title={widget.title}
       />
     </WidgetFrame>
@@ -350,6 +367,7 @@ function DonutWidget({
   datasetsById,
   cardClassName,
   controls,
+  presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "donut") {
     return null;
@@ -358,10 +376,16 @@ function DonutWidget({
   const dataset = datasetsById.get(widget.config.queryId);
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      presentation={presentation}
+      widget={widget}
+    >
       <PrismDonutChart
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
+        presentation={presentation}
         title={widget.title}
       />
     </WidgetFrame>
@@ -373,6 +397,7 @@ function StackedBarWidget({
   datasetsById,
   cardClassName,
   controls,
+  presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "stackedBar") {
     return null;
@@ -394,10 +419,12 @@ function StackedBarWidget({
       className={cardClassName}
       controls={controls}
       descriptionClassName="sr-only"
+      presentation={presentation}
       widget={widget}
     >
       <PrismStackedBarChart
         metric={metric}
+        presentation={presentation}
         series={series}
         title={widget.title}
       />
@@ -410,6 +437,7 @@ function CalendarHeatmapWidget({
   datasetsById,
   cardClassName,
   controls,
+  presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "calendarHeatmap") {
     return null;
@@ -421,12 +449,14 @@ function CalendarHeatmapWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
-      density="compact"
+      density={presentation === "feature" ? "feature" : "compact"}
+      presentation={presentation}
       widget={widget}
     >
       <PrismCalendarHeatmap
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
+        presentation={presentation}
         title={widget.title}
       />
     </WidgetFrame>
@@ -438,6 +468,7 @@ function TableWidget({
   datasetsById,
   cardClassName,
   controls,
+  presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "rankingTable" && widget.type !== "dataTable") {
     return null;
@@ -446,7 +477,12 @@ function TableWidget({
   const dataset = datasetsById.get(widget.config.queryId);
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      presentation={presentation}
+      widget={widget}
+    >
       <div className="overflow-x-auto">
         <table className="w-full min-w-96 text-left text-[12px]">
           <caption className="sr-only">{widget.title} 데이터 표</caption>
@@ -489,6 +525,7 @@ function InsightWidget({
   findingsById,
   cardClassName,
   controls,
+  presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "insight") {
     return null;
@@ -503,7 +540,12 @@ function InsightWidget({
   };
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      presentation={presentation}
+      widget={widget}
+    >
       <div className={`rounded-lg border p-4 ${toneClass[widget.config.tone]}`}>
         <p className="text-[13px] leading-6 text-[#191c1e]">
           {finding?.fallbackText ?? "검증된 Finding을 찾지 못했습니다."}
@@ -590,18 +632,35 @@ export function DashboardWidgetGrid({
   const findingsById = new Map(
     findings.map((finding) => [finding.id, finding]),
   );
-  const orderedWidgets = getDashboardGridWidgetOrder(widgets);
+  const layoutDataDensity: DashboardLayoutDataDensity = Object.fromEntries(
+    datasets.map((dataset) => [dataset.queryId, dataset.points.length]),
+  );
+  const mdLayoutPlan = createDashboardLayoutPlan(
+    widgets,
+    "md",
+    layoutDataDensity,
+  );
+  const lgLayoutPlan = createDashboardLayoutPlan(
+    widgets,
+    "lg",
+    layoutDataDensity,
+  );
+  const orderedWidgets = getDashboardGridWidgetOrder(widgets, lgLayoutPlan);
 
   return (
-    <div className="mt-5 grid gap-5 md:grid-cols-6 lg:grid-cols-12">
+    <div
+      className="mt-5 grid md:grid-cols-6 lg:grid-cols-12"
+      style={{ gap: dashboardLayoutConstraints.lg.gutterPx }}
+    >
       {orderedWidgets.map((widget) => (
         <div
-          className={getWidgetGridClassName(widget, widgets)}
+          className={getWidgetGridClassName(widget, mdLayoutPlan, lgLayoutPlan)}
           key={widget.id}
         >
           <DashboardWidgetCard
             datasetsById={datasetsById}
             findingsById={findingsById}
+            presentation={lgLayoutPlan.get(widget.id)?.presentation}
             widget={widget}
           />
         </div>

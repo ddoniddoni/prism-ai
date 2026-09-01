@@ -5,6 +5,7 @@ import { useId, useMemo } from "react";
 
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import type { MetricKey } from "@/lib/analytics/metric-catalog";
+import type { DashboardWidgetPresentation } from "@/stores/dashboard-layout";
 
 import {
   formatChangeWithDirection,
@@ -21,8 +22,24 @@ import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 type PrismRankedBarChartProps = {
   metric: MetricKey;
   points: readonly DataPoint[];
+  presentation?: DashboardWidgetPresentation;
   title: string;
 };
+
+function getPresentationChartHeight(
+  itemCount: number,
+  presentation: DashboardWidgetPresentation,
+): number {
+  const standardHeight = getPrismRankedBarChartHeight(itemCount);
+
+  if (presentation === "compact") {
+    return Math.max(152, standardHeight - 24);
+  }
+
+  return presentation === "feature"
+    ? Math.min(312, standardHeight + 32)
+    : standardHeight;
+}
 
 const nivoTheme = {
   axis: {
@@ -79,13 +96,14 @@ function createPrismRankedBarTooltip(metric: MetricKey) {
 export function PrismRankedBarChart({
   metric,
   points,
+  presentation = "standard",
   title,
 }: PrismRankedBarChartProps) {
   const chartId = useId().replace(/:/g, "");
   const prefersReducedMotion = usePrefersReducedMotion();
   const data = useMemo(() => createPrismRankedBarData(points), [points]);
   const tooltip = useMemo(() => createPrismRankedBarTooltip(metric), [metric]);
-  const chartHeight = getPrismRankedBarChartHeight(data.length);
+  const chartHeight = getPresentationChartHeight(data.length, presentation);
   const summaryId = `prism-ranked-bar-chart-summary-${chartId}`;
   const chartSummary =
     data.length > 0

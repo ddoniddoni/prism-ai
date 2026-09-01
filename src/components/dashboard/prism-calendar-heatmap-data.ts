@@ -23,6 +23,14 @@ export type PrismCalendarHeatmapData = {
   weekCount: number;
 };
 
+export type PrismCalendarHeatmapSummary = {
+  averageValue: number | null;
+  dataDayCount: number;
+  peakCell: PrismCalendarHeatmapCell | undefined;
+  strongestWeekdayIndex: number | undefined;
+  totalValue: number | null;
+};
+
 function parseIsoDate(value: string): Date | undefined {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
 
@@ -120,5 +128,45 @@ export function createPrismCalendarHeatmapData(
     cells,
     peakCell,
     weekCount: Math.ceil(cells.length / 7),
+  };
+}
+
+export function createPrismCalendarHeatmapSummary(
+  data: PrismCalendarHeatmapData,
+): PrismCalendarHeatmapSummary {
+  const dataCells = data.cells.filter(
+    (cell): cell is PrismCalendarHeatmapCell & { value: number } =>
+      cell.hasData && cell.value !== null,
+  );
+
+  if (dataCells.length === 0) {
+    return {
+      averageValue: null,
+      dataDayCount: 0,
+      peakCell: undefined,
+      strongestWeekdayIndex: undefined,
+      totalValue: null,
+    };
+  }
+
+  const totalValue = dataCells.reduce((total, cell) => total + cell.value, 0);
+  const valuesByWeekday = Array.from({ length: 7 }, () => 0);
+
+  for (const cell of dataCells) {
+    valuesByWeekday[cell.weekdayIndex] += cell.value;
+  }
+
+  const strongestWeekdayIndex = valuesByWeekday.reduce(
+    (bestIndex, value, index, values) =>
+      value > values[bestIndex] ? index : bestIndex,
+    0,
+  );
+
+  return {
+    averageValue: totalValue / dataCells.length,
+    dataDayCount: dataCells.length,
+    peakCell: data.peakCell,
+    strongestWeekdayIndex,
+    totalValue,
   };
 }
