@@ -104,7 +104,11 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - Calendar Heatmap은 큰 유동 셀 대신 28px/36px 고정 날짜 셀로 압축했다. 각 셀은 일자를 표시하고, 선택일자 Badge·주말 보조 톤·Active Ring으로 넓은 Dashboard Card 안에서도 작은 분석 캘린더를 의도적으로 읽을 수 있게 했다.
 - Calendar Heatmap은 4-column 컴팩트 보조 위젯으로 배치한다. 중첩된 바깥 패널과 장황한 설명을 없애고, 20px/24px 날짜 셀과 7-row Editor 높이로 줄여 캘린더 자체에 맞는 밀도를 유지한다. Auto Layout은 실제 렌더된 콘텐츠 높이를 다시 측정해, 기존에 저장된 큰 카드 높이도 축소한다.
 - 모든 Widget Card의 기본 패딩과 헤더 간격을 줄이고, 실제 분석 밀도에 맞춰 Chart Canvas와 Editor 기본 행 높이를 낮췄다. 추이·누적 막대·도넛·랭킹은 축·Tooltip·키보드 접근성을 유지하는 범위에서 작은 카드 비율로 재구성하며, 데이터 표와 사용자가 직접 조정한 카드의 높이는 강제 축소하지 않는다.
-- `KPI + Time Series + Calendar Heatmap + Comparison` 결과는 일반적인 좌측 세로 스택 대신 `KPI·캘린더`의 compact rail과 `추이·비교`의 wide canvas로 자동 배치한다. 초기 CSS Grid와 편집 가능 Grid가 같은 시각 순서를 사용해 로딩 직후에도 큰 빈 영역 없이 읽힌다.
+- `KPI + Time Series + Calendar Heatmap + Comparison` 결과에서 날짜가 21개 이상이고 비교 차트가 짧으면, 캘린더를 `추이` 아래의 8-column Feature Canvas로 승격하고 비교 차트는 KPI 아래 Compact Rail로 둔다. 짧은 날짜 범위는 기존 `KPI·캘린더` Compact Rail을 유지한다. 초기 CSS Grid와 편집 가능 Grid는 같은 계획 순서를 사용한다.
+- Adaptive Dashboard Layout Planner는 검증된 위젯 종류, 실제 Query DataPoint 수, 브레이크포인트만으로 `compact`·`standard`·`feature` 표현과 Grid 사각형을 결정한다. 단독 캘린더는 전체 폭의 Feature Monthboard로, KPI와 캘린더만 있으면 4:8 인접 분석으로 확장하며, KPI·추이·보조 분석이 함께 있으면 기존 Evidence Mosaic을 유지한다.
+- Trend·Ranked Bar·Stacked Bar·Donut·Calendar Heatmap·Table Frame이 공통 Presentation을 받아 Canvas·여백·날짜 셀 밀도를 함께 조절한다. 저장된 사용자의 Custom Layout은 자동 재배치하지 않고, Auto Layout만 실제 콘텐츠 높이를 다음 배치에 반영한다.
+- Dashboard Layout Constraint는 Desktop 12열·20px Gutter·최대 18% 빈 Canvas, Tablet 6열·20px Gutter·최대 20% 빈 Canvas를 단일 Contract로 둔다. 월간 캘린더 Feature 후보는 이 빈 공간 예산을 통과할 때만 선택한다.
+- Calendar Heatmap의 Feature Canvas에는 가장 높은 일자·기간 합계·일평균·강한 요일·분석 일수를 계산해 표시하는 `Month signals` 패널을 추가했다. 모든 값은 검증된 일별 DataPoint에서 결정론적으로 계산하며, Feature Card의 남는 폭을 분석 근거로 채운다.
 
 ## 진행 중
 
@@ -153,6 +157,10 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-01 | Dashboard는 질문 결과에 맞춰 Evidence Mosaic Layout을 사용 | 정해진 순서의 빈 Grid Cell 대신 KPI·추이·보조 분석·근거의 정보 우선순위에 따라 Canvas를 채우고, 1024px 이상 콘텐츠 영역에서는 Desktop Mosaic을 적용하기 위함 |
 | 2026-09-02 | 누적 막대는 Series별 검증된 Query를 쌓아서 렌더링 | 현재 Query DSL의 단일 Grouping 제약을 우회해 임의 비즈니스 값이나 잘못된 비교값을 합산하지 않고, 같은 날짜·지표의 결정론적 세그먼트 합계를 표현하기 위함 |
 | 2026-09-02 | 시간대 대신 주차 × 요일 캘린더 히트맵을 사용 | 현재 Dataset은 일별 Aggregate이므로 존재하지 않는 시간대 정보를 추정하지 않고, 실제 날짜 기반의 매출 집중도를 표현하기 위함 |
+| 2026-09-02 | Adaptive Layout은 Widget Semantic·DataPoint Density·Viewport만 사용 | LLM이나 임의의 표시값 없이 같은 검증 결과에는 같은 배치를 보장하면서, 단독·여유 Canvas에서는 차트가 충분한 표현 크기를 쓰게 하기 위함 |
+| 2026-09-02 | 월간 캘린더(21일 이상)는 짧은 비교 차트보다 우선적으로 8-column Canvas를 사용 | 31개 날짜 셀의 정보 밀도를 4-column 보조 레일에 가두지 않고, 빈 Card 내부 여백 대신 읽기 쉬운 날짜 셀과 Detail을 제공하기 위함 |
+| 2026-09-02 | 자동 배치는 빈 Canvas 예산을 초과하는 Feature 후보를 거부 | Dashboard를 억지로 꽉 채우거나 반대로 큰 빈 영역을 방치하지 않고, 정보 밀도가 충분한 후보만 넓은 Canvas로 승격하기 위함 |
+| 2026-09-02 | Feature Calendar는 결정론적 Month signals를 동반 | 넓어진 카드의 빈 폭을 장식으로 채우지 않고, 실제 일별 Dataset에서 재현 가능한 추가 분석을 제공하기 위함 |
 
 ## 검증 결과
 
@@ -176,6 +184,19 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - `npm run typecheck`: 통과 (PrismCalendarHeatmap Compact Date Cells)
 - `npm run build`: 통과 (PrismCalendarHeatmap Compact Date Cells, Next.js Webpack production build)
 - 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (PrismCalendarHeatmap Compact Date Cells)
+- `npm run lint`: 통과 (Adaptive Dashboard Layout)
+- `npm run typecheck`: 통과 (Adaptive Dashboard Layout)
+- `npm run build`: 통과 (Adaptive Dashboard Layout, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Adaptive Dashboard Layout)
+- Adaptive Layout Planner Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run lint`: 통과 (Calendar Feature Canvas Priority)
+- `npm run typecheck`: 통과 (Calendar Feature Canvas Priority)
+- `npm run build`: 통과 (Calendar Feature Canvas Priority, Next.js Webpack production build)
+- 캘린더 Feature Canvas 회귀 기대값 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run lint`: 통과 (Dashboard Empty Space Budget)
+- `npm run typecheck`: 통과 (Dashboard Empty Space Budget)
+- `npm run build`: 통과 (Dashboard Empty Space Budget, Next.js Webpack production build)
+- Constraint·Calendar Month signals Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - 로컬 브라우저 시각 점검: 미실행 (현재 세션에 연결 가능한 Browser 없음)
 - `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)

@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import type { DashboardWidget } from "@/lib/ai/schemas/dashboard-spec";
 
-import { getDashboardWidgetSpan } from "./dashboard-layout";
+import {
+  createDashboardLayoutPlan,
+  getDashboardWidgetSpan,
+  type DashboardLayoutDataDensity,
+} from "./dashboard-layout";
 
 export const editorBreakpoints = ["lg", "md", "sm"] as const;
 export const editableWidgetTypes = [
@@ -177,11 +181,44 @@ function createBreakpointLayout(
   widgets: readonly DashboardWidget[],
   breakpoint: EditorBreakpoint,
   existingLayout: readonly EditorLayoutItem[] = [],
+  dataDensity: DashboardLayoutDataDensity = {},
 ): EditorLayoutItem[] {
   const columns = editorGridColumns[breakpoint];
   const existingItemsById = new Map(
     existingLayout.map((item) => [item.i, item]),
   );
+  const heightOverrides = Object.fromEntries(
+    existingLayout.map((item) => [item.i, item.h]),
+  );
+  const layoutPlan = createDashboardLayoutPlan(
+    widgets,
+    breakpoint,
+    dataDensity,
+    heightOverrides,
+  );
+  const plannedLayout = widgets.flatMap((widget) => {
+    const item = layoutPlan.get(widget.id);
+
+    return item
+      ? [
+          {
+            i: widget.id,
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h,
+            minW: getMinimumWidgetWidth(widget, breakpoint),
+            minH: getMinimumWidgetHeight(widget),
+            maxW: columns,
+            maxH: 16,
+          },
+        ]
+      : [];
+  });
+
+  if (plannedLayout.length === widgets.length) {
+    return plannedLayout;
+  }
 
   const supportingWidgetCount = widgets.filter(
     (widget) =>
@@ -376,11 +413,12 @@ export function createDashboardEditorSnapshot(
 export function createBalancedDashboardEditorLayouts(
   widgets: readonly DashboardWidget[],
   layouts: EditorLayouts,
+  dataDensity: DashboardLayoutDataDensity = {},
 ): EditorLayouts {
   return {
-    lg: createBreakpointLayout(widgets, "lg", layouts.lg),
-    md: createBreakpointLayout(widgets, "md", layouts.md),
-    sm: createBreakpointLayout(widgets, "sm", layouts.sm),
+    lg: createBreakpointLayout(widgets, "lg", layouts.lg, dataDensity),
+    md: createBreakpointLayout(widgets, "md", layouts.md, dataDensity),
+    sm: createBreakpointLayout(widgets, "sm", layouts.sm, dataDensity),
   };
 }
 

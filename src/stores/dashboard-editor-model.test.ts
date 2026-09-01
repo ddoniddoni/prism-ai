@@ -11,7 +11,12 @@ import {
   redoDashboardEditorDocument,
   undoDashboardEditorDocument,
 } from "./dashboard-editor-model";
-import { getDashboardWidgetSpan } from "./dashboard-layout";
+import {
+  createDashboardLayoutPlan,
+  dashboardLayoutConstraints,
+  getDashboardUnusedCanvasRatio,
+  getDashboardWidgetSpan,
+} from "./dashboard-layout";
 
 const widgets = [
   {
@@ -210,6 +215,107 @@ describe("dashboard editor model", () => {
       { i: "segments", x: 4, y: 8, w: 8, h: 6 },
       { i: "calendar-heatmap", x: 0, y: 4, w: 4, h: 6, minW: 4, minH: 4 },
     ]);
+  });
+
+  it("promotes a month calendar above a short category comparison", () => {
+    const dashboardWidgets = [
+      widgets[0],
+      {
+        id: "trend",
+        type: "timeSeries",
+        title: "기간별 흐름",
+        queryIds: ["trend-query"],
+        findingIds: [],
+        size: "large",
+        config: { queryId: "trend-query", xKey: "label" },
+      },
+      widgets[1],
+      {
+        id: "calendar-heatmap",
+        type: "calendarHeatmap",
+        title: "일자별 집중도",
+        queryIds: ["trend-query"],
+        findingIds: [],
+        size: "medium",
+        config: { queryId: "trend-query", xKey: "label" },
+      },
+    ] satisfies DashboardWidget[];
+    const document = createDashboardEditorDocument(dashboardWidgets);
+    const layouts = createBalancedDashboardEditorLayouts(
+      dashboardWidgets,
+      document.present.layouts,
+      { "segment-query": 5, "trend-query": 31 },
+    );
+    const layoutPlan = createDashboardLayoutPlan(dashboardWidgets, "lg", {
+      "segment-query": 5,
+      "trend-query": 31,
+    });
+
+    expect(layouts.lg).toMatchObject([
+      { i: "revenue", x: 0, y: 0, w: 4, h: 4 },
+      { i: "trend", x: 4, y: 0, w: 8, h: 8 },
+      { i: "segments", x: 0, y: 4, w: 4, h: 6 },
+      {
+        i: "calendar-heatmap",
+        x: 4,
+        y: 8,
+        w: 8,
+        h: 8,
+      },
+    ]);
+    expect(getDashboardUnusedCanvasRatio(layoutPlan, "lg")).toBeLessThanOrEqual(
+      dashboardLayoutConstraints.lg.maxUnusedCanvasRatio,
+    );
+  });
+
+  it("expands a standalone calendar into the available analysis canvas", () => {
+    const calendarWidget = {
+      id: "calendar-heatmap",
+      type: "calendarHeatmap",
+      title: "일자별 집중도",
+      queryIds: ["trend-query"],
+      findingIds: [],
+      size: "medium",
+      config: { queryId: "trend-query", xKey: "label" },
+    } satisfies DashboardWidget;
+
+    expect(
+      createDashboardLayoutPlan([calendarWidget], "lg", {
+        "trend-query": 31,
+      }).get(calendarWidget.id),
+    ).toMatchObject({
+      h: 9,
+      presentation: "feature",
+      w: 12,
+      x: 0,
+      y: 0,
+    });
+  });
+
+  it("uses an adjacent feature calendar when a KPI leaves a wide canvas", () => {
+    const calendarWidget = {
+      id: "calendar-heatmap",
+      type: "calendarHeatmap",
+      title: "일자별 집중도",
+      queryIds: ["trend-query"],
+      findingIds: [],
+      size: "medium",
+      config: { queryId: "trend-query", xKey: "label" },
+    } satisfies DashboardWidget;
+    const layoutPlan = createDashboardLayoutPlan(
+      [widgets[0], calendarWidget],
+      "lg",
+      { "trend-query": 31 },
+    );
+
+    expect(layoutPlan.get("revenue")).toMatchObject({ w: 4, x: 0, y: 0 });
+    expect(layoutPlan.get(calendarWidget.id)).toMatchObject({
+      h: 8,
+      presentation: "feature",
+      w: 8,
+      x: 4,
+      y: 0,
+    });
   });
 
   it("migrates a legacy saved layout to automatic Mosaic placement", () => {

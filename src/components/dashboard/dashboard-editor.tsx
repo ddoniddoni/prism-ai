@@ -45,6 +45,11 @@ import {
   type EditorBreakpoint,
   type EditableWidgetType,
 } from "@/stores/dashboard-editor-model";
+import {
+  createDashboardLayoutPlan,
+  dashboardLayoutConstraints,
+  type DashboardLayoutDataDensity,
+} from "@/stores/dashboard-layout";
 import { useDashboardEditorStore } from "@/stores/dashboard-editor-store";
 
 import {
@@ -64,7 +69,10 @@ const editorBreakpoints: Record<EditorBreakpoint, number> = {
   md: 640,
   sm: 0,
 };
-const editorGridMargin = [20, 20] as const;
+const editorGridMargin = [
+  dashboardLayoutConstraints.lg.gutterPx,
+  dashboardLayoutConstraints.lg.gutterPx,
+] as const;
 const editorRowHeight = 28;
 
 const activeDragConfig = {
@@ -357,6 +365,8 @@ export function DashboardEditor({
 }: DashboardEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editorStatus, setEditorStatus] = useState("");
+  const [activeBreakpoint, setActiveBreakpoint] =
+    useState<EditorBreakpoint>("lg");
   const currentBreakpoint = useRef<EditorBreakpoint>("lg");
   const { width, containerRef, mounted } = useContainerWidth({
     measureBeforeMount: true,
@@ -413,6 +423,13 @@ export function DashboardEditor({
 
     return resolvedWidgets.filter((widget) => !hiddenWidgetIds.has(widget.id));
   }, [document.present.hiddenWidgetIds, resolvedWidgets]);
+  const layoutDataDensity = useMemo<DashboardLayoutDataDensity>(
+    () =>
+      Object.fromEntries(
+        datasets.map((dataset) => [dataset.queryId, dataset.points.length]),
+      ),
+    [datasets],
+  );
   const layouts = useMemo<ResponsiveLayouts<EditorBreakpoint>>(() => {
     const reconciledSnapshot = reconcileDashboardEditorSnapshot(
       document.present,
@@ -422,8 +439,9 @@ export function DashboardEditor({
     const balancedLayouts = usesCustomLayout(document.present)
       ? reconciledSnapshot.layouts
       : createBalancedDashboardEditorLayouts(
-          resolvedWidgets,
+          widgets,
           reconciledSnapshot.layouts,
+          layoutDataDensity,
         );
 
     return {
@@ -431,7 +449,7 @@ export function DashboardEditor({
       md: balancedLayouts.md.filter((item) => visibleWidgetIds.has(item.i)),
       sm: balancedLayouts.sm.filter((item) => visibleWidgetIds.has(item.i)),
     };
-  }, [document, resolvedWidgets, widgets]);
+  }, [document, layoutDataDensity, resolvedWidgets, widgets]);
   const layoutKey = useMemo(
     () =>
       (["lg", "md", "sm"] as const)
@@ -450,6 +468,11 @@ export function DashboardEditor({
   const findingsById = useMemo(
     () => new Map(findings.map((finding) => [finding.id, finding])),
     [findings],
+  );
+  const activeLayoutPlan = useMemo(
+    () =>
+      createDashboardLayoutPlan(widgets, activeBreakpoint, layoutDataDensity),
+    [activeBreakpoint, layoutDataDensity, widgets],
   );
 
   function commitLayout(layout: Layout) {
@@ -523,6 +546,7 @@ export function DashboardEditor({
             margin={editorGridMargin}
             onBreakpointChange={(breakpoint) => {
               currentBreakpoint.current = breakpoint;
+              setActiveBreakpoint(breakpoint);
             }}
             onDragStop={commitLayout}
             onResizeStop={commitLayout}
@@ -545,6 +569,9 @@ export function DashboardEditor({
                   }
                   datasetsById={datasetsById}
                   findingsById={findingsById}
+                  presentation={
+                    activeLayoutPlan.get(widget.id)?.presentation ?? "standard"
+                  }
                   widget={widget}
                 />
               );

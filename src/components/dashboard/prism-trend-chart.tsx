@@ -5,6 +5,7 @@ import { useId, useMemo } from "react";
 
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import type { MetricKey } from "@/lib/analytics/metric-catalog";
+import type { DashboardWidgetPresentation } from "@/stores/dashboard-layout";
 
 import { formatMetricAxisValue, formatMetricValue } from "./formatters";
 import {
@@ -17,7 +18,14 @@ import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 type PrismTrendChartProps = {
   metric: MetricKey;
   points: readonly DataPoint[];
+  presentation?: DashboardWidgetPresentation;
   title: string;
+};
+
+const chartHeightClassNames: Record<DashboardWidgetPresentation, string> = {
+  compact: "h-44 sm:h-48 lg:h-52",
+  standard: "h-48 sm:h-56 lg:h-64",
+  feature: "h-52 sm:h-60 lg:h-64",
 };
 
 const nivoTheme = {
@@ -120,6 +128,7 @@ function createPrismTrendSliceTooltip(metric: MetricKey) {
 export function PrismTrendChart({
   metric,
   points,
+  presentation = "standard",
   title,
 }: PrismTrendChartProps) {
   const chartId = useId().replace(/:/g, "");
@@ -138,12 +147,13 @@ export function PrismTrendChart({
     firstPoint && latestPoint
       ? `${title}: ${formatAxisLabel(firstPoint.label)} ${formatMetricValue(metric, firstPoint.value)}에서 ${formatAxisLabel(latestPoint.label)} ${formatMetricValue(metric, latestPoint.value)}까지의 추이입니다.`
       : `${title} 차트에 표시할 데이터가 없습니다.`;
+  const chartHeightClassName = chartHeightClassNames[presentation];
 
   if (validPoints.length === 0) {
     return (
       <div
         aria-label={chartSummary}
-        className="grid h-44 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587] sm:h-52 lg:h-64"
+        className={`grid ${chartHeightClassName} place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587]`}
         role="img"
       >
         표시할 추이 데이터가 없습니다.
@@ -177,7 +187,7 @@ export function PrismTrendChart({
         </span>
       </div>
 
-      <div className="h-48 sm:h-56 lg:h-64">
+      <div className={chartHeightClassName}>
         <ResponsiveLine
           animate={!prefersReducedMotion}
           areaOpacity={0.13}

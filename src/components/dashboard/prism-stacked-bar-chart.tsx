@@ -10,6 +10,7 @@ import { useCallback, useId, useMemo } from "react";
 import { useTooltip } from "@nivo/tooltip";
 
 import type { MetricKey } from "@/lib/analytics/metric-catalog";
+import type { DashboardWidgetPresentation } from "@/stores/dashboard-layout";
 
 import { formatMetricAxisValue, formatMetricValue } from "./formatters";
 import {
@@ -25,8 +26,15 @@ import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type PrismStackedBarChartProps = {
   metric: MetricKey;
+  presentation?: DashboardWidgetPresentation;
   series: readonly PrismStackedBarSeries[];
   title: string;
+};
+
+const chartHeightClassNames: Record<DashboardWidgetPresentation, string> = {
+  compact: "h-44 sm:h-48 lg:h-52",
+  standard: "h-48 sm:h-52 lg:h-56",
+  feature: "h-52 sm:h-56 lg:h-60",
 };
 
 const nivoTheme = {
@@ -174,6 +182,7 @@ function PrismStackedBarItem({
 
 export function PrismStackedBarChart({
   metric,
+  presentation = "standard",
   series,
   title,
 }: PrismStackedBarChartProps) {
@@ -203,12 +212,13 @@ export function PrismStackedBarChart({
         })
         .join(", ")}.`
     : `${title} 차트에 표시할 데이터가 없습니다.`;
+  const chartHeightClassName = chartHeightClassNames[presentation];
 
   if (data.length === 0 || series.length < 2) {
     return (
       <div
         aria-label={chartSummary}
-        className="grid h-44 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587] sm:h-52"
+        className={`grid ${chartHeightClassName} place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587]`}
         role="img"
       >
         표시할 구성 시계열 데이터가 없습니다.
@@ -248,7 +258,7 @@ export function PrismStackedBarChart({
       <div
         aria-describedby={summaryId}
         aria-label={`${title} 누적 막대 차트`}
-        className="h-48 w-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4 sm:h-52 lg:h-56"
+        className={`${chartHeightClassName} w-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4`}
         role="img"
         tabIndex={0}
       >
