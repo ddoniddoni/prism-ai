@@ -42,7 +42,9 @@ type MockAnalysisDefinition = {
     trend?: string;
     focus?: string;
     stacked?: string;
+    heatmap?: string;
   };
+  calendarHeatmap?: boolean;
   stackedSeries?: readonly StackedSeriesDefinition[];
 };
 
@@ -114,6 +116,33 @@ function rootCauseDefinition(): MockAnalysisDefinition {
 }
 
 function resolveDefinition(question: string): MockAnalysisDefinition {
+  if (
+    question.includes("매출") &&
+    (question.includes("히트맵") ||
+      question.includes("집중도") ||
+      question.includes("달력"))
+  ) {
+    return {
+      intent: "trend",
+      goal: "지난달의 일별 매출 집중도를 캘린더 히트맵으로 확인합니다.",
+      primaryMetric: "revenue",
+      period: { preset: "lastMonth" },
+      compareWith: "none",
+      filters: [],
+      focusDimension: "category",
+      title: "지난달 매출 집중도",
+      subtitle:
+        "날짜별 매출 강도를 캘린더 형태로 보고 집중된 날을 빠르게 찾습니다.",
+      widgetTitles: {
+        primary: "지난달 총매출",
+        trend: "기간별 전체 매출",
+        focus: "카테고리별 매출",
+        heatmap: "일자별 매출 집중도",
+      },
+      calendarHeatmap: true,
+    };
+  }
+
   if (
     (question.includes("디바이스") || question.includes("기기")) &&
     question.includes("매출") &&
@@ -488,6 +517,18 @@ function createDashboardSpec(
       findingIds: [],
       size: "large",
       config: { series: stackedSeries, xKey: "label" },
+    });
+  }
+
+  if (definition.calendarHeatmap && trendDataset) {
+    widgets.push({
+      id: "calendar-heatmap",
+      type: "calendarHeatmap",
+      title: definition.widgetTitles?.heatmap ?? "일자별 집중도",
+      queryIds: [trendDataset.queryId],
+      findingIds: [],
+      size: "large",
+      config: { queryId: trendDataset.queryId, xKey: "label" },
     });
   }
 

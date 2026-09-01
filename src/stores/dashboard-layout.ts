@@ -6,6 +6,7 @@ function isSupportingWidget(widget: DashboardWidget): boolean {
   return (
     widget.type === "categoryBar" ||
     widget.type === "stackedBar" ||
+    widget.type === "calendarHeatmap" ||
     widget.type === "donut" ||
     widget.type === "rankingTable" ||
     widget.type === "dataTable"
@@ -30,6 +31,9 @@ export function getDashboardWidgetSpan(
   const supportingWidgets = widgets.filter(isSupportingWidget);
   const supportingWidgetCount = supportingWidgets.length;
   const supportingWidgetIndex = supportingWidgets.indexOf(widget);
+  const hasCalendarHeatmap = supportingWidgets.some(
+    (candidate) => candidate.type === "calendarHeatmap",
+  );
 
   if (breakpoint === "md") {
     if (widget.type === "metric") {
@@ -69,6 +73,20 @@ export function getDashboardWidgetSpan(
 
   if (widget.type === "insight") {
     return 12;
+  }
+
+  if (
+    metricCount === 1 &&
+    hasTimeSeries &&
+    hasCalendarHeatmap &&
+    supportingWidgetCount <= 2 &&
+    isSupportingWidget(widget)
+  ) {
+    return widget.type === "calendarHeatmap" ? 4 : 8;
+  }
+
+  if (widget.type === "calendarHeatmap") {
+    return 4;
   }
 
   if (metricCount === 1 && hasTimeSeries && supportingWidgetCount <= 2) {

@@ -208,7 +208,7 @@ export function PrismStackedBarChart({
     return (
       <div
         aria-label={chartSummary}
-        className="grid h-56 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587] sm:h-64"
+        className="grid h-44 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587] sm:h-52"
         role="img"
       >
         표시할 구성 시계열 데이터가 없습니다.
@@ -217,8 +217,8 @@ export function PrismStackedBarChart({
   }
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-[#e1e4ec] bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.14),transparent_36%),linear-gradient(180deg,#fdfdff_0%,#f7f8fd_100%)] px-1 pt-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 pb-1 text-[10px]">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-[#e1e4ec] bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.14),transparent_36%),linear-gradient(180deg,#fdfdff_0%,#f7f8fd_100%)] px-1 pt-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-2.5 pb-0.5 text-[10px]">
         <ul
           aria-label={`${title} 계열`}
           className="flex flex-wrap gap-x-3 gap-y-1.5"
@@ -248,7 +248,7 @@ export function PrismStackedBarChart({
       <div
         aria-describedby={summaryId}
         aria-label={`${title} 누적 막대 차트`}
-        className="h-60 w-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4 sm:h-64 lg:h-72"
+        className="h-48 w-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4 sm:h-52 lg:h-56"
         role="img"
         tabIndex={0}
       >
@@ -293,7 +293,7 @@ export function PrismStackedBarChart({
           innerPadding={2}
           isFocusable
           keys={series.map((item) => item.id)}
-          margin={{ bottom: 38, left: 68, right: 16, top: 14 }}
+          margin={{ bottom: 34, left: 64, right: 14, top: 10 }}
           motionConfig="gentle"
           padding={0.32}
           role="img"

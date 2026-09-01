@@ -42,5 +42,5 @@ export function createPrismRankedBarData(
 }
 
 export function getPrismRankedBarChartHeight(itemCount: number): number {
-  return Math.min(320, Math.max(208, itemCount * 48 + 64));
+  return Math.min(264, Math.max(176, itemCount * 40 + 48));
 }

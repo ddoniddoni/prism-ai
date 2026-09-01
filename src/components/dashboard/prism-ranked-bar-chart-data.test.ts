@@ -48,7 +48,7 @@ describe("PrismRankedBarChart data", () => {
   });
 
   it("keeps the chart height dense for short rankings and bounded for long ones", () => {
-    expect(getPrismRankedBarChartHeight(3)).toBe(208);
-    expect(getPrismRankedBarChartHeight(20)).toBe(320);
+    expect(getPrismRankedBarChartHeight(3)).toBe(176);
+    expect(getPrismRankedBarChartHeight(20)).toBe(264);
   });
 });

@@ -214,10 +214,14 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
               return item;
             }
 
-            const nextHeight = Math.min(
+            const measuredHeight = Math.min(
               item.maxH,
-              Math.max(item.h, Math.round(height)),
+              Math.max(item.minH, Math.round(height)),
             );
+            const nextHeight =
+              document.present.layoutMode === "auto"
+                ? measuredHeight
+                : Math.max(item.h, measuredHeight);
 
             return nextHeight === item.h ? item : { ...item, h: nextHeight };
           });

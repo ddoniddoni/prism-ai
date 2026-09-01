@@ -470,7 +470,7 @@ export function DashboardEditor({
       const layoutItem = currentLayout.find((item) => item.i === widgetId);
       const requiredRows = getGridRowsForContentHeight(contentHeight);
 
-      if (!layoutItem || requiredRows <= layoutItem.h) {
+      if (!layoutItem) {
         return;
       }
 

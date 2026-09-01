@@ -26,7 +26,7 @@ const PrismTrendChart = dynamic(
     loading: () => (
       <div
         aria-label="추이 차트를 불러오는 중"
-        className="prism-skeleton h-72 rounded-xl sm:h-80"
+        className="prism-skeleton h-52 rounded-xl sm:h-60"
       />
     ),
     ssr: false,
@@ -39,7 +39,7 @@ const PrismDonutChart = dynamic(
     loading: () => (
       <div
         aria-label="구성비 차트를 불러오는 중"
-        className="prism-skeleton h-60 rounded-xl"
+        className="prism-skeleton h-48 rounded-xl"
       />
     ),
     ssr: false,
@@ -55,7 +55,7 @@ const PrismRankedBarChart = dynamic(
     loading: () => (
       <div
         aria-label="랭킹 차트를 불러오는 중"
-        className="prism-skeleton h-52 rounded-xl"
+        className="prism-skeleton h-44 rounded-xl"
       />
     ),
     ssr: false,
@@ -71,7 +71,23 @@ const PrismStackedBarChart = dynamic(
     loading: () => (
       <div
         aria-label="누적 막대 차트를 불러오는 중"
-        className="prism-skeleton h-60 rounded-xl sm:h-64"
+        className="prism-skeleton h-48 rounded-xl sm:h-52"
+      />
+    ),
+    ssr: false,
+  },
+);
+
+const PrismCalendarHeatmap = dynamic(
+  () =>
+    import("./prism-calendar-heatmap").then(
+      (module) => module.PrismCalendarHeatmap,
+    ),
+  {
+    loading: () => (
+      <div
+        aria-label="캘린더 히트맵을 불러오는 중"
+        className="prism-skeleton h-40 rounded-xl"
       />
     ),
     ssr: false,
@@ -130,48 +146,83 @@ function getWidgetGridClassName(
   return `${gridSpanClassNames.md[mdSpan]} ${gridSpanClassNames.lg[lgSpan]}`;
 }
 
+function getDashboardGridWidgetOrder(
+  widgets: readonly DashboardWidget[],
+): readonly DashboardWidget[] {
+  const [metricWidget, trendWidget] = widgets;
+  const calendarHeatmapWidget = widgets.find(
+    (widget) => widget.type === "calendarHeatmap",
+  );
+
+  if (
+    metricWidget?.type !== "metric" ||
+    trendWidget?.type !== "timeSeries" ||
+    !calendarHeatmapWidget
+  ) {
+    return widgets;
+  }
+
+  return [
+    metricWidget,
+    trendWidget,
+    calendarHeatmapWidget,
+    ...widgets.filter(
+      (widget) =>
+        widget.id !== metricWidget.id &&
+        widget.id !== trendWidget.id &&
+        widget.id !== calendarHeatmapWidget.id,
+    ),
+  ];
+}
+
 function WidgetFrame({
   children,
   className,
   controls,
+  descriptionClassName,
+  density = "default",
   widget,
 }: {
   children: ReactNode;
   className?: string;
   controls?: ReactNode;
+  descriptionClassName?: string;
+  density?: "compact" | "default";
   widget: DashboardWidget;
 }) {
   return (
     <section
       aria-labelledby={`${widget.id}-title`}
-      className={`w-full self-start rounded-xl border border-[#e1e2e4] bg-white p-5 ${className ?? ""}`}
+      className={`w-full self-start rounded-xl border border-[#e1e2e4] bg-white ${density === "compact" ? "p-3" : "p-4"} ${className ?? ""}`}
       id={widget.id}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-2.5">
         <div className="min-w-0">
           <p className="text-[9px] font-semibold tracking-[0.11em] text-[#777587] uppercase">
             {widget.type}
           </p>
           <h2
-            className="mt-1.5 text-[15px] font-semibold tracking-[-0.02em] break-words text-[#191c1e]"
+            className="mt-1 text-[15px] font-semibold tracking-[-0.02em] break-words text-[#191c1e]"
             id={`${widget.id}-title`}
           >
             {widget.title}
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded border border-[#dde2e8] bg-[#f8f9fb] px-2 py-1 text-[9px] text-[#777587]">
+          <span className="rounded border border-[#dde2e8] bg-[#f8f9fb] px-1.5 py-0.5 text-[9px] text-[#777587]">
             {widget.queryIds.length} data ref
           </span>
           {controls}
         </div>
       </div>
       {widget.description ? (
-        <p className="mt-2 text-[12px] leading-5 break-words text-[#595e6b]">
+        <p
+          className={`mt-1.5 text-[12px] leading-5 break-words text-[#595e6b] ${descriptionClassName ?? ""}`}
+        >
           {widget.description}
         </p>
       ) : null}
-      <div className="mt-4">{children}</div>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
@@ -190,11 +241,17 @@ function MetricWidget({
   const change = dataset?.points[0]?.percentChange ?? null;
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
-      <p className="text-3xl font-semibold tracking-[-0.045em] text-[#191c1e] sm:text-[34px]">
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      density="compact"
+      descriptionClassName="sr-only"
+      widget={widget}
+    >
+      <p className="text-[28px] leading-none font-semibold tracking-[-0.045em] text-[#191c1e] sm:text-3xl">
         {formatMetricValue(widget.config.metric, dataset?.currentTotal)}
       </p>
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#eef0f2] pt-3">
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#eef0f2] pt-2.5">
         <span className="text-[11px] text-[#595e6b]">
           {dataset?.comparisonRange ? "비교 기간 대비" : "비교 없음"}
         </span>
@@ -227,11 +284,11 @@ function TimeSeriesWidget({
         points={dataset?.points ?? []}
         title={widget.title}
       />
-      <details className="mt-4 border-t border-[#eef0f2] pt-3 text-[12px] text-[#595e6b]">
+      <details className="mt-2 text-[11px] text-[#595e6b]">
         <summary className="cursor-pointer font-medium text-[#4f46e5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]">
           차트 데이터 표 보기
         </summary>
-        <div className="mt-3 max-h-48 overflow-auto">
+        <div className="mt-2 max-h-44 overflow-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">{widget.title} 원본 데이터</caption>
             <thead className="text-[#777587]">
@@ -273,7 +330,12 @@ function CategoryBarWidget({
   const dataset = datasetsById.get(widget.config.queryId);
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      descriptionClassName="sr-only"
+      widget={widget}
+    >
       <PrismRankedBarChart
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
@@ -328,10 +390,43 @@ function StackedBarWidget({
     "revenue";
 
   return (
-    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      descriptionClassName="sr-only"
+      widget={widget}
+    >
       <PrismStackedBarChart
         metric={metric}
         series={series}
+        title={widget.title}
+      />
+    </WidgetFrame>
+  );
+}
+
+function CalendarHeatmapWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
+  if (widget.type !== "calendarHeatmap") {
+    return null;
+  }
+
+  const dataset = datasetsById.get(widget.config.queryId);
+
+  return (
+    <WidgetFrame
+      className={cardClassName}
+      controls={controls}
+      density="compact"
+      widget={widget}
+    >
+      <PrismCalendarHeatmap
+        metric={dataset?.metric ?? "revenue"}
+        points={dataset?.points ?? []}
         title={widget.title}
       />
     </WidgetFrame>
@@ -426,6 +521,7 @@ const componentRegistry = {
   timeSeries: TimeSeriesWidget,
   categoryBar: CategoryBarWidget,
   stackedBar: StackedBarWidget,
+  calendarHeatmap: CalendarHeatmapWidget,
   donut: DonutWidget,
   rankingTable: TableWidget,
   dataTable: TableWidget,
@@ -494,10 +590,11 @@ export function DashboardWidgetGrid({
   const findingsById = new Map(
     findings.map((finding) => [finding.id, finding]),
   );
+  const orderedWidgets = getDashboardGridWidgetOrder(widgets);
 
   return (
     <div className="mt-5 grid gap-5 md:grid-cols-6 lg:grid-cols-12">
-      {widgets.map((widget) => (
+      {orderedWidgets.map((widget) => (
         <div
           className={getWidgetGridClassName(widget, widgets)}
           key={widget.id}

@@ -101,7 +101,7 @@ export function PrismRankedBarChart({
     return (
       <div
         aria-label={chartSummary}
-        className="grid h-52 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587]"
+        className="grid h-44 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587]"
         role="img"
       >
         표시할 세그먼트 데이터가 없습니다.
@@ -117,7 +117,7 @@ export function PrismRankedBarChart({
       role="img"
       tabIndex={0}
     >
-      <div className="mb-2 flex items-center justify-between px-1 text-[10px]">
+      <div className="mb-1.5 flex items-center justify-between px-1 text-[10px]">
         <span className="font-semibold tracking-[0.09em] text-[#777587] uppercase">
           높은 순
         </span>
@@ -158,7 +158,7 @@ export function PrismRankedBarChart({
           labelSkipWidth={0}
           labelTextColor="#343844"
           layout="horizontal"
-          margin={{ bottom: 34, left: 92, right: 90, top: 4 }}
+          margin={{ bottom: 30, left: 88, right: 80, top: 2 }}
           motionConfig="gentle"
           padding={0.38}
           role="img"

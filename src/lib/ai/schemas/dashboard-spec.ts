@@ -9,6 +9,7 @@ export const widgetTypes = [
   "timeSeries",
   "categoryBar",
   "stackedBar",
+  "calendarHeatmap",
   "donut",
   "rankingTable",
   "dataTable",
@@ -86,6 +87,18 @@ const stackedBarWidgetSchema = widgetReferenceSchema
   })
   .strict();
 
+const calendarHeatmapWidgetSchema = widgetReferenceSchema
+  .extend({
+    type: z.literal("calendarHeatmap"),
+    config: z
+      .object({
+        queryId: z.string().trim().min(1),
+        xKey: z.literal("label"),
+      })
+      .strict(),
+  })
+  .strict();
+
 const donutWidgetSchema = widgetReferenceSchema
   .extend({
     type: z.literal("donut"),
@@ -124,6 +137,7 @@ export const dashboardWidgetSchema = z.discriminatedUnion("type", [
   timeSeriesWidgetSchema,
   categoryBarWidgetSchema,
   stackedBarWidgetSchema,
+  calendarHeatmapWidgetSchema,
   donutWidgetSchema,
   rankingTableWidgetSchema,
   dataTableWidgetSchema,

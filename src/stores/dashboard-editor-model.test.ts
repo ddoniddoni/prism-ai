@@ -166,8 +166,49 @@ describe("dashboard editor model", () => {
       { i: "revenue", x: 0, y: 0, w: 4 },
       { i: "trend", x: 4, y: 0, w: 8 },
       { i: "segments", x: 0, y: 4, w: 4 },
-      { i: "ranking", x: 4, y: 9, w: 8 },
-      { i: "insight", x: 0, y: 17, w: 12 },
+      { i: "ranking", x: 4, y: 8, w: 8 },
+      { i: "insight", x: 0, y: 15, w: 12 },
+    ]);
+  });
+
+  it("places a compact calendar below the KPI and wide comparison below the trend", () => {
+    const dashboardWidgets = [
+      widgets[0],
+      {
+        id: "trend",
+        type: "timeSeries",
+        title: "기간별 흐름",
+        queryIds: ["trend-query"],
+        findingIds: [],
+        size: "large",
+        config: { queryId: "trend-query", xKey: "label" },
+      },
+      widgets[1],
+      {
+        id: "calendar-heatmap",
+        type: "calendarHeatmap",
+        title: "일자별 집중도",
+        queryIds: ["trend-query"],
+        findingIds: [],
+        size: "medium",
+        config: { queryId: "trend-query", xKey: "label" },
+      },
+    ] satisfies DashboardWidget[];
+    const layouts = createBalancedDashboardEditorLayouts(
+      dashboardWidgets,
+      createDashboardEditorDocument(dashboardWidgets).present.layouts,
+    );
+
+    expect(
+      dashboardWidgets.map((widget) =>
+        getDashboardWidgetSpan(widget, dashboardWidgets, "lg"),
+      ),
+    ).toEqual([4, 8, 8, 4]);
+    expect(layouts.lg).toMatchObject([
+      { i: "revenue", x: 0, y: 0, w: 4, h: 4 },
+      { i: "trend", x: 4, y: 0, w: 8, h: 8 },
+      { i: "segments", x: 4, y: 8, w: 8, h: 6 },
+      { i: "calendar-heatmap", x: 0, y: 4, w: 4, h: 6, minW: 4, minH: 4 },
     ]);
   });
 
@@ -270,6 +311,6 @@ describe("dashboard editor model", () => {
 
     expect(
       reconciled.present.layouts.lg.find((item) => item.i === "segments"),
-    ).toMatchObject({ h: 8, minH: 8 });
+    ).toMatchObject({ h: 7, minH: 7 });
   });
 });

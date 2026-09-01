@@ -98,6 +98,13 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - Mock Planner가 `지난달 매출의 디바이스별 구성을 보여줘`를 3개의 독립된 디바이스 `date` Query로 변환하고, Home 추천 질문에서 바로 실행할 수 있게 했다.
 - `PrismStackedBarChart`는 상단 여유가 부족한 막대의 Tooltip을 `bottom` Anchor로, 나머지는 `top` Anchor로 렌더링한다. Nivo 기본 Bar Tooltip이 항상 `top` Anchor를 선택해 `overflow-hidden` Chart Panel 상단에서 잘리던 문제를 전용 Bar Renderer로 해결했고, 키보드 Focus에도 같은 배치 규칙을 적용했다.
 - 전용 Bar Renderer가 Nivo의 내부 Bar 객체를 Tooltip JSX에 전달할 때 React 전용 `key`를 제외했다. 개발 콘솔의 Key Spread 경고 없이 동일한 Tooltip 정보를 표시한다.
+- 시간대가 없는 일별 Dataset의 의미를 보존하기 위해 `PrismCalendarHeatmap`을 추가했다. 매출 시계열을 주차 × 요일 셀로 변환하고, 결정론적 DataPoint 값에 비례한 Indigo 색 농도로 집중일을 표시한다.
+- Calendar Heatmap은 Hover·Click·Keyboard Focus에서 선택 날짜와 실제 계산값을 안전한 고정 Detail Panel에 표시한다. 상단·하단 Tooltip이 Card 경계에서 잘리는 문제 없이 Screen Reader에도 선택 날짜를 알린다.
+- `calendarHeatmap`을 Dashboard Schema·Component Registry·Evidence Mosaic에 등록했고, `지난달 매출 집중도를 달력 히트맵으로 보여줘` 예시가 기존 일별 매출 Query를 재사용하도록 Mock Planner에 추가했다.
+- Calendar Heatmap은 큰 유동 셀 대신 28px/36px 고정 날짜 셀로 압축했다. 각 셀은 일자를 표시하고, 선택일자 Badge·주말 보조 톤·Active Ring으로 넓은 Dashboard Card 안에서도 작은 분석 캘린더를 의도적으로 읽을 수 있게 했다.
+- Calendar Heatmap은 4-column 컴팩트 보조 위젯으로 배치한다. 중첩된 바깥 패널과 장황한 설명을 없애고, 20px/24px 날짜 셀과 7-row Editor 높이로 줄여 캘린더 자체에 맞는 밀도를 유지한다. Auto Layout은 실제 렌더된 콘텐츠 높이를 다시 측정해, 기존에 저장된 큰 카드 높이도 축소한다.
+- 모든 Widget Card의 기본 패딩과 헤더 간격을 줄이고, 실제 분석 밀도에 맞춰 Chart Canvas와 Editor 기본 행 높이를 낮췄다. 추이·누적 막대·도넛·랭킹은 축·Tooltip·키보드 접근성을 유지하는 범위에서 작은 카드 비율로 재구성하며, 데이터 표와 사용자가 직접 조정한 카드의 높이는 강제 축소하지 않는다.
+- `KPI + Time Series + Calendar Heatmap + Comparison` 결과는 일반적인 좌측 세로 스택 대신 `KPI·캘린더`의 compact rail과 `추이·비교`의 wide canvas로 자동 배치한다. 초기 CSS Grid와 편집 가능 Grid가 같은 시각 순서를 사용해 로딩 직후에도 큰 빈 영역 없이 읽힌다.
 
 ## 진행 중
 
@@ -145,8 +152,35 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-01 | 모든 Widget Card는 콘텐츠 높이에 맞춰 Editor Grid 행을 자동 확장 | 바깥 Card Scroll을 제거하면서 고정 Grid 안의 콘텐츠 겹침을 막고, Table 전용 내부 Scroll은 유지하기 위함 |
 | 2026-09-01 | Dashboard는 질문 결과에 맞춰 Evidence Mosaic Layout을 사용 | 정해진 순서의 빈 Grid Cell 대신 KPI·추이·보조 분석·근거의 정보 우선순위에 따라 Canvas를 채우고, 1024px 이상 콘텐츠 영역에서는 Desktop Mosaic을 적용하기 위함 |
 | 2026-09-02 | 누적 막대는 Series별 검증된 Query를 쌓아서 렌더링 | 현재 Query DSL의 단일 Grouping 제약을 우회해 임의 비즈니스 값이나 잘못된 비교값을 합산하지 않고, 같은 날짜·지표의 결정론적 세그먼트 합계를 표현하기 위함 |
+| 2026-09-02 | 시간대 대신 주차 × 요일 캘린더 히트맵을 사용 | 현재 Dataset은 일별 Aggregate이므로 존재하지 않는 시간대 정보를 추정하지 않고, 실제 날짜 기반의 매출 집중도를 표현하기 위함 |
 
 ## 검증 결과
+
+- `npm run lint`: 통과 (Phase 8 PrismCalendarHeatmap)
+- `npm run typecheck`: 통과 (Phase 8 PrismCalendarHeatmap)
+- `npm run build`: 통과 (Phase 8 PrismCalendarHeatmap, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Phase 8 PrismCalendarHeatmap)
+- `npm run lint`: 통과 (Calendar Heatmap Compact Card Layout)
+- `npm run typecheck`: 통과 (Calendar Heatmap Compact Card Layout)
+- `npm run build`: 통과 (Calendar Heatmap Compact Card Layout, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Calendar Heatmap Compact Card Layout)
+- `npm run lint`: 통과 (Dashboard Compact Card Density)
+- `npm run typecheck`: 통과 (Dashboard Compact Card Density)
+- `npm run build`: 통과 (Dashboard Compact Card Density, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Dashboard Compact Card Density)
+- `npm run format:check`: 기존 `src/lib/data/supabase-repository.test.ts` 형식 경고로 미통과 (이번 변경 범위 밖, 파일 미수정)
+- `npm run lint`: 통과 (Dashboard Smart Mosaic Layout)
+- `npm run typecheck`: 통과 (Dashboard Smart Mosaic Layout)
+- `npm run build`: 통과 (Dashboard Smart Mosaic Layout, Next.js Webpack production build)
+- `npm run lint`: 통과 (PrismCalendarHeatmap Compact Date Cells)
+- `npm run typecheck`: 통과 (PrismCalendarHeatmap Compact Date Cells)
+- `npm run build`: 통과 (PrismCalendarHeatmap Compact Date Cells, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (PrismCalendarHeatmap Compact Date Cells)
+- 로컬 브라우저 시각 점검: 미실행 (현재 세션에 연결 가능한 Browser 없음)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run lint`: 통과 (Phase 8 PrismStackedBarChart)
 - `npm run typecheck`: 통과 (Phase 8 PrismStackedBarChart)

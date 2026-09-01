@@ -93,13 +93,14 @@ export type DashboardEditorDocument = z.infer<
 function getWidgetHeight(widget: DashboardWidget): number {
   const heights: Record<DashboardWidget["type"], number> = {
     metric: 4,
-    timeSeries: 9,
-    categoryBar: 8,
-    stackedBar: 9,
-    donut: 8,
-    rankingTable: 8,
-    dataTable: 8,
-    insight: 6,
+    timeSeries: 8,
+    categoryBar: 6,
+    stackedBar: 7,
+    calendarHeatmap: 6,
+    donut: 7,
+    rankingTable: 7,
+    dataTable: 7,
+    insight: 4,
   };
 
   return heights[widget.type];
@@ -121,11 +122,16 @@ function getMinimumWidgetWidth(
     return 1;
   }
 
+  if (widget.type === "calendarHeatmap") {
+    return breakpoint === "lg" ? 4 : 3;
+  }
+
   const minimumWidths: Record<DashboardWidget["type"], number> = {
     metric: 3,
     timeSeries: 6,
     categoryBar: 4,
     stackedBar: 6,
+    calendarHeatmap: 3,
     donut: 4,
     rankingTable: 4,
     dataTable: 4,
@@ -181,6 +187,7 @@ function createBreakpointLayout(
     (widget) =>
       widget.type === "categoryBar" ||
       widget.type === "stackedBar" ||
+      widget.type === "calendarHeatmap" ||
       widget.type === "donut" ||
       widget.type === "rankingTable" ||
       widget.type === "dataTable",
@@ -211,6 +218,54 @@ function createBreakpointLayout(
       existingItemsById.get(trendWidget.id),
     );
     const layout = [metricItem, trendItem];
+    const calendarHeatmapWidget = remainingWidgets.find(
+      (widget) => widget.type === "calendarHeatmap",
+    );
+
+    if (calendarHeatmapWidget) {
+      let compactLaneBottom = metricItem.h;
+      let analysisLaneBottom = trendItem.h;
+
+      for (const widget of remainingWidgets) {
+        const existingItem = existingItemsById.get(widget.id);
+        const isCalendarHeatmap = widget.id === calendarHeatmapWidget.id;
+        const isSupportingWidget =
+          widget.type === "categoryBar" ||
+          widget.type === "stackedBar" ||
+          widget.type === "calendarHeatmap" ||
+          widget.type === "donut" ||
+          widget.type === "rankingTable" ||
+          widget.type === "dataTable";
+        const startsNewRow = !isSupportingWidget;
+        const item = createLayoutItem(
+          widget,
+          widgets,
+          breakpoint,
+          isCalendarHeatmap || startsNewRow ? 0 : metricItem.w,
+          isCalendarHeatmap
+            ? compactLaneBottom
+            : startsNewRow
+              ? Math.max(compactLaneBottom, analysisLaneBottom)
+              : analysisLaneBottom,
+          existingItem,
+        );
+
+        layout.push(item);
+
+        if (isCalendarHeatmap) {
+          compactLaneBottom += item.h;
+        } else if (isSupportingWidget) {
+          analysisLaneBottom += item.h;
+        } else {
+          const nextBottom = item.y + item.h;
+          compactLaneBottom = nextBottom;
+          analysisLaneBottom = nextBottom;
+        }
+      }
+
+      return layout;
+    }
+
     let leftLaneBottom = metricItem.h;
     let rightLaneBottom = trendItem.h;
     let supportingWidgetIndex = 0;
@@ -220,11 +275,13 @@ function createBreakpointLayout(
       const isSupportingWidget =
         widget.type === "categoryBar" ||
         widget.type === "stackedBar" ||
+        widget.type === "calendarHeatmap" ||
         widget.type === "donut" ||
         widget.type === "rankingTable" ||
         widget.type === "dataTable";
       const isLeftLaneWidget =
-        isSupportingWidget && supportingWidgetIndex === 0;
+        isSupportingWidget &&
+        (supportingWidgetIndex === 0 || widget.type === "calendarHeatmap");
       const startsNewRow = !isSupportingWidget;
       const item = createLayoutItem(
         widget,
