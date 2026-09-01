@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "analyze:bundle": "tsx scripts/measure-bundle.ts",
     "seed:generate": "tsx scripts/generate-seed.ts",
     "seed:supabase": "tsx scripts/seed-supabase.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"

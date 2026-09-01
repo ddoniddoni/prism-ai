@@ -6,7 +6,7 @@ Phase 8: Portfolio 완성
 
 ## 상태
 
-Phase 8 접근성·반응형 1차 보완과 Nivo Chart 3종 완료 · Portfolio 문서와 성능 측정 진행 전 · 테스트 실행 보류
+Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측정 완료 · README·Architecture Diagram·Demo 자료 진행 전 · 테스트 실행 보류
 
 ## 완료
 
@@ -86,10 +86,12 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Chart 3종 완료 · Portfolio 
 - MIT 라이선스의 `@nivo/bar`로 기존 CSS Category Bar를 `PrismRankedBarChart`로 대체했다. 이 Bundle도 Dashboard에서만 동적으로 로드한다.
 - Ranked Bar Chart는 값 기준 내림차순, 1위 Indigo 강조, 끝값의 K·M·B 축약 표기, Hover Tooltip, Keyboard Focus와 Screen Reader 순위 요약을 제공한다. 비교 데이터가 있으면 Tooltip에 상승·하락 문구를 함께 표시한다.
 - PrismRankedBarChart의 정렬·강조색·높이 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- `npm run analyze:bundle`과 Manifest 기반 측정기를 추가했다. Dashboard 초기 Client Asset과 지연 로드되는 Editor·Nivo Chart Bundle을 raw/gzip 크기로 재현 가능하게 기록했다.
+- `docs/PERFORMANCE.md`에 현재 production build의 실제 정적 Bundle 크기와, Chart별 크기는 공통 Chunk 때문에 합산하지 않는다는 해석 범위를 기록했다.
 
 ## 진행 중
 
-- Phase 8의 Accessibility·Responsive 1차 보완과 Nivo 기반 `PrismTrendChart`·`PrismDonutChart`·`PrismRankedBarChart`를 마쳤다. 다음 Performance 측정, README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
+- Phase 8의 Accessibility·Responsive 1차 보완, Nivo 기반 `PrismTrendChart`·`PrismDonutChart`·`PrismRankedBarChart`, 재현 가능한 정적 Bundle 측정을 마쳤다. 다음 README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
 
 ## 결정 사항
 
@@ -129,8 +131,18 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Chart 3종 완료 · Portfolio 
 | 2026-09-01 | Trend Chart는 MIT 라이선스의 Nivo를 동적 로드 | D3·react-spring 기반의 높은 시각 완성도와 Tooltip·접근성 기능을 사용하면서 초기 Dashboard Bundle을 키우지 않기 위함 |
 | 2026-09-01 | Donut Chart도 Nivo Pie를 동적 로드 | 기존 Conic Gradient보다 Arc 간격·Hover·Motion을 정교하게 제어하면서 Trend Chart와 같은 검증된 시각화 경로를 유지하기 위함 |
 | 2026-09-01 | Category Bar는 Nivo Bar를 동적 로드 | 같은 검증된 Chart Stack에서 순위·Tooltip·Keyboard 접근을 제공하고, 기존 CSS Progress Bar보다 정교한 순위 표현을 만들기 위함 |
+| 2026-09-01 | 성능은 Build Manifest의 raw·gzip Asset 크기로 반복 측정 | 브라우저 체감 성능을 추정하지 않고 초기 Dashboard와 지연 로드 Bundle 경계를 재현 가능한 수치로 기록하기 위함 |
 
 ## 검증 결과
+
+- `npm run build`: 통과 (Phase 8 Bundle Measurement, Next.js Webpack production build)
+- `npm run analyze:bundle`: 통과 (Dashboard 초기 748.7 KiB raw / 223.6 KiB gzip, 상세 결과는 `docs/PERFORMANCE.md`)
+- `npm run lint`: 통과 (Phase 8 Bundle Measurement)
+- `npm run typecheck`: 통과 (Phase 8 Bundle Measurement)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run seed:generate`: 통과
 - `npm run lint`: 통과 (`npm run check`에서 실행)
@@ -277,9 +289,10 @@ Phase 8 접근성·반응형 1차 보완과 Nivo Chart 3종 완료 · Portfolio 
 - Supabase Project·Key가 아직 제공되지 않아 Migration 적용, `seed:supabase`, 실제 Row Query, RLS Advisor와 Database Test는 실행하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.
 - Stitch UI와 Dashboard Editing의 Runtime Browser·E2E 시각 검증은 사용자 요청에 따라 실행하지 않았다.
+- 정적 Bundle 크기만 기록했다. 배포 환경의 실제 Web Vitals와 Network Waterfall은 아직 측정하지 않았다.
 - Dashboard 편집값은 계정 동기화가 아닌 브라우저별 Local Storage에만 저장된다.
 - Repository 전체 `format:check`는 기존 `src/lib/data/supabase-repository.test.ts` 포맷 불일치 1건 때문에 실패한다. Phase 7 변경 파일은 별도 검사에서 모두 통과했다.
 
 ## 다음 권장 작업
 
-`docs/IMPLEMENTATION_PLAN.md`의 Phase 8을 진행해 Accessibility Audit, Performance 측정, README, Architecture Diagram과 Portfolio Demo 자료를 완성한다.
+README에서 Frontend·AI·성능 설계 결정을 정리한 뒤 Architecture Diagram과 Portfolio Demo 자료를 완성한다.
