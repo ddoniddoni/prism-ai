@@ -11,7 +11,14 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ResponsiveGridLayout,
   useContainerWidth,
@@ -28,11 +35,13 @@ import type {
 } from "@/lib/ai/schemas/dashboard-spec";
 import {
   applyWidgetTypeOverride,
+  createBalancedDashboardEditorLayouts,
   createDashboardEditorDocument,
   editorGridColumns,
   getCompatibleWidgetTypes,
   reconcileDashboardEditorDocument,
   reconcileDashboardEditorSnapshot,
+  type DashboardEditorSnapshot,
   type EditorBreakpoint,
   type EditableWidgetType,
 } from "@/stores/dashboard-editor-model";
@@ -51,10 +60,12 @@ type DashboardEditorProps = {
 };
 
 const editorBreakpoints: Record<EditorBreakpoint, number> = {
-  lg: 1200,
+  lg: 1024,
   md: 640,
   sm: 0,
 };
+const editorGridMargin = [20, 20] as const;
+const editorRowHeight = 28;
 
 const activeDragConfig = {
   enabled: true,
@@ -88,6 +99,57 @@ const widgetTypeLabels: Record<EditableWidgetType, string> = {
 
 function isEditableWidgetType(value: string): value is EditableWidgetType {
   return Object.prototype.hasOwnProperty.call(widgetTypeLabels, value);
+}
+
+function getGridRowsForContentHeight(contentHeight: number): number {
+  return Math.ceil(
+    (contentHeight + editorGridMargin[1]) /
+      (editorRowHeight + editorGridMargin[1]),
+  );
+}
+
+function usesCustomLayout(snapshot: DashboardEditorSnapshot): boolean {
+  return snapshot.layoutMode === "custom";
+}
+
+function WidgetCardHeightObserver({
+  children,
+  onContentHeightChange,
+}: {
+  children: ReactNode;
+  onContentHeightChange: (contentHeight: number) => void;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const content = contentRef.current;
+
+    if (!content) {
+      return;
+    }
+
+    const observedContent = content;
+
+    function synchronizeHeight() {
+      onContentHeightChange(
+        Math.ceil(observedContent.getBoundingClientRect().height),
+      );
+    }
+
+    synchronizeHeight();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(synchronizeHeight);
+
+    observer.observe(observedContent);
+
+    return () => observer.disconnect();
+  }, [onContentHeightChange]);
+
+  return <div ref={contentRef}>{children}</div>;
 }
 
 function WidgetEditorControls({
@@ -357,19 +419,30 @@ export function DashboardEditor({
       resolvedWidgets,
     );
     const visibleWidgetIds = new Set(widgets.map((widget) => widget.id));
+    const balancedLayouts = usesCustomLayout(document.present)
+      ? reconciledSnapshot.layouts
+      : createBalancedDashboardEditorLayouts(
+          resolvedWidgets,
+          reconciledSnapshot.layouts,
+        );
 
     return {
-      lg: reconciledSnapshot.layouts.lg.filter((item) =>
-        visibleWidgetIds.has(item.i),
-      ),
-      md: reconciledSnapshot.layouts.md.filter((item) =>
-        visibleWidgetIds.has(item.i),
-      ),
-      sm: reconciledSnapshot.layouts.sm.filter((item) =>
-        visibleWidgetIds.has(item.i),
-      ),
+      lg: balancedLayouts.lg.filter((item) => visibleWidgetIds.has(item.i)),
+      md: balancedLayouts.md.filter((item) => visibleWidgetIds.has(item.i)),
+      sm: balancedLayouts.sm.filter((item) => visibleWidgetIds.has(item.i)),
     };
-  }, [document.present, resolvedWidgets, widgets]);
+  }, [document, resolvedWidgets, widgets]);
+  const layoutKey = useMemo(
+    () =>
+      (["lg", "md", "sm"] as const)
+        .map((breakpoint) =>
+          (layouts[breakpoint] ?? [])
+            .map((item) => `${item.i}:${item.x},${item.y},${item.w},${item.h}`)
+            .join("|"),
+        )
+        .join("/"),
+    [layouts],
+  );
   const datasetsById = useMemo(
     () => new Map(datasets.map((dataset) => [dataset.queryId, dataset])),
     [datasets],
@@ -384,6 +457,29 @@ export function DashboardEditor({
       .getState()
       .commitLayout(dashboard.id, currentBreakpoint.current, layout);
   }
+
+  const ensureWidgetContentHeight = useCallback(
+    (widgetId: string, contentHeight: number) => {
+      const breakpoint = currentBreakpoint.current;
+      const currentLayout = layouts[breakpoint];
+
+      if (!currentLayout) {
+        return;
+      }
+
+      const layoutItem = currentLayout.find((item) => item.i === widgetId);
+      const requiredRows = getGridRowsForContentHeight(contentHeight);
+
+      if (!layoutItem || requiredRows <= layoutItem.h) {
+        return;
+      }
+
+      useDashboardEditorStore
+        .getState()
+        .ensureWidgetHeight(dashboard.id, breakpoint, widgetId, requiredRows);
+    },
+    [dashboard.id, layouts],
+  );
 
   return (
     <section aria-labelledby="analysis-dashboard-title" className="mt-7">
@@ -422,25 +518,22 @@ export function DashboardEditor({
             compactor={verticalCompactor}
             containerPadding={[0, 0]}
             dragConfig={isEditing ? activeDragConfig : inactiveDragConfig}
+            key={layoutKey}
             layouts={layouts}
-            margin={[20, 20]}
+            margin={editorGridMargin}
             onBreakpointChange={(breakpoint) => {
               currentBreakpoint.current = breakpoint;
             }}
             onDragStop={commitLayout}
             onResizeStop={commitLayout}
             resizeConfig={isEditing ? activeResizeConfig : inactiveResizeConfig}
-            rowHeight={28}
+            rowHeight={editorRowHeight}
             width={width}
           >
-            {widgets.map((widget) => (
-              <div key={widget.id}>
+            {widgets.map((widget) => {
+              const card = (
                 <DashboardWidgetCard
-                  cardClassName={
-                    widget.type === "donut"
-                      ? "overflow-visible lg:col-span-12"
-                      : "h-full overflow-auto lg:col-span-12"
-                  }
+                  cardClassName="overflow-visible lg:col-span-12"
                   controls={
                     isEditing ? (
                       <WidgetEditorControls
@@ -454,8 +547,20 @@ export function DashboardEditor({
                   findingsById={findingsById}
                   widget={widget}
                 />
-              </div>
-            ))}
+              );
+
+              return (
+                <div key={widget.id}>
+                  <WidgetCardHeightObserver
+                    onContentHeightChange={(contentHeight) =>
+                      ensureWidgetContentHeight(widget.id, contentHeight)
+                    }
+                  >
+                    {card}
+                  </WidgetCardHeightObserver>
+                </div>
+              );
+            })}
           </ResponsiveGridLayout>
         )}
       </div>

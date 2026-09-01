@@ -113,7 +113,7 @@ export function PrismRankedBarChart({
     <div
       aria-describedby={summaryId}
       aria-label={`${title} 가로 랭킹 차트`}
-      className="relative w-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4"
+      className="relative w-full min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4"
       role="img"
       tabIndex={0}
     >

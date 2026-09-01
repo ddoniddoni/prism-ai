@@ -15,6 +15,7 @@ const supportedQuestions = [
   "가장 많이 하락한 상품은 뭐야?",
   "광고비 대비 성과를 보여줘.",
   "환불률이 높은 지역을 알려줘.",
+  "서울에서 산 제품들 판매량만 보여줘.",
 ] as const;
 
 describe("MockAIProvider", () => {
@@ -41,6 +42,32 @@ describe("MockAIProvider", () => {
     expect(JSON.stringify(plan)).not.toContain("10935");
     expect(plan.queries.every((query) => "value" in query === false)).toBe(
       true,
+    );
+  });
+
+  it("maps Seoul product sales to the allowlisted region filter and units-sold query", async () => {
+    const provider = new MockAIProvider();
+    const plan = await provider.createPlan({
+      question: "서울에서 산 제품들 판매량만 보여줘.",
+    });
+
+    expect(plan.intent).toBe("ranking");
+    expect(plan.contextPatch).toEqual({
+      primaryMetric: "unitsSold",
+      period: { preset: "lastMonth" },
+      compareWith: "none",
+      filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+      focusDimension: "product",
+    });
+    expect(plan.queries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "focus",
+          metric: "unitsSold",
+          groupBy: "product",
+          filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+        }),
+      ]),
     );
   });
 

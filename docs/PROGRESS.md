@@ -88,6 +88,11 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - PrismRankedBarChart의 정렬·강조색·높이 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - `npm run analyze:bundle`과 Manifest 기반 측정기를 추가했다. Dashboard 초기 Client Asset과 지연 로드되는 Editor·Nivo Chart Bundle을 raw/gzip 크기로 재현 가능하게 기록했다.
 - `docs/PERFORMANCE.md`에 현재 production build의 실제 정적 Bundle 크기와, Chart별 크기는 공통 Chunk 때문에 합산하지 않는다는 해석 범위를 기록했다.
+- Dashboard Editor의 모든 Widget Card는 바깥 `overflow-auto`를 제거하고 `ResizeObserver`로 콘텐츠 높이에 맞춰 Grid 행을 자동 확장한다. Card 내부 Scroll이나 아래 Widget과의 겹침이 생기지 않으며, 원본 Data Table과 일반 Table의 필요한 내부 Scroll은 유지한다.
+- Dashboard는 실제 Widget 조합을 기준으로 단일 KPI+추이 4:8을 먼저 배치하고, 보조 분석을 KPI·추이 아래의 4:8 Lane에 차례로 쌓아 빈 영역을 줄인다. 단독 Insight는 전체 폭이며, 태블릿은 6열·모바일은 1열로 전환되고 Nivo Chart도 각 Card 폭과 높이에 맞춰 다시 그려진다.
+- Evidence Mosaic의 span 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- 기존에 저장된 Layout은 `auto`로 마이그레이션해 새 Mosaic 규칙으로 즉시 재배치한다. 이후 실제 Drag·Resize·표시 타입·숨김 편집 뒤에만 `custom` Layout으로 보존하며, 시스템이 측정해 확장한 Card 높이는 재배치 뒤에도 유지한다.
+- Mock Planner에 `서울에서 산 제품들 판매량만 보여줘` 예시를 추가했다. 한국어 지역명 `서울`을 Dataset의 허용 값 `Seoul`로 매핑하고, `unitsSold`를 상품별로 집계하는 검증된 Query DSL만 생성한다.
 
 ## 진행 중
 
@@ -132,8 +137,27 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-01 | Donut Chart도 Nivo Pie를 동적 로드 | 기존 Conic Gradient보다 Arc 간격·Hover·Motion을 정교하게 제어하면서 Trend Chart와 같은 검증된 시각화 경로를 유지하기 위함 |
 | 2026-09-01 | Category Bar는 Nivo Bar를 동적 로드 | 같은 검증된 Chart Stack에서 순위·Tooltip·Keyboard 접근을 제공하고, 기존 CSS Progress Bar보다 정교한 순위 표현을 만들기 위함 |
 | 2026-09-01 | 성능은 Build Manifest의 raw·gzip Asset 크기로 반복 측정 | 브라우저 체감 성능을 추정하지 않고 초기 Dashboard와 지연 로드 Bundle 경계를 재현 가능한 수치로 기록하기 위함 |
+| 2026-09-01 | 모든 Widget Card는 콘텐츠 높이에 맞춰 Editor Grid 행을 자동 확장 | 바깥 Card Scroll을 제거하면서 고정 Grid 안의 콘텐츠 겹침을 막고, Table 전용 내부 Scroll은 유지하기 위함 |
+| 2026-09-01 | Dashboard는 질문 결과에 맞춰 Evidence Mosaic Layout을 사용 | 정해진 순서의 빈 Grid Cell 대신 KPI·추이·보조 분석·근거의 정보 우선순위에 따라 Canvas를 채우고, 1024px 이상 콘텐츠 영역에서는 Desktop Mosaic을 적용하기 위함 |
 
 ## 검증 결과
+
+- `npm run lint`: 통과 (Phase 8 Evidence Mosaic Layout)
+- `npm run typecheck`: 통과 (Phase 8 Evidence Mosaic Layout)
+- `npm run build`: 통과 (Phase 8 Evidence Mosaic Layout, Next.js Webpack production build)
+- 로컬 브라우저 1440px Viewport (콘텐츠 영역 1144px): KPI 368px + 추이 756px의 4:8 Desktop Mosaic 적용 확인. 같은 개발 세션에서 분석 화면을 반복 새로고침한 뒤 Mock `/api/analyze` 요청 제한(429)이 발생해, 최종 계단형 배치의 추가 시각 재실행은 보류했다.
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
+- `npm run lint`: 통과 (Phase 8 Widget Card Scroll Removal)
+- `npm run typecheck`: 통과 (Phase 8 Widget Card Scroll Removal)
+- `npm run build`: 통과 (Phase 8 Widget Card Scroll Removal, Next.js Webpack production build)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run build`: 통과 (Phase 8 Bundle Measurement, Next.js Webpack production build)
 - `npm run analyze:bundle`: 통과 (Dashboard 초기 748.7 KiB raw / 223.6 KiB gzip, 상세 결과는 `docs/PERFORMANCE.md`)

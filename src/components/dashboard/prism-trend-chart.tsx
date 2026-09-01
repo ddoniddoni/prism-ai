@@ -143,7 +143,7 @@ export function PrismTrendChart({
     return (
       <div
         aria-label={chartSummary}
-        className="grid h-72 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587]"
+        className="grid h-56 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587] sm:h-64 lg:h-80"
         role="img"
       >
         표시할 추이 데이터가 없습니다.
@@ -152,7 +152,7 @@ export function PrismTrendChart({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#e1e4ec] bg-[radial-gradient(circle_at_84%_3%,rgba(99,102,241,0.15),transparent_38%),linear-gradient(180deg,#fdfdff_0%,#f7f8fd_100%)] px-1 pt-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-[#e1e4ec] bg-[radial-gradient(circle_at_84%_3%,rgba(99,102,241,0.15),transparent_38%),linear-gradient(180deg,#fdfdff_0%,#f7f8fd_100%)] px-1 pt-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 pb-1 text-[10px]">
         <div className="flex items-center gap-3 text-[#595e6b]">
           <span className="inline-flex items-center gap-1.5 font-semibold text-[#312e81]">
@@ -177,7 +177,7 @@ export function PrismTrendChart({
         </span>
       </div>
 
-      <div className="h-72 sm:h-80">
+      <div className="h-56 sm:h-64 lg:h-[22rem]">
         <ResponsiveLine
           animate={!prefersReducedMotion}
           areaOpacity={0.13}

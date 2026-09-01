@@ -12,6 +12,7 @@ const recommendedQuestions = [
   "가장 많이 하락한 상품은 뭐야?",
   "광고비 대비 성과를 보여줘.",
   "환불률이 높은 지역을 알려줘.",
+  "서울에서 산 제품들 판매량만 보여줘.",
 ] as const;
 
 export default async function Home() {

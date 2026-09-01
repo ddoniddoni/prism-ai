@@ -95,7 +95,7 @@ export function PrismDonutChart({
     return (
       <div
         aria-label={chartSummary}
-        className="grid h-60 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587]"
+        className="grid h-56 place-items-center rounded-xl border border-dashed border-[#d8dbe1] bg-[#fbfcfd] text-sm text-[#777587] sm:h-60"
         role="img"
       >
         표시할 구성비 데이터가 없습니다.
@@ -104,11 +104,11 @@ export function PrismDonutChart({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[38rem] items-center gap-5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-6">
+    <div className="mx-auto grid w-full max-w-4xl items-center gap-5 sm:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)] sm:gap-7">
       <div
         aria-describedby={summaryId}
         aria-label={`${title} 도넛 차트`}
-        className="relative mx-auto h-48 w-full max-w-48 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4"
+        className="relative mx-auto h-52 w-full max-w-52 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-4 sm:h-56 sm:max-w-56"
         role="img"
         tabIndex={0}
       >

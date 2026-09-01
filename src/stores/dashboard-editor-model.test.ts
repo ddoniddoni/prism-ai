@@ -4,12 +4,14 @@ import type { DashboardWidget } from "@/lib/ai/schemas/dashboard-spec";
 
 import {
   applyWidgetTypeOverride,
+  createBalancedDashboardEditorLayouts,
   commitDashboardEditorSnapshot,
   createDashboardEditorDocument,
   reconcileDashboardEditorDocument,
   redoDashboardEditorDocument,
   undoDashboardEditorDocument,
 } from "./dashboard-editor-model";
+import { getDashboardWidgetSpan } from "./dashboard-layout";
 
 const widgets = [
   {
@@ -44,6 +46,145 @@ describe("dashboard editor model", () => {
     expect(document.present.layouts.sm.every((item) => item.w === 1)).toBe(
       true,
     );
+  });
+
+  it("uses query-result-aware spans to avoid empty dashboard rows", () => {
+    const dashboardWidgets = [
+      widgets[0],
+      {
+        id: "trend",
+        type: "timeSeries",
+        title: "기간별 흐름",
+        queryIds: ["trend-query"],
+        findingIds: [],
+        size: "large",
+        config: { queryId: "trend-query", xKey: "label" },
+      },
+      widgets[1],
+      {
+        id: "ranking",
+        type: "rankingTable",
+        title: "카테고리 순위",
+        queryIds: ["ranking-query"],
+        findingIds: [],
+        size: "medium",
+        config: { queryId: "ranking-query" },
+      },
+      {
+        id: "insight",
+        type: "insight",
+        title: "계산된 핵심 근거",
+        queryIds: ["trend-query"],
+        findingIds: ["finding-1"],
+        size: "medium",
+        config: { findingId: "finding-1", tone: "neutral" },
+      },
+    ] satisfies DashboardWidget[];
+
+    expect(
+      dashboardWidgets.map((widget) =>
+        getDashboardWidgetSpan(widget, dashboardWidgets, "lg"),
+      ),
+    ).toEqual([4, 8, 4, 8, 12]);
+    expect(
+      dashboardWidgets.map((widget) =>
+        getDashboardWidgetSpan(widget, dashboardWidgets, "md"),
+      ),
+    ).toEqual([6, 6, 3, 3, 6]);
+    expect(
+      dashboardWidgets.map((widget) =>
+        getDashboardWidgetSpan(widget, dashboardWidgets, "sm"),
+      ),
+    ).toEqual([1, 1, 1, 1, 1]);
+  });
+
+  it("rebalances an untouched layout while retaining an automatically measured height", () => {
+    const dashboardWidgets = [
+      widgets[0],
+      {
+        id: "trend",
+        type: "timeSeries",
+        title: "기간별 흐름",
+        queryIds: ["trend-query"],
+        findingIds: [],
+        size: "large",
+        config: { queryId: "trend-query", xKey: "label" },
+      },
+    ] satisfies DashboardWidget[];
+    const document = createDashboardEditorDocument(dashboardWidgets);
+    const layouts = createBalancedDashboardEditorLayouts(dashboardWidgets, {
+      ...document.present.layouts,
+      lg: document.present.layouts.lg.map((item) =>
+        item.i === "trend" ? { ...item, h: 12 } : item,
+      ),
+    });
+
+    expect(layouts.lg).toMatchObject([
+      { i: "revenue", w: 4, x: 0, y: 0 },
+      { i: "trend", w: 8, x: 4, y: 0, h: 12 },
+    ]);
+  });
+
+  it("stacks supporting analysis into the short KPI lane", () => {
+    const dashboardWidgets = [
+      widgets[0],
+      {
+        id: "trend",
+        type: "timeSeries",
+        title: "기간별 흐름",
+        queryIds: ["trend-query"],
+        findingIds: [],
+        size: "large",
+        config: { queryId: "trend-query", xKey: "label" },
+      },
+      widgets[1],
+      {
+        id: "ranking",
+        type: "rankingTable",
+        title: "카테고리 순위",
+        queryIds: ["ranking-query"],
+        findingIds: [],
+        size: "medium",
+        config: { queryId: "ranking-query" },
+      },
+      {
+        id: "insight",
+        type: "insight",
+        title: "계산된 핵심 근거",
+        queryIds: ["trend-query"],
+        findingIds: ["finding-1"],
+        size: "medium",
+        config: { findingId: "finding-1", tone: "neutral" },
+      },
+    ] satisfies DashboardWidget[];
+    const layouts = createBalancedDashboardEditorLayouts(
+      dashboardWidgets,
+      createDashboardEditorDocument(dashboardWidgets).present.layouts,
+    );
+
+    expect(layouts.lg).toMatchObject([
+      { i: "revenue", x: 0, y: 0, w: 4 },
+      { i: "trend", x: 4, y: 0, w: 8 },
+      { i: "segments", x: 0, y: 4, w: 4 },
+      { i: "ranking", x: 4, y: 9, w: 8 },
+      { i: "insight", x: 0, y: 17, w: 12 },
+    ]);
+  });
+
+  it("migrates a legacy saved layout to automatic Mosaic placement", () => {
+    const document = createDashboardEditorDocument(widgets);
+    const legacyDocument = {
+      ...document,
+      present: {
+        ...document.present,
+        layoutMode: undefined,
+      },
+    };
+
+    expect(
+      reconcileDashboardEditorDocument(legacyDocument, widgets).present
+        .layoutMode,
+    ).toBe("auto");
   });
 
   it("keeps bounded undo and redo snapshots", () => {

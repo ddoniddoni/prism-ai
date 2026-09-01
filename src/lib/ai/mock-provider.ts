@@ -37,6 +37,11 @@ type MockAnalysisDefinition = {
   focusDimension?: DimensionKey;
   title: string;
   subtitle: string;
+  widgetTitles?: {
+    primary?: string;
+    trend?: string;
+    focus?: string;
+  };
 };
 
 export class UnsupportedQuestionError extends Error {
@@ -83,6 +88,30 @@ function rootCauseDefinition(): MockAnalysisDefinition {
 }
 
 function resolveDefinition(question: string): MockAnalysisDefinition {
+  if (
+    (question.includes("서울") || question.includes("seoul")) &&
+    (question.includes("제품") || question.includes("상품")) &&
+    (question.includes("판매량") || question.includes("판매 수량"))
+  ) {
+    return {
+      intent: "ranking",
+      goal: "서울에서 발생한 주문의 상품별 판매 수량을 확인합니다.",
+      primaryMetric: "unitsSold",
+      period: { preset: "lastMonth" },
+      compareWith: "none",
+      filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+      focusDimension: "product",
+      title: "서울 판매 상품 수량",
+      subtitle:
+        "서울에서 발생한 주문만 대상으로 상품별 판매 수량을 확인합니다.",
+      widgetTitles: {
+        primary: "서울 상품 판매량",
+        trend: "기간별 서울 판매량",
+        focus: "서울 상품별 판매량",
+      },
+    };
+  }
+
   if (question.includes("환불") && question.includes("지역")) {
     return {
       intent: "ranking",
@@ -327,7 +356,7 @@ function createDashboardSpec(
     widgets.push({
       id: "primary-metric",
       type: "metric",
-      title: "핵심 지표",
+      title: definition.widgetTitles?.primary ?? "핵심 지표",
       description: "선택 기간의 결정론적 계산 결과입니다.",
       queryIds: [primaryDataset.queryId],
       findingIds: [],
@@ -343,7 +372,7 @@ function createDashboardSpec(
     widgets.push({
       id: "performance-trend",
       type: "timeSeries",
-      title: "기간별 흐름",
+      title: definition.widgetTitles?.trend ?? "기간별 흐름",
       queryIds: [trendDataset.queryId],
       findingIds: [],
       size: "large",
@@ -355,7 +384,7 @@ function createDashboardSpec(
     widgets.push({
       id: "focus-segments",
       type: "categoryBar",
-      title: "주요 세그먼트 비교",
+      title: definition.widgetTitles?.focus ?? "주요 세그먼트 비교",
       queryIds: [focusDataset.queryId],
       findingIds: [],
       size: "medium",

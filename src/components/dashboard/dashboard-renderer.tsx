@@ -9,6 +9,10 @@ import type {
   DashboardSpec,
   DashboardWidget,
 } from "@/lib/ai/schemas/dashboard-spec";
+import {
+  getDashboardWidgetSpan,
+  type DashboardLayoutBreakpoint,
+} from "@/stores/dashboard-layout";
 
 import {
   formatChangeWithDirection,
@@ -72,15 +76,42 @@ type DashboardWidgetProps = {
   controls?: ReactNode;
 };
 
-function getWidgetWidth(size: DashboardWidget["size"]): string {
-  const widths: Record<DashboardWidget["size"], string> = {
-    small: "lg:col-span-3",
-    medium: "lg:col-span-6",
-    large: "lg:col-span-8",
-    full: "lg:col-span-12",
-  };
+const gridSpanClassNames: Record<
+  Exclude<DashboardLayoutBreakpoint, "sm">,
+  Record<number, string>
+> = {
+  lg: {
+    1: "lg:col-span-1",
+    2: "lg:col-span-2",
+    3: "lg:col-span-3",
+    4: "lg:col-span-4",
+    5: "lg:col-span-5",
+    6: "lg:col-span-6",
+    7: "lg:col-span-7",
+    8: "lg:col-span-8",
+    9: "lg:col-span-9",
+    10: "lg:col-span-10",
+    11: "lg:col-span-11",
+    12: "lg:col-span-12",
+  },
+  md: {
+    1: "md:col-span-1",
+    2: "md:col-span-2",
+    3: "md:col-span-3",
+    4: "md:col-span-4",
+    5: "md:col-span-5",
+    6: "md:col-span-6",
+  },
+};
 
-  return widths[size];
+function getWidgetGridClassName(
+  widget: DashboardWidget,
+  widgets: readonly DashboardWidget[],
+): string {
+  const mdSpan = getDashboardWidgetSpan(widget, widgets, "md");
+  const lgSpan = getDashboardWidgetSpan(widget, widgets, "lg");
+
+  return `${gridSpanClassNames.md[mdSpan]} ${gridSpanClassNames.lg[lgSpan]}`;
 }
 
 function WidgetFrame({
@@ -97,7 +128,7 @@ function WidgetFrame({
   return (
     <section
       aria-labelledby={`${widget.id}-title`}
-      className={`self-start rounded-xl border border-[#e1e2e4] bg-white p-5 ${getWidgetWidth(widget.size)} ${className ?? ""}`}
+      className={`w-full self-start rounded-xl border border-[#e1e2e4] bg-white p-5 ${className ?? ""}`}
       id={widget.id}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -416,14 +447,18 @@ export function DashboardWidgetGrid({
   );
 
   return (
-    <div className="mt-5 grid gap-5 lg:grid-cols-12">
+    <div className="mt-5 grid gap-5 md:grid-cols-6 lg:grid-cols-12">
       {widgets.map((widget) => (
-        <DashboardWidgetCard
-          datasetsById={datasetsById}
-          findingsById={findingsById}
+        <div
+          className={getWidgetGridClassName(widget, widgets)}
           key={widget.id}
-          widget={widget}
-        />
+        >
+          <DashboardWidgetCard
+            datasetsById={datasetsById}
+            findingsById={findingsById}
+            widget={widget}
+          />
+        </div>
       ))}
     </div>
   );
