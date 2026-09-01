@@ -87,6 +87,9 @@ function validateDashboardComposition(
     ...composition.widgets.flatMap((widget) => [
       widget.title,
       ...(widget.description ? [widget.description] : []),
+      ...(widget.type === "stackedBar"
+        ? widget.config.series.map((series) => series.label)
+        : []),
     ]),
   ];
 

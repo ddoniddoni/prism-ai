@@ -422,6 +422,7 @@ export const widgetTypes = [
   "metric",
   "timeSeries",
   "categoryBar",
+  "stackedBar",
   "donut",
   "rankingTable",
   "dataTable",
@@ -434,6 +435,7 @@ export const widgetTypes = [
 - 핵심 숫자 하나: `metric`
 - 시간 흐름: `timeSeries`
 - Category 비교: `categoryBar`
+- 같은 시점의 검증된 세그먼트 시계열 구성: `stackedBar`
 - 적은 수의 Category 비중: `donut`
 - 순위와 상위 또는 하위 항목: `rankingTable`
 - 상세 Row나 여러 Column: `dataTable`
@@ -468,6 +470,7 @@ Type별 Config:
 - `metric`: Metric Key, Query ID, Format
 - `timeSeries`: Query ID, X Key, Series Config
 - `categoryBar`: Query ID, Orientation, Sort
+- `stackedBar`: 동일 X Key를 공유하는 2개 이상 Query ID와 검증된 Series Label
 - `donut`: Query ID, Label과 Value Field
 - `rankingTable`: Query ID, 허용 Column
 - `dataTable`: Query ID, 허용 Column
@@ -489,6 +492,7 @@ const componentRegistry = {
   metric: MetricCard,
   timeSeries: TimeSeriesChart,
   categoryBar: CategoryBarChart,
+  stackedBar: StackedBarChart,
   donut: DonutChart,
   rankingTable: RankingTable,
   dataTable: DataTable,
@@ -508,6 +512,7 @@ Mock Provider는 최소 다음 질문을 지원한다.
 - 작년 같은 기간과 비교해줘.
 - 가장 많이 하락한 상품은 뭐야?
 - 광고비 대비 성과를 보여줘.
+- 지난달 매출의 디바이스별 구성을 보여줘.
 - 환불률이 높은 지역을 알려줘.
 
 Mock Output도 Live Output과 동일한 Zod Schema와 Semantic Validation을 통과해야 한다.

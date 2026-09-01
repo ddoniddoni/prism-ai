@@ -5,6 +5,7 @@ export type DashboardLayoutBreakpoint = "lg" | "md" | "sm";
 function isSupportingWidget(widget: DashboardWidget): boolean {
   return (
     widget.type === "categoryBar" ||
+    widget.type === "stackedBar" ||
     widget.type === "donut" ||
     widget.type === "rankingTable" ||
     widget.type === "dataTable"

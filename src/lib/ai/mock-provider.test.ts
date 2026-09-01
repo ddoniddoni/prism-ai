@@ -16,6 +16,7 @@ const supportedQuestions = [
   "광고비 대비 성과를 보여줘.",
   "환불률이 높은 지역을 알려줘.",
   "서울에서 산 제품들 판매량만 보여줘.",
+  "지난달 매출의 디바이스별 구성을 보여줘.",
 ] as const;
 
 describe("MockAIProvider", () => {
@@ -66,6 +67,43 @@ describe("MockAIProvider", () => {
           metric: "unitsSold",
           groupBy: "product",
           filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+        }),
+      ]),
+    );
+  });
+
+  it("maps a device composition question to independent verified date series", async () => {
+    const provider = new MockAIProvider();
+    const plan = await provider.createPlan({
+      question: "지난달 매출의 디바이스별 구성을 보여줘.",
+    });
+
+    expect(plan.intent).toBe("segmentAnalysis");
+    expect(plan.queries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "stack-desktop",
+          metric: "revenue",
+          groupBy: "date",
+          filters: [
+            { dimension: "device", operator: "eq", values: ["desktop"] },
+          ],
+        }),
+        expect.objectContaining({
+          id: "stack-mobile",
+          metric: "revenue",
+          groupBy: "date",
+          filters: [
+            { dimension: "device", operator: "eq", values: ["mobile"] },
+          ],
+        }),
+        expect.objectContaining({
+          id: "stack-tablet",
+          metric: "revenue",
+          groupBy: "date",
+          filters: [
+            { dimension: "device", operator: "eq", values: ["tablet"] },
+          ],
         }),
       ]),
     );

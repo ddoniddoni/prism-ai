@@ -93,6 +93,11 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - Evidence Mosaic의 span 계산 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - 기존에 저장된 Layout은 `auto`로 마이그레이션해 새 Mosaic 규칙으로 즉시 재배치한다. 이후 실제 Drag·Resize·표시 타입·숨김 편집 뒤에만 `custom` Layout으로 보존하며, 시스템이 측정해 확장한 Card 높이는 재배치 뒤에도 유지한다.
 - Mock Planner에 `서울에서 산 제품들 판매량만 보여줘` 예시를 추가했다. 한국어 지역명 `서울`을 Dataset의 허용 값 `Seoul`로 매핑하고, `unitsSold`를 상품별로 집계하는 검증된 Query DSL만 생성한다.
+- MIT 라이선스의 `@nivo/bar`로 `PrismStackedBarChart`를 추가했다. 이 Chart도 Dashboard에서만 동적으로 로드하며, 동일 기간의 Desktop·Mobile·Tablet 일자별 Query를 실제로 누적해 표시한다.
+- `stackedBar`를 Dashboard Schema·Sanitizer·Component Registry·Evidence Mosaic에 등록했다. 2개 미만의 유효한 Series 참조는 제거하며, 표시값은 각 Query가 결정론적으로 계산한 DataPoint만 사용한다.
+- Mock Planner가 `지난달 매출의 디바이스별 구성을 보여줘`를 3개의 독립된 디바이스 `date` Query로 변환하고, Home 추천 질문에서 바로 실행할 수 있게 했다.
+- `PrismStackedBarChart`는 상단 여유가 부족한 막대의 Tooltip을 `bottom` Anchor로, 나머지는 `top` Anchor로 렌더링한다. Nivo 기본 Bar Tooltip이 항상 `top` Anchor를 선택해 `overflow-hidden` Chart Panel 상단에서 잘리던 문제를 전용 Bar Renderer로 해결했고, 키보드 Focus에도 같은 배치 규칙을 적용했다.
+- 전용 Bar Renderer가 Nivo의 내부 Bar 객체를 Tooltip JSX에 전달할 때 React 전용 `key`를 제외했다. 개발 콘솔의 Key Spread 경고 없이 동일한 Tooltip 정보를 표시한다.
 
 ## 진행 중
 
@@ -139,8 +144,25 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-01 | 성능은 Build Manifest의 raw·gzip Asset 크기로 반복 측정 | 브라우저 체감 성능을 추정하지 않고 초기 Dashboard와 지연 로드 Bundle 경계를 재현 가능한 수치로 기록하기 위함 |
 | 2026-09-01 | 모든 Widget Card는 콘텐츠 높이에 맞춰 Editor Grid 행을 자동 확장 | 바깥 Card Scroll을 제거하면서 고정 Grid 안의 콘텐츠 겹침을 막고, Table 전용 내부 Scroll은 유지하기 위함 |
 | 2026-09-01 | Dashboard는 질문 결과에 맞춰 Evidence Mosaic Layout을 사용 | 정해진 순서의 빈 Grid Cell 대신 KPI·추이·보조 분석·근거의 정보 우선순위에 따라 Canvas를 채우고, 1024px 이상 콘텐츠 영역에서는 Desktop Mosaic을 적용하기 위함 |
+| 2026-09-02 | 누적 막대는 Series별 검증된 Query를 쌓아서 렌더링 | 현재 Query DSL의 단일 Grouping 제약을 우회해 임의 비즈니스 값이나 잘못된 비교값을 합산하지 않고, 같은 날짜·지표의 결정론적 세그먼트 합계를 표현하기 위함 |
 
 ## 검증 결과
+
+- `npm run lint`: 통과 (Phase 8 PrismStackedBarChart)
+- `npm run typecheck`: 통과 (Phase 8 PrismStackedBarChart)
+- `npm run build`: 통과 (Phase 8 PrismStackedBarChart, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Phase 8 PrismStackedBarChart)
+- `npm run lint`: 통과 (PrismStackedBarChart Tooltip Anchor)
+- `npm run typecheck`: 통과 (PrismStackedBarChart Tooltip Anchor)
+- `npm run build`: 통과 (PrismStackedBarChart Tooltip Anchor, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (PrismStackedBarChart Tooltip Anchor)
+- `npm run lint`: 통과 (PrismStackedBarChart Tooltip Key Spread)
+- `npm run typecheck`: 통과 (PrismStackedBarChart Tooltip Key Spread)
+- `npm run build`: 통과 (PrismStackedBarChart Tooltip Key Spread, Next.js Webpack production build)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run lint`: 통과 (Phase 8 Evidence Mosaic Layout)
 - `npm run typecheck`: 통과 (Phase 8 Evidence Mosaic Layout)

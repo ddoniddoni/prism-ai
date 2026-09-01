@@ -8,6 +8,7 @@ export const widgetTypes = [
   "metric",
   "timeSeries",
   "categoryBar",
+  "stackedBar",
   "donut",
   "rankingTable",
   "dataTable",
@@ -63,6 +64,28 @@ const categoryBarWidgetSchema = widgetReferenceSchema
   })
   .strict();
 
+const stackedBarWidgetSchema = widgetReferenceSchema
+  .extend({
+    type: z.literal("stackedBar"),
+    config: z
+      .object({
+        series: z
+          .array(
+            z
+              .object({
+                queryId: z.string().trim().min(1),
+                label: z.string().trim().min(1).max(120),
+              })
+              .strict(),
+          )
+          .min(2)
+          .max(6),
+        xKey: z.literal("label"),
+      })
+      .strict(),
+  })
+  .strict();
+
 const donutWidgetSchema = widgetReferenceSchema
   .extend({
     type: z.literal("donut"),
@@ -100,6 +123,7 @@ export const dashboardWidgetSchema = z.discriminatedUnion("type", [
   metricWidgetSchema,
   timeSeriesWidgetSchema,
   categoryBarWidgetSchema,
+  stackedBarWidgetSchema,
   donutWidgetSchema,
   rankingTableWidgetSchema,
   dataTableWidgetSchema,

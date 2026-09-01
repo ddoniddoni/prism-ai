@@ -95,6 +95,7 @@ function getWidgetHeight(widget: DashboardWidget): number {
     metric: 4,
     timeSeries: 9,
     categoryBar: 8,
+    stackedBar: 9,
     donut: 8,
     rankingTable: 8,
     dataTable: 8,
@@ -124,6 +125,7 @@ function getMinimumWidgetWidth(
     metric: 3,
     timeSeries: 6,
     categoryBar: 4,
+    stackedBar: 6,
     donut: 4,
     rankingTable: 4,
     dataTable: 4,
@@ -178,6 +180,7 @@ function createBreakpointLayout(
   const supportingWidgetCount = widgets.filter(
     (widget) =>
       widget.type === "categoryBar" ||
+      widget.type === "stackedBar" ||
       widget.type === "donut" ||
       widget.type === "rankingTable" ||
       widget.type === "dataTable",
@@ -216,6 +219,7 @@ function createBreakpointLayout(
       const existingItem = existingItemsById.get(widget.id);
       const isSupportingWidget =
         widget.type === "categoryBar" ||
+        widget.type === "stackedBar" ||
         widget.type === "donut" ||
         widget.type === "rankingTable" ||
         widget.type === "dataTable";

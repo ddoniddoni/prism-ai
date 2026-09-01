@@ -41,8 +41,34 @@ type MockAnalysisDefinition = {
     primary?: string;
     trend?: string;
     focus?: string;
+    stacked?: string;
   };
+  stackedSeries?: readonly StackedSeriesDefinition[];
 };
+
+type StackedSeriesDefinition = {
+  id: string;
+  label: string;
+  filter: AnalyticsFilter;
+};
+
+const deviceStackedSeries = [
+  {
+    id: "desktop",
+    label: "Desktop",
+    filter: { dimension: "device", operator: "eq", values: ["desktop"] },
+  },
+  {
+    id: "mobile",
+    label: "Mobile",
+    filter: { dimension: "device", operator: "eq", values: ["mobile"] },
+  },
+  {
+    id: "tablet",
+    label: "Tablet",
+    filter: { dimension: "device", operator: "eq", values: ["tablet"] },
+  },
+] as const satisfies readonly StackedSeriesDefinition[];
 
 export class UnsupportedQuestionError extends Error {
   constructor() {
@@ -88,6 +114,35 @@ function rootCauseDefinition(): MockAnalysisDefinition {
 }
 
 function resolveDefinition(question: string): MockAnalysisDefinition {
+  if (
+    (question.includes("디바이스") || question.includes("기기")) &&
+    question.includes("매출") &&
+    (question.includes("구성") ||
+      question.includes("누적") ||
+      question.includes("쌓") ||
+      question.includes("비중"))
+  ) {
+    return {
+      intent: "segmentAnalysis",
+      goal: "지난달 매출의 일자별 디바이스 구성을 누적해 확인합니다.",
+      primaryMetric: "revenue",
+      period: { preset: "lastMonth" },
+      compareWith: "none",
+      filters: [],
+      focusDimension: "device",
+      title: "지난달 디바이스 매출 구성",
+      subtitle:
+        "일자별 매출을 디바이스 구성으로 나누어 흐름과 비중을 함께 봅니다.",
+      widgetTitles: {
+        primary: "지난달 총매출",
+        trend: "기간별 전체 매출",
+        focus: "디바이스별 총매출",
+        stacked: "일자별 디바이스 매출 구성",
+      },
+      stackedSeries: deviceStackedSeries,
+    };
+  }
+
   if (
     (question.includes("서울") || question.includes("seoul")) &&
     (question.includes("제품") || question.includes("상품")) &&
@@ -232,6 +287,21 @@ function createQueries(definition: MockAnalysisDefinition): AnalyticsQuery[] {
     );
   }
 
+  if (definition.stackedSeries) {
+    queries.push(
+      ...definition.stackedSeries.map((series) =>
+        createQuery(
+          `stack-${series.id}`,
+          primaryMetric,
+          period,
+          "none",
+          normalizeAnalyticsFilters([...filters, series.filter]),
+          "date",
+        ),
+      ),
+    );
+  }
+
   if (definition.intent === "rootCause" || definition.intent === "comparison") {
     queries.push(
       createQuery(
@@ -289,6 +359,10 @@ function applyContextPatch(
   currentContext: AnalysisContext | undefined,
   patch: AnalysisContextPatch,
 ): MockAnalysisDefinition {
+  const filters = normalizeAnalyticsFilters(
+    patch.filters ?? currentContext?.filters ?? definition.filters,
+  );
+
   return {
     ...definition,
     primaryMetric:
@@ -300,13 +374,14 @@ function applyContextPatch(
       patch.compareWith ??
       currentContext?.compareWith ??
       definition.compareWith,
-    filters: normalizeAnalyticsFilters(
-      patch.filters ?? currentContext?.filters ?? definition.filters,
-    ),
+    filters,
     focusDimension:
       patch.focusDimension ??
       currentContext?.focusDimension ??
       definition.focusDimension,
+    ...(filters.some((filter) => filter.dimension === "device")
+      ? { stackedSeries: undefined }
+      : {}),
   };
 }
 
@@ -343,6 +418,16 @@ function createDashboardSpec(
   );
   const categoryDataset = input.datasets.find(
     (dataset) => dataset.queryId === "category",
+  );
+  const stackedSeries = (definition.stackedSeries ?? []).flatMap((series) =>
+    input.datasets.some((dataset) => dataset.queryId === `stack-${series.id}`)
+      ? [
+          {
+            queryId: `stack-${series.id}`,
+            label: series.label,
+          },
+        ]
+      : [],
   );
   const leadFinding =
     input.findings.find(
@@ -389,6 +474,20 @@ function createDashboardSpec(
       findingIds: [],
       size: "medium",
       config: { queryId: focusDataset.queryId, orientation: "horizontal" },
+    });
+  }
+
+  if (stackedSeries.length >= 2) {
+    widgets.push({
+      id: "stacked-segment-trend",
+      type: "stackedBar",
+      title: definition.widgetTitles?.stacked ?? "기간별 세그먼트 구성",
+      description:
+        "같은 일자의 세그먼트 값을 누적해 전체와 구성을 함께 표시합니다.",
+      queryIds: stackedSeries.map((series) => series.queryId),
+      findingIds: [],
+      size: "large",
+      config: { series: stackedSeries, xKey: "label" },
     });
   }
 
@@ -461,7 +560,11 @@ export class MockAIProvider implements AIProvider {
   }
 
   async createDashboard(input: DashboardComposerInput): Promise<DashboardSpec> {
-    const definition = resolveDefinition(input.plan.normalizedQuestion);
+    const definition = applyContextPatch(
+      resolveDefinition(input.plan.normalizedQuestion),
+      input.context,
+      {},
+    );
 
     return createDashboardSpec(input, definition);
   }

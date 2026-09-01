@@ -62,6 +62,22 @@ const PrismRankedBarChart = dynamic(
   },
 );
 
+const PrismStackedBarChart = dynamic(
+  () =>
+    import("./prism-stacked-bar-chart").then(
+      (module) => module.PrismStackedBarChart,
+    ),
+  {
+    loading: () => (
+      <div
+        aria-label="누적 막대 차트를 불러오는 중"
+        className="prism-skeleton h-60 rounded-xl sm:h-64"
+      />
+    ),
+    ssr: false,
+  },
+);
+
 type DashboardRendererProps = {
   dashboard: DashboardSpec;
   datasets: readonly AnalyticsDataset[];
@@ -290,6 +306,38 @@ function DonutWidget({
   );
 }
 
+function StackedBarWidget({
+  widget,
+  datasetsById,
+  cardClassName,
+  controls,
+}: DashboardWidgetProps) {
+  if (widget.type !== "stackedBar") {
+    return null;
+  }
+
+  const series = widget.config.series.flatMap((item) => {
+    const dataset = datasetsById.get(item.queryId);
+
+    return dataset
+      ? [{ id: item.queryId, label: item.label, points: dataset.points }]
+      : [];
+  });
+  const metric =
+    datasetsById.get(widget.config.series[0]?.queryId ?? "")?.metric ??
+    "revenue";
+
+  return (
+    <WidgetFrame className={cardClassName} controls={controls} widget={widget}>
+      <PrismStackedBarChart
+        metric={metric}
+        series={series}
+        title={widget.title}
+      />
+    </WidgetFrame>
+  );
+}
+
 function TableWidget({
   widget,
   datasetsById,
@@ -377,6 +425,7 @@ const componentRegistry = {
   metric: MetricWidget,
   timeSeries: TimeSeriesWidget,
   categoryBar: CategoryBarWidget,
+  stackedBar: StackedBarWidget,
   donut: DonutWidget,
   rankingTable: TableWidget,
   dataTable: TableWidget,
