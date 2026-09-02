@@ -116,6 +116,10 @@ function rootCauseDefinition(): MockAnalysisDefinition {
 }
 
 function resolveDefinition(question: string): MockAnalysisDefinition {
+  if (question.includes("선택한") && question.includes("자세히")) {
+    return rootCauseDefinition();
+  }
+
   if (
     question.includes("매출") &&
     (question.includes("히트맵") ||

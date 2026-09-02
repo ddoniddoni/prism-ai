@@ -1,12 +1,20 @@
 import { z } from "zod";
 
 import { analyticsDatasetSchema } from "@/lib/analytics/query-engine";
+import { analyticsFilterSchema } from "@/lib/analytics/query-schema";
 import { findingSchema } from "@/lib/analytics/findings";
 import {
   analysisContextSchema,
   analysisPlanSchema,
 } from "@/lib/ai/schemas/analysis-plan";
 import { dashboardSpecSchema } from "@/lib/ai/schemas/dashboard-spec";
+
+export const drilldownFilterSchema = analyticsFilterSchema
+  .extend({
+    operator: z.literal("eq"),
+    values: z.array(z.string().trim().min(1).max(120)).length(1),
+  })
+  .strict();
 
 export const analyzeRequestSchema = z
   .object({
@@ -15,8 +23,18 @@ export const analyzeRequestSchema = z
     sessionId: z.string().trim().min(1).max(120).optional(),
     dashboardId: z.string().trim().min(1).max(120).optional(),
     currentContext: analysisContextSchema.optional(),
+    drilldownFilter: drilldownFilterSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((request, context) => {
+    if (request.drilldownFilter && !request.currentContext) {
+      context.addIssue({
+        code: "custom",
+        path: ["currentContext"],
+        message: "선택값 후속 분석에는 현재 분석 Context가 필요합니다.",
+      });
+    }
+  });
 
 export const analyzeErrorResponseSchema = z
   .object({
@@ -53,3 +71,4 @@ export const analyzeResponseSchema = z
 export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
 export type AnalyzeErrorResponse = z.infer<typeof analyzeErrorResponseSchema>;
 export type AnalyzeResponse = z.infer<typeof analyzeResponseSchema>;
+export type DrilldownFilter = z.infer<typeof drilldownFilterSchema>;

@@ -29,6 +29,7 @@ import {
 
 import type { Finding } from "@/lib/analytics/findings";
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
+import type { AnalyticsFilter } from "@/lib/analytics/query-schema";
 import type {
   DashboardSpec,
   DashboardWidget,
@@ -62,7 +63,9 @@ import type { DashboardDrilldownSelection } from "./dashboard-drilldown-data";
 type DashboardEditorProps = {
   dashboard: DashboardSpec;
   datasets: readonly AnalyticsDataset[];
+  drilldownAnalysisDisabled?: boolean;
   findings: readonly Finding[];
+  onDrilldownAnalysis?: (filter: AnalyticsFilter) => void;
 };
 
 const editorBreakpoints: Record<EditorBreakpoint, number> = {
@@ -362,7 +365,9 @@ function EditorToolbar({
 export function DashboardEditor({
   dashboard,
   datasets,
+  drilldownAnalysisDisabled = false,
   findings,
+  onDrilldownAnalysis,
 }: DashboardEditorProps) {
   const [activeDrilldown, setActiveDrilldown] =
     useState<DashboardDrilldownSelection | null>(null);
@@ -531,8 +536,10 @@ export function DashboardEditor({
           <DashboardWidgetGrid
             activeDrilldown={activeDrilldown}
             datasets={datasets}
+            drilldownAnalysisDisabled={drilldownAnalysisDisabled}
             findings={findings}
             onDrilldownChange={handleDrilldownChange}
+            onDrilldownAnalysis={onDrilldownAnalysis}
             widgets={widgets}
           />
         ) : widgets.length === 0 ? (
@@ -580,8 +587,10 @@ export function DashboardEditor({
                     ) : undefined
                   }
                   datasetsById={datasetsById}
+                  drilldownAnalysisDisabled={drilldownAnalysisDisabled}
                   findingsById={findingsById}
                   onDrilldownChange={handleDrilldownChange}
+                  onDrilldownAnalysis={onDrilldownAnalysis}
                   presentation={
                     activeLayoutPlan.get(widget.id)?.presentation ?? "standard"
                   }

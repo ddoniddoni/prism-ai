@@ -1,6 +1,10 @@
 import type { MetricKey } from "@/lib/analytics/metric-catalog";
 import { metricCatalog } from "@/lib/analytics/metric-catalog";
 import type { AnalyticsDataset, DataPoint } from "@/lib/analytics/query-engine";
+import {
+  isFilterableDimensionKey,
+  type AnalyticsFilter,
+} from "@/lib/analytics/query-schema";
 
 export type DashboardDrilldownSelection = {
   label: string;
@@ -107,5 +111,26 @@ export function createDashboardDrilldown(
     rank,
     sharePercent: getSharePercent(dataset, point),
     validPointCount,
+  };
+}
+
+export function createDashboardDrilldownFilter(
+  dataset: AnalyticsDataset,
+  label: string,
+): AnalyticsFilter | undefined {
+  if (
+    !dataset.groupBy ||
+    !isFilterableDimensionKey(dataset.groupBy) ||
+    !dataset.points.some(
+      (point) => point.label === label && point.value !== null,
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    dimension: dataset.groupBy,
+    operator: "eq",
+    values: [label],
   };
 }

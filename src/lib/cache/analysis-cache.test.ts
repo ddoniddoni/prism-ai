@@ -34,6 +34,39 @@ describe("InMemoryAnalysisCache", () => {
     );
   });
 
+  it("keeps different selected chart filters in separate cache entries", () => {
+    const context = {
+      primaryMetric: "revenue" as const,
+      period: { preset: "lastMonth" as const },
+      compareWith: "previousPeriod" as const,
+      filters: [],
+      focusDimension: "category" as const,
+    };
+    const electronicsRequest: AnalyzeRequest = {
+      ...originalRequest,
+      question: "선택한 카테고리 Electronics을 자세히 분석해줘.",
+      currentContext: context,
+      drilldownFilter: {
+        dimension: "category",
+        operator: "eq",
+        values: ["Electronics"],
+      },
+    };
+    const fashionRequest: AnalyzeRequest = {
+      ...electronicsRequest,
+      requestId: "cache-fashion-request",
+      drilldownFilter: {
+        dimension: "category",
+        operator: "eq",
+        values: ["Fashion"],
+      },
+    };
+
+    expect(createAnalysisCacheKey(electronicsRequest, scope)).not.toBe(
+      createAnalysisCacheKey(fashionRequest, scope),
+    );
+  });
+
   it("expires entries and returns a defensive response copy", async () => {
     let now = 0;
     const cache = new InMemoryAnalysisCache(1_000, 2, () => now);
