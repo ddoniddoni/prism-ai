@@ -29,7 +29,10 @@ import {
 
 import type { Finding } from "@/lib/analytics/findings";
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
-import type { AnalyticsFilter } from "@/lib/analytics/query-schema";
+import type {
+  AnalyticsFilter,
+  CompareMode,
+} from "@/lib/analytics/query-schema";
 import type {
   DashboardSpec,
   DashboardWidget,
@@ -62,9 +65,13 @@ import type { DashboardDrilldownSelection } from "./dashboard-drilldown-data";
 
 type DashboardEditorProps = {
   dashboard: DashboardSpec;
+  comparisonControlsDisabled?: boolean;
+  contextFilterControlsDisabled?: boolean;
   datasets: readonly AnalyticsDataset[];
   drilldownAnalysisDisabled?: boolean;
   findings: readonly Finding[];
+  onContextFiltersChange?: (filters: readonly AnalyticsFilter[]) => void;
+  onComparisonChange?: (compareWith: CompareMode) => void;
   onDrilldownAnalysis?: (filter: AnalyticsFilter) => void;
 };
 
@@ -364,9 +371,13 @@ function EditorToolbar({
 
 export function DashboardEditor({
   dashboard,
+  comparisonControlsDisabled = false,
+  contextFilterControlsDisabled = false,
   datasets,
   drilldownAnalysisDisabled = false,
   findings,
+  onComparisonChange,
+  onContextFiltersChange,
   onDrilldownAnalysis,
 }: DashboardEditorProps) {
   const [activeDrilldown, setActiveDrilldown] =
@@ -520,7 +531,13 @@ export function DashboardEditor({
 
   return (
     <section aria-labelledby="analysis-dashboard-title" className="mt-7">
-      <DashboardHeader dashboard={dashboard} />
+      <DashboardHeader
+        dashboard={dashboard}
+        comparisonControlsDisabled={comparisonControlsDisabled}
+        filterControlsDisabled={contextFilterControlsDisabled}
+        onComparisonChange={onComparisonChange}
+        onFiltersChange={onContextFiltersChange}
+      />
       <EditorToolbar
         dashboard={dashboard}
         isEditing={isEditing}

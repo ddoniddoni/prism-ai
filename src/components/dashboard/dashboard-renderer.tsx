@@ -1,11 +1,16 @@
 "use client";
 
+import { SlidersHorizontal, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo, type ReactNode, useState } from "react";
 
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import type { Finding } from "@/lib/analytics/findings";
-import type { AnalyticsFilter } from "@/lib/analytics/query-schema";
+import {
+  compareModes,
+  type AnalyticsFilter,
+  type CompareMode,
+} from "@/lib/analytics/query-schema";
 import type {
   DashboardSpec,
   DashboardWidget,
@@ -25,6 +30,10 @@ import {
   getComparisonLabel,
 } from "./formatters";
 import { DashboardDrilldown } from "./dashboard-drilldown";
+import {
+  getDashboardContextFilterLabel,
+  removeDashboardContextFilter,
+} from "./dashboard-context-controls-data";
 import type { DashboardDrilldownSelection } from "./dashboard-drilldown-data";
 
 const PrismTrendChart = dynamic(
@@ -734,7 +743,22 @@ export const DashboardWidgetCard = memo(function DashboardWidgetCard(
   return <Widget {...props} />;
 });
 
-export function DashboardHeader({ dashboard }: { dashboard: DashboardSpec }) {
+export function DashboardHeader({
+  dashboard,
+  comparisonControlsDisabled = false,
+  filterControlsDisabled = false,
+  onComparisonChange,
+  onFiltersChange,
+}: {
+  dashboard: DashboardSpec;
+  comparisonControlsDisabled?: boolean;
+  filterControlsDisabled?: boolean;
+  onComparisonChange?: (compareWith: CompareMode) => void;
+  onFiltersChange?: (filters: readonly AnalyticsFilter[]) => void;
+}) {
+  const canChangeComparison = Boolean(onComparisonChange);
+  const canChangeFilters = Boolean(onFiltersChange);
+
   return (
     <div className="py-2 sm:py-3">
       <p className="text-[10px] font-semibold tracking-[0.12em] text-[#4f46e5] uppercase">
@@ -752,21 +776,94 @@ export function DashboardHeader({ dashboard }: { dashboard: DashboardSpec }) {
       <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#777587]">
         {dashboard.summary}
       </p>
-      <div className="mt-4 flex flex-wrap gap-2 text-[10px] text-[#595e6b]">
-        <span className="rounded border border-[#dde2e8] bg-white px-2.5 py-1.5">
-          {dashboard.context.period.preset}
-        </span>
-        <span className="rounded border border-[#dde2e8] bg-white px-2.5 py-1.5">
-          {getComparisonLabel(dashboard.context.compareWith)}
-        </span>
-        {dashboard.context.filters.map((filter) => (
-          <span
-            className="rounded border border-[#c3c0ff] bg-[#eef2ff] px-2.5 py-1.5 text-[#3525cd]"
-            key={`${filter.dimension}-${filter.operator}-${filter.values.join("-")}`}
-          >
-            {filter.dimension}: {filter.values.join(", ")}
+      <div className="mt-4 rounded-lg border border-[#dde2e8] bg-[#f8f9fb] p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.1em] text-[#595e6b] uppercase">
+            <SlidersHorizontal aria-hidden="true" className="size-3" />
+            분석 조건
+          </p>
+          {dashboard.context.filters.length > 0 && canChangeFilters ? (
+            <button
+              className="min-h-8 rounded-md px-2 text-[10px] font-semibold text-[#4f46e5] transition-colors hover:bg-[#eef2ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] disabled:cursor-not-allowed disabled:text-[#9296a0]"
+              disabled={filterControlsDisabled}
+              onClick={() => onFiltersChange?.([])}
+              type="button"
+            >
+              전체 해제
+            </button>
+          ) : null}
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-2 text-[11px] text-[#595e6b]">
+          <span className="rounded-md border border-[#dde2e8] bg-white px-2.5 py-1.5">
+            {dashboard.context.period.preset}
           </span>
-        ))}
+          {canChangeComparison ? (
+            <label className="rounded-md border border-[#c3c0ff] bg-white text-[#3525cd] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#4f46e5]">
+              <span className="sr-only">비교 기준</span>
+              <select
+                aria-label="비교 기준"
+                className="min-h-8 cursor-pointer bg-transparent py-1.5 pr-2 pl-2.5 font-medium outline-none disabled:cursor-not-allowed disabled:text-[#9296a0]"
+                disabled={comparisonControlsDisabled}
+                onChange={(event) => {
+                  const nextCompareWith = compareModes.find(
+                    (compareWith) => compareWith === event.target.value,
+                  );
+
+                  if (nextCompareWith) {
+                    onComparisonChange?.(nextCompareWith);
+                  }
+                }}
+                value={dashboard.context.compareWith}
+              >
+                {compareModes.map((compareWith) => (
+                  <option key={compareWith} value={compareWith}>
+                    {getComparisonLabel(compareWith)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="rounded-md border border-[#dde2e8] bg-white px-2.5 py-1.5">
+              {getComparisonLabel(dashboard.context.compareWith)}
+            </span>
+          )}
+          {dashboard.context.filters.length === 0 ? (
+            <span className="rounded-md border border-dashed border-[#c9ccd2] bg-white px-2.5 py-1.5 text-[#777587]">
+              전체 데이터
+            </span>
+          ) : (
+            dashboard.context.filters.map((filter) => {
+              const label = getDashboardContextFilterLabel(filter);
+
+              return (
+                <span
+                  className="inline-flex items-center gap-1 rounded-md border border-[#c3c0ff] bg-[#eef2ff] py-1 pl-2.5 text-[#3525cd]"
+                  key={`${filter.dimension}-${filter.operator}-${filter.values.join("-")}`}
+                >
+                  {label}
+                  {canChangeFilters ? (
+                    <button
+                      aria-label={`${label} 조건 제거`}
+                      className="grid size-7 place-items-center rounded-r-md text-[#4f46e5] transition-colors hover:bg-[#dedcff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] disabled:cursor-not-allowed disabled:text-[#9296a0]"
+                      disabled={filterControlsDisabled}
+                      onClick={() =>
+                        onFiltersChange?.(
+                          removeDashboardContextFilter(
+                            dashboard.context.filters,
+                            filter,
+                          ),
+                        )
+                      }
+                      type="button"
+                    >
+                      <X aria-hidden="true" className="size-3" />
+                    </button>
+                  ) : null}
+                </span>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

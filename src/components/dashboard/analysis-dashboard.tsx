@@ -13,12 +13,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   analyzeErrorResponseSchema,
   analyzeResponseSchema,
+  type ContextOverride,
   type DrilldownFilter,
   type AnalyzeResponse,
 } from "@/lib/analysis/schemas";
 import type { AnalysisContext } from "@/lib/ai/schemas/analysis-plan";
 import { dimensionCatalog } from "@/lib/analytics/dimension-catalog";
-import type { AnalyticsFilter } from "@/lib/analytics/query-schema";
+import {
+  normalizeAnalyticsFilters,
+  type AnalyticsFilter,
+  type CompareMode,
+} from "@/lib/analytics/query-schema";
 import {
   createAnalysisHistoryEntry,
   saveAnalysisHistory,
@@ -37,6 +42,7 @@ type AnalysisDashboardProps = {
 };
 
 type PendingAnalysis = {
+  contextOverride?: ContextOverride;
   drilldownFilter?: DrilldownFilter;
   question: string;
   currentContext?: AnalysisContext;
@@ -77,6 +83,7 @@ async function readResponseBody(response: Response): Promise<unknown> {
 async function requestAnalysis({
   dashboardId,
   question,
+  contextOverride,
   drilldownFilter,
   currentContext,
   sessionId,
@@ -90,6 +97,7 @@ async function requestAnalysis({
       dashboardId,
       ...(sessionId ? { sessionId } : {}),
       ...(currentContext ? { currentContext } : {}),
+      ...(contextOverride ? { contextOverride } : {}),
       ...(drilldownFilter ? { drilldownFilter } : {}),
     }),
   });
@@ -305,6 +313,42 @@ export function AnalysisDashboard({
     mutateAnalysis({ ...nextAnalysis, dashboardId });
   }
 
+  function startContextFiltersChange(filters: readonly AnalyticsFilter[]) {
+    if (!activeResponse) {
+      return;
+    }
+
+    const contextOverride: ContextOverride = {
+      filters: normalizeAnalyticsFilters(filters),
+    };
+    const nextAnalysis = {
+      question: activeResponse.plan.normalizedQuestion,
+      currentContext: activeResponse.context,
+      sessionId: activeResponse.sessionId,
+      contextOverride,
+    };
+
+    setPendingAnalysis(nextAnalysis);
+    mutateAnalysis({ ...nextAnalysis, dashboardId });
+  }
+
+  function startComparisonChange(compareWith: CompareMode) {
+    if (!activeResponse || activeResponse.context.compareWith === compareWith) {
+      return;
+    }
+
+    const contextOverride: ContextOverride = { compareWith };
+    const nextAnalysis = {
+      question: activeResponse.plan.normalizedQuestion,
+      currentContext: activeResponse.context,
+      sessionId: activeResponse.sessionId,
+      contextOverride,
+    };
+
+    setPendingAnalysis(nextAnalysis);
+    mutateAnalysis({ ...nextAnalysis, dashboardId });
+  }
+
   function startDrilldownAnalysis(filter: AnalyticsFilter) {
     if (!activeResponse || filter.operator !== "eq") {
       return;
@@ -412,10 +456,14 @@ export function AnalysisDashboard({
       ) : null}
       <DashboardEditor
         dashboard={activeResponse.dashboard}
+        comparisonControlsDisabled={displayStatus === "loading"}
+        contextFilterControlsDisabled={displayStatus === "loading"}
         datasets={activeResponse.datasets}
         drilldownAnalysisDisabled={displayStatus === "loading"}
         findings={activeResponse.findings}
         key={activeResponse.analysisId}
+        onComparisonChange={startComparisonChange}
+        onContextFiltersChange={startContextFiltersChange}
         onDrilldownAnalysis={startDrilldownAnalysis}
       />
       <div className="mt-5">

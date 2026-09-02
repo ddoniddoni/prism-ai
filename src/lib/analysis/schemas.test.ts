@@ -63,4 +63,51 @@ describe("Analyze request drilldown filter", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts a verified Context override and rejects conflicting input", () => {
+    expect(
+      analyzeRequestSchema.safeParse({
+        question: "지난달 매출이 왜 감소했어?",
+        requestId: "context-override-request",
+        currentContext,
+        contextOverride: {
+          filters: [
+            {
+              dimension: "device",
+              operator: "eq",
+              values: ["mobile"],
+            },
+          ],
+        },
+      }).success,
+    ).toBe(true);
+    expect(
+      analyzeRequestSchema.safeParse({
+        question: "선택한 카테고리를 자세히 분석해줘.",
+        requestId: "context-override-conflict-request",
+        currentContext,
+        drilldownFilter: {
+          dimension: "category",
+          operator: "eq",
+          values: ["Electronics"],
+        },
+        contextOverride: { filters: [] },
+      }).success,
+    ).toBe(false);
+    expect(
+      analyzeRequestSchema.safeParse({
+        question: "지난달 매출이 왜 감소했어?",
+        requestId: "context-override-missing-context-request",
+        contextOverride: { filters: [] },
+      }).success,
+    ).toBe(false);
+    expect(
+      analyzeRequestSchema.safeParse({
+        question: "지난달 매출이 왜 감소했어?",
+        requestId: "context-override-comparison-request",
+        currentContext,
+        contextOverride: { compareWith: "previousYear" },
+      }).success,
+    ).toBe(true);
+  });
 });

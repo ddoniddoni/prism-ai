@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 import { analyticsDatasetSchema } from "@/lib/analytics/query-engine";
-import { analyticsFilterSchema } from "@/lib/analytics/query-schema";
+import {
+  analyticsFilterSchema,
+  compareModes,
+} from "@/lib/analytics/query-schema";
 import { findingSchema } from "@/lib/analytics/findings";
 import {
   analysisContextSchema,
@@ -16,6 +19,18 @@ export const drilldownFilterSchema = analyticsFilterSchema
   })
   .strict();
 
+export const contextOverrideSchema = z
+  .object({
+    filters: z.array(analyticsFilterSchema).max(20).optional(),
+    compareWith: z.enum(compareModes).optional(),
+  })
+  .strict()
+  .refine(
+    (override) =>
+      override.filters !== undefined || override.compareWith !== undefined,
+    "분석 조건 변경값이 필요합니다.",
+  );
+
 export const analyzeRequestSchema = z
   .object({
     question: z.string().trim().min(2).max(300),
@@ -24,14 +39,26 @@ export const analyzeRequestSchema = z
     dashboardId: z.string().trim().min(1).max(120).optional(),
     currentContext: analysisContextSchema.optional(),
     drilldownFilter: drilldownFilterSchema.optional(),
+    contextOverride: contextOverrideSchema.optional(),
   })
   .strict()
   .superRefine((request, context) => {
-    if (request.drilldownFilter && !request.currentContext) {
+    if (
+      (request.drilldownFilter || request.contextOverride) &&
+      !request.currentContext
+    ) {
       context.addIssue({
         code: "custom",
         path: ["currentContext"],
-        message: "선택값 후속 분석에는 현재 분석 Context가 필요합니다.",
+        message: "분석 조건을 바꾸려면 현재 분석 Context가 필요합니다.",
+      });
+    }
+
+    if (request.drilldownFilter && request.contextOverride) {
+      context.addIssue({
+        code: "custom",
+        path: ["contextOverride"],
+        message: "선택값 분석과 분석 조건 변경은 함께 요청할 수 없습니다.",
       });
     }
   });
@@ -72,3 +99,4 @@ export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
 export type AnalyzeErrorResponse = z.infer<typeof analyzeErrorResponseSchema>;
 export type AnalyzeResponse = z.infer<typeof analyzeResponseSchema>;
 export type DrilldownFilter = z.infer<typeof drilldownFilterSchema>;
+export type ContextOverride = z.infer<typeof contextOverrideSchema>;
