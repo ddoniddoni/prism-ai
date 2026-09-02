@@ -115,6 +115,10 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - 카테고리·디바이스·지역처럼 허용된 차원 값의 `Selected evidence`에는 명시적인 `상세 분석` 액션을 추가했다. 날짜는 Filterable Dimension이 아니므로 근거 조회만 가능하다.
 - 상세 분석 요청은 현재 Analysis Context와 단일 `eq` 선택 Filter를 Zod로 검증한다. 서버는 Planner에 좁혀진 Context를 전달하고, 최종 Context Filter를 모든 Query DSL에 다시 강제한 뒤 Repository를 실행한다.
 - 선택 Filter를 Cache Key에 포함해, 같은 질문이라도 서로 다른 차트 선택 결과가 Cache를 공유하지 않게 했다. 선택 Filter·Query 강제·Cache 분리에 대한 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- Dashboard Header의 분석 조건을 기간·비교·사람이 읽는 Filter Chip으로 정리했다. Filter Chip의 제거 버튼과 `전체 해제`는 분석 중 비활성화되며, 조건이 없으면 `전체 데이터` 상태를 명시한다.
+- 비교 기준은 Header의 작은 Select Control에서 `비교 없음`·이전 기간·이전 달·전년 동기 중 하나로 바로 바꿀 수 있다. 이 선택도 분석 중에는 비활성화된다.
+- 조건 변경 요청은 현재 Context와 검증된 Filter 또는 비교 기준만 받는 전용 Schema를 사용한다. 서버가 변경된 Context를 Planner에 전달하고, Filter 변경은 최종 Filter를 모든 Query DSL에 다시 강제하며 비교 변경은 모든 Query의 비교 모드를 고정한다. 차트 선택 상세 분석과 같은 요청에서 섞이면 거부한다.
+- 조건 변경은 새 Cache Key로 분리한다. 조건 표시·제거·비교 선택, Schema 경계, Context Filter·비교 기준 재적용을 검증하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
@@ -169,8 +173,16 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-02 | Feature Calendar는 결정론적 Month signals를 동반 | 넓어진 카드의 빈 폭을 장식으로 채우지 않고, 실제 일별 Dataset에서 재현 가능한 추가 분석을 제공하기 위함 |
 | 2026-09-03 | Chart Drilldown은 검증된 Dataset을 재해석하는 UI 상태로 제한 | 차트 클릭만으로 허용되지 않은 DB Filter·SQL·LLM 수치를 만들지 않고도, 사용자가 선택값의 근거를 즉시 확인하게 하기 위함 |
 | 2026-09-03 | 선택값 후속 분석은 현재 Context의 단일 허용 `eq` Filter를 서버에서 모든 Query DSL에 강제 | UI나 모델이 분석 범위를 임의로 넓히지 못하게 하면서도, 사용자가 검증된 Chart 값에서 바로 좁은 분석으로 이어지게 하기 위함 |
+| 2026-09-03 | Dashboard Filter·비교 기준 변경은 전용 Context Override로 서버에서 재적용 | 조건 제거·전체 해제·비교 선택이 자연어 해석이나 Client-only State에 의존하지 않고, 다음 Query 범위를 결정론적으로 바꾸게 하기 위함 |
 
 ## 검증 결과
+
+- `npm run lint`: 통과 (Dashboard Context Controls)
+- `npm run typecheck`: 통과 (Dashboard Context Controls)
+- `npm run build`: 통과 (Dashboard Context Controls, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Dashboard Context Controls)
+- Context Override·Filter 제거·비교 기준·Cache 분리 Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test`, `npm run test:e2e`, `npm run check`, `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run lint`: 통과 (Selection Follow-up Analysis)
 - `npm run typecheck`: 통과 (Selection Follow-up Analysis)

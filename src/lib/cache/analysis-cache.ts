@@ -51,6 +51,9 @@ export function createAnalysisCacheKey(
     ...(request.drilldownFilter
       ? { drilldownFilter: request.drilldownFilter }
       : {}),
+    ...(request.contextOverride
+      ? { contextOverride: request.contextOverride }
+      : {}),
   });
 }
 

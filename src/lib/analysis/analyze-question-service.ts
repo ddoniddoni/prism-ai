@@ -13,6 +13,8 @@ import { env } from "@/lib/env";
 
 import {
   addDrilldownFilter,
+  applyAnalysisContextOverride,
+  constrainPlanToContextOverride,
   constrainPlanToContextFilters,
 } from "./drilldown-context";
 import {
@@ -54,10 +56,17 @@ export class AnalyzeQuestionService {
     const request = analyzeRequestSchema.parse(input);
     const startedAt = Date.now();
     const callBudget = createAICallBudget(env.AI_MAX_CALLS_PER_ANALYSIS);
-    const plannerContext =
-      request.currentContext && request.drilldownFilter
-        ? addDrilldownFilter(request.currentContext, request.drilldownFilter)
+    const currentContext =
+      request.currentContext && request.contextOverride
+        ? applyAnalysisContextOverride(
+            request.currentContext,
+            request.contextOverride,
+          )
         : request.currentContext;
+    const plannerContext =
+      currentContext && request.drilldownFilter
+        ? addDrilldownFilter(currentContext, request.drilldownFilter)
+        : currentContext;
     let rawPlan;
 
     try {
@@ -82,12 +91,16 @@ export class AnalyzeQuestionService {
 
     const plan = normalizeAnalysisPlan(rawPlan);
     const plannedContext = mergeAnalysisContext(plannerContext, plan);
-    const context = request.drilldownFilter
-      ? addDrilldownFilter(plannedContext, request.drilldownFilter)
-      : plannedContext;
-    const constrainedPlan = request.drilldownFilter
-      ? constrainPlanToContextFilters(plan, context.filters)
-      : plan;
+    const context = request.contextOverride
+      ? applyAnalysisContextOverride(plannedContext, request.contextOverride)
+      : request.drilldownFilter
+        ? addDrilldownFilter(plannedContext, request.drilldownFilter)
+        : plannedContext;
+    const constrainedPlan = request.contextOverride
+      ? constrainPlanToContextOverride(plan, context, request.contextOverride)
+      : request.drilldownFilter
+        ? constrainPlanToContextFilters(plan, context.filters)
+        : plan;
     const queryResults = await Promise.allSettled(
       constrainedPlan.queries.map((query) =>
         this.dependencies.repository.execute(query),

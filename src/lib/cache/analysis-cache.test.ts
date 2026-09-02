@@ -67,6 +67,48 @@ describe("InMemoryAnalysisCache", () => {
     );
   });
 
+  it("keeps explicit Context changes in separate cache entries", () => {
+    const context = {
+      primaryMetric: "revenue" as const,
+      period: { preset: "lastMonth" as const },
+      compareWith: "previousPeriod" as const,
+      filters: [
+        {
+          dimension: "category" as const,
+          operator: "eq" as const,
+          values: ["Electronics"],
+        },
+      ],
+      focusDimension: "category" as const,
+    };
+    const clearFiltersRequest: AnalyzeRequest = {
+      ...originalRequest,
+      currentContext: context,
+      contextOverride: { filters: [] },
+    };
+    const mobileOnlyRequest: AnalyzeRequest = {
+      ...clearFiltersRequest,
+      requestId: "cache-context-override-mobile-request",
+      contextOverride: {
+        filters: [{ dimension: "device", operator: "eq", values: ["mobile"] }],
+      },
+    };
+
+    expect(createAnalysisCacheKey(clearFiltersRequest, scope)).not.toBe(
+      createAnalysisCacheKey(mobileOnlyRequest, scope),
+    );
+    expect(createAnalysisCacheKey(clearFiltersRequest, scope)).not.toBe(
+      createAnalysisCacheKey(
+        {
+          ...clearFiltersRequest,
+          requestId: "cache-context-override-previous-year-request",
+          contextOverride: { compareWith: "previousYear" },
+        },
+        scope,
+      ),
+    );
+  });
+
   it("expires entries and returns a defensive response copy", async () => {
     let now = 0;
     const cache = new InMemoryAnalysisCache(1_000, 2, () => now);

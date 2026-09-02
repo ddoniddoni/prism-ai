@@ -97,6 +97,79 @@ describe("AnalyzeQuestionService", () => {
     ).toBe(true);
   });
 
+  it("enforces an explicit Context filter change after a selected chart analysis", async () => {
+    const service = new AnalyzeQuestionService();
+    const initial = await service.execute({
+      question: "지난달 매출이 왜 감소했어?",
+      requestId: "context-filter-initial-request",
+    });
+    const selected = await service.execute({
+      question: "선택한 카테고리 Electronics을 자세히 분석해줘.",
+      requestId: "context-filter-selected-request",
+      sessionId: initial.sessionId,
+      currentContext: initial.context,
+      drilldownFilter: {
+        dimension: "category",
+        operator: "eq",
+        values: ["Electronics"],
+      },
+    });
+    const reset = await service.execute({
+      question: selected.plan.normalizedQuestion,
+      requestId: "context-override-reset-request",
+      sessionId: selected.sessionId,
+      currentContext: selected.context,
+      contextOverride: { filters: [] },
+    });
+
+    expect(reset.context.filters).toEqual([]);
+    expect(
+      reset.plan.queries.every(
+        (query) =>
+          !query.filters.some((filter) => filter.dimension === "category"),
+      ),
+    ).toBe(true);
+
+    const mobileOnly = await service.execute({
+      question: initial.plan.normalizedQuestion,
+      requestId: "context-override-mobile-request",
+      sessionId: initial.sessionId,
+      currentContext: initial.context,
+      contextOverride: {
+        filters: [{ dimension: "device", operator: "eq", values: ["mobile"] }],
+      },
+    });
+
+    expect(mobileOnly.context.filters).toEqual([
+      { dimension: "device", operator: "eq", values: ["mobile"] },
+    ]);
+    expect(
+      mobileOnly.plan.queries.every((query) =>
+        query.filters.some(
+          (filter) =>
+            filter.dimension === "device" &&
+            filter.operator === "eq" &&
+            filter.values.includes("mobile"),
+        ),
+      ),
+    ).toBe(true);
+
+    const previousYear = await service.execute({
+      question: initial.plan.normalizedQuestion,
+      requestId: "context-override-comparison-request",
+      sessionId: initial.sessionId,
+      currentContext: initial.context,
+      contextOverride: { compareWith: "previousYear" },
+    });
+
+    expect(previousYear.context.compareWith).toBe("previousYear");
+    expect(
+      previousYear.plan.queries.every(
+        (query) => query.compareWith === "previousYear",
+      ),
+    ).toBe(true);
+  });
+
   it("keeps fulfilled query results when one repository query is unavailable", async () => {
     const localRepository = new LocalAnalyticsRepository();
     const repository: AnalyticsRepository = {
