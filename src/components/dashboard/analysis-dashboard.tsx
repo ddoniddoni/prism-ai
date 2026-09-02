@@ -13,9 +13,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   analyzeErrorResponseSchema,
   analyzeResponseSchema,
+  type DrilldownFilter,
   type AnalyzeResponse,
 } from "@/lib/analysis/schemas";
 import type { AnalysisContext } from "@/lib/ai/schemas/analysis-plan";
+import { dimensionCatalog } from "@/lib/analytics/dimension-catalog";
+import type { AnalyticsFilter } from "@/lib/analytics/query-schema";
 import {
   createAnalysisHistoryEntry,
   saveAnalysisHistory,
@@ -34,6 +37,7 @@ type AnalysisDashboardProps = {
 };
 
 type PendingAnalysis = {
+  drilldownFilter?: DrilldownFilter;
   question: string;
   currentContext?: AnalysisContext;
   sessionId?: string;
@@ -73,6 +77,7 @@ async function readResponseBody(response: Response): Promise<unknown> {
 async function requestAnalysis({
   dashboardId,
   question,
+  drilldownFilter,
   currentContext,
   sessionId,
 }: AnalysisMutationInput): Promise<AnalyzeResponse> {
@@ -85,6 +90,7 @@ async function requestAnalysis({
       dashboardId,
       ...(sessionId ? { sessionId } : {}),
       ...(currentContext ? { currentContext } : {}),
+      ...(drilldownFilter ? { drilldownFilter } : {}),
     }),
   });
   const body = await readResponseBody(response);
@@ -299,6 +305,33 @@ export function AnalysisDashboard({
     mutateAnalysis({ ...nextAnalysis, dashboardId });
   }
 
+  function startDrilldownAnalysis(filter: AnalyticsFilter) {
+    if (!activeResponse || filter.operator !== "eq") {
+      return;
+    }
+
+    const value = filter.values.at(0);
+
+    if (!value || filter.values.length !== 1) {
+      return;
+    }
+
+    const drilldownFilter: DrilldownFilter = {
+      dimension: filter.dimension,
+      operator: "eq",
+      values: [value],
+    };
+    const nextAnalysis = {
+      question: `선택한 ${dimensionCatalog[filter.dimension].label} ${value}을 자세히 분석해줘.`,
+      currentContext: activeResponse.context,
+      sessionId: activeResponse.sessionId,
+      drilldownFilter,
+    };
+
+    setPendingAnalysis(nextAnalysis);
+    mutateAnalysis({ ...nextAnalysis, dashboardId });
+  }
+
   if (displayStatus === "loading" && !activeResponse) {
     return <DashboardLoadingState />;
   }
@@ -380,8 +413,10 @@ export function AnalysisDashboard({
       <DashboardEditor
         dashboard={activeResponse.dashboard}
         datasets={activeResponse.datasets}
+        drilldownAnalysisDisabled={displayStatus === "loading"}
         findings={activeResponse.findings}
         key={activeResponse.analysisId}
+        onDrilldownAnalysis={startDrilldownAnalysis}
       />
       <div className="mt-5">
         <FollowUpPrompt

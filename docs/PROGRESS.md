@@ -112,6 +112,9 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - Trend·Ranked Bar·Donut·Stacked Bar·Calendar Heatmap의 데이터 포인트를 선택하면 같은 Widget 안에 `Selected evidence` Drilldown을 연다. 현재 값, 그룹 평균, 순위, 비교 변화 또는 합계형 지표의 기간 내 비중, 관련 Finding과 Query Ref를 검증된 Dataset에서만 다시 계산해 표시한다.
 - Drilldown 상태는 `widgetId`·`queryId`·`label`만 가진 일시적 Client UI 상태다. 선택값으로 SQL·Query DSL·AI 출력을 만들지 않으며, 후속 분석 응답이 도착하면 Editor를 새 Analysis ID로 다시 마운트해 이전 선택을 보존하지 않는다.
 - Drilldown 계산(순위·평균·비중·비교값) Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- 카테고리·디바이스·지역처럼 허용된 차원 값의 `Selected evidence`에는 명시적인 `상세 분석` 액션을 추가했다. 날짜는 Filterable Dimension이 아니므로 근거 조회만 가능하다.
+- 상세 분석 요청은 현재 Analysis Context와 단일 `eq` 선택 Filter를 Zod로 검증한다. 서버는 Planner에 좁혀진 Context를 전달하고, 최종 Context Filter를 모든 Query DSL에 다시 강제한 뒤 Repository를 실행한다.
+- 선택 Filter를 Cache Key에 포함해, 같은 질문이라도 서로 다른 차트 선택 결과가 Cache를 공유하지 않게 했다. 선택 Filter·Query 강제·Cache 분리에 대한 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
@@ -165,8 +168,16 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-02 | 자동 배치는 빈 Canvas 예산을 초과하는 Feature 후보를 거부 | Dashboard를 억지로 꽉 채우거나 반대로 큰 빈 영역을 방치하지 않고, 정보 밀도가 충분한 후보만 넓은 Canvas로 승격하기 위함 |
 | 2026-09-02 | Feature Calendar는 결정론적 Month signals를 동반 | 넓어진 카드의 빈 폭을 장식으로 채우지 않고, 실제 일별 Dataset에서 재현 가능한 추가 분석을 제공하기 위함 |
 | 2026-09-03 | Chart Drilldown은 검증된 Dataset을 재해석하는 UI 상태로 제한 | 차트 클릭만으로 허용되지 않은 DB Filter·SQL·LLM 수치를 만들지 않고도, 사용자가 선택값의 근거를 즉시 확인하게 하기 위함 |
+| 2026-09-03 | 선택값 후속 분석은 현재 Context의 단일 허용 `eq` Filter를 서버에서 모든 Query DSL에 강제 | UI나 모델이 분석 범위를 임의로 넓히지 못하게 하면서도, 사용자가 검증된 Chart 값에서 바로 좁은 분석으로 이어지게 하기 위함 |
 
 ## 검증 결과
+
+- `npm run lint`: 통과 (Selection Follow-up Analysis)
+- `npm run typecheck`: 통과 (Selection Follow-up Analysis)
+- `npm run build`: 통과 (Selection Follow-up Analysis, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Selection Follow-up Analysis)
+- 선택 Filter·Query 강제·Cache 분리 Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test`, `npm run test:e2e`, `npm run check`, `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run lint`: 통과 (Phase 8 PrismCalendarHeatmap)
 - `npm run typecheck`: 통과 (Phase 8 PrismCalendarHeatmap)

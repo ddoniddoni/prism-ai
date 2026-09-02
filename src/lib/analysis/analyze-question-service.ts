@@ -12,6 +12,10 @@ import type { AnalyticsRepository } from "@/lib/data/repository";
 import { env } from "@/lib/env";
 
 import {
+  addDrilldownFilter,
+  constrainPlanToContextFilters,
+} from "./drilldown-context";
+import {
   analyzeRequestSchema,
   analyzeResponseSchema,
   type AnalyzeRequest,
@@ -50,14 +54,16 @@ export class AnalyzeQuestionService {
     const request = analyzeRequestSchema.parse(input);
     const startedAt = Date.now();
     const callBudget = createAICallBudget(env.AI_MAX_CALLS_PER_ANALYSIS);
+    const plannerContext =
+      request.currentContext && request.drilldownFilter
+        ? addDrilldownFilter(request.currentContext, request.drilldownFilter)
+        : request.currentContext;
     let rawPlan;
 
     try {
       rawPlan = await this.dependencies.provider.createPlan({
         question: request.question,
-        ...(request.currentContext
-          ? { currentContext: request.currentContext }
-          : {}),
+        ...(plannerContext ? { currentContext: plannerContext } : {}),
         callBudget,
       });
     } catch (error) {
@@ -75,9 +81,17 @@ export class AnalyzeQuestionService {
     }
 
     const plan = normalizeAnalysisPlan(rawPlan);
-    const context = mergeAnalysisContext(request.currentContext, plan);
+    const plannedContext = mergeAnalysisContext(plannerContext, plan);
+    const context = request.drilldownFilter
+      ? addDrilldownFilter(plannedContext, request.drilldownFilter)
+      : plannedContext;
+    const constrainedPlan = request.drilldownFilter
+      ? constrainPlanToContextFilters(plan, context.filters)
+      : plan;
     const queryResults = await Promise.allSettled(
-      plan.queries.map((query) => this.dependencies.repository.execute(query)),
+      constrainedPlan.queries.map((query) =>
+        this.dependencies.repository.execute(query),
+      ),
     );
     const datasets = queryResults.flatMap((result) =>
       result.status === "fulfilled" ? [result.value] : [],
@@ -98,7 +112,7 @@ export class AnalyzeQuestionService {
     try {
       dashboardProposal = await this.dependencies.provider.createDashboard({
         dashboardId: request.dashboardId ?? `dashboard-${request.requestId}`,
-        plan,
+        plan: constrainedPlan,
         context,
         datasets,
         findings,
@@ -127,7 +141,7 @@ export class AnalyzeQuestionService {
       analysisId: `analysis-${request.requestId}`,
       sessionId: request.sessionId ?? `session-${request.requestId}`,
       context,
-      plan,
+      plan: constrainedPlan,
       datasets,
       findings,
       dashboard: sanitizedDashboard.dashboard,

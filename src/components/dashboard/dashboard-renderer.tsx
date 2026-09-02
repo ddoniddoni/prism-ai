@@ -5,6 +5,7 @@ import { memo, type ReactNode, useState } from "react";
 
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import type { Finding } from "@/lib/analytics/findings";
+import type { AnalyticsFilter } from "@/lib/analytics/query-schema";
 import type {
   DashboardSpec,
   DashboardWidget,
@@ -113,7 +114,9 @@ type DashboardWidgetProps = {
   findingsById: ReadonlyMap<string, Finding>;
   cardClassName?: string;
   controls?: ReactNode;
+  drilldownAnalysisDisabled?: boolean;
   onDrilldownChange?: (selection: DashboardDrilldownSelection | null) => void;
+  onDrilldownAnalysis?: (filter: AnalyticsFilter) => void;
   presentation?: DashboardWidgetPresentation;
 };
 
@@ -301,8 +304,10 @@ function TimeSeriesWidget({
   datasetsById,
   cardClassName,
   controls,
+  drilldownAnalysisDisabled,
   findingsById,
   onDrilldownChange,
+  onDrilldownAnalysis,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "timeSeries") {
@@ -337,7 +342,9 @@ function TimeSeriesWidget({
       {dataset && selectedDrilldown ? (
         <DashboardDrilldown
           dataset={dataset}
+          disabled={drilldownAnalysisDisabled}
           findings={[...findingsById.values()]}
+          onAnalyzeSelection={onDrilldownAnalysis}
           onDismiss={() => onDrilldownChange?.(null)}
           selection={selectedDrilldown}
         />
@@ -381,8 +388,10 @@ function CategoryBarWidget({
   datasetsById,
   cardClassName,
   controls,
+  drilldownAnalysisDisabled,
   findingsById,
   onDrilldownChange,
+  onDrilldownAnalysis,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "categoryBar") {
@@ -418,7 +427,9 @@ function CategoryBarWidget({
       {dataset && selectedDrilldown ? (
         <DashboardDrilldown
           dataset={dataset}
+          disabled={drilldownAnalysisDisabled}
           findings={[...findingsById.values()]}
+          onAnalyzeSelection={onDrilldownAnalysis}
           onDismiss={() => onDrilldownChange?.(null)}
           selection={selectedDrilldown}
         />
@@ -433,8 +444,10 @@ function DonutWidget({
   datasetsById,
   cardClassName,
   controls,
+  drilldownAnalysisDisabled,
   findingsById,
   onDrilldownChange,
+  onDrilldownAnalysis,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "donut") {
@@ -469,7 +482,9 @@ function DonutWidget({
       {dataset && selectedDrilldown ? (
         <DashboardDrilldown
           dataset={dataset}
+          disabled={drilldownAnalysisDisabled}
           findings={[...findingsById.values()]}
+          onAnalyzeSelection={onDrilldownAnalysis}
           onDismiss={() => onDrilldownChange?.(null)}
           selection={selectedDrilldown}
         />
@@ -484,8 +499,10 @@ function StackedBarWidget({
   datasetsById,
   cardClassName,
   controls,
+  drilldownAnalysisDisabled,
   findingsById,
   onDrilldownChange,
+  onDrilldownAnalysis,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "stackedBar") {
@@ -532,7 +549,9 @@ function StackedBarWidget({
       {selectedDataset && selectedDrilldown ? (
         <DashboardDrilldown
           dataset={selectedDataset}
+          disabled={drilldownAnalysisDisabled}
           findings={[...findingsById.values()]}
+          onAnalyzeSelection={onDrilldownAnalysis}
           onDismiss={() => onDrilldownChange?.(null)}
           selection={selectedDrilldown}
         />
@@ -547,8 +566,10 @@ function CalendarHeatmapWidget({
   datasetsById,
   cardClassName,
   controls,
+  drilldownAnalysisDisabled,
   findingsById,
   onDrilldownChange,
+  onDrilldownAnalysis,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "calendarHeatmap") {
@@ -584,7 +605,9 @@ function CalendarHeatmapWidget({
       {dataset && selectedDrilldown ? (
         <DashboardDrilldown
           dataset={dataset}
+          disabled={drilldownAnalysisDisabled}
           findings={[...findingsById.values()]}
+          onAnalyzeSelection={onDrilldownAnalysis}
           onDismiss={() => onDrilldownChange?.(null)}
           selection={selectedDrilldown}
         />
@@ -751,13 +774,17 @@ export function DashboardHeader({ dashboard }: { dashboard: DashboardSpec }) {
 
 export function DashboardWidgetGrid({
   activeDrilldown,
+  drilldownAnalysisDisabled,
   widgets,
   datasets,
   findings,
   onDrilldownChange,
+  onDrilldownAnalysis,
 }: Pick<DashboardRendererProps, "datasets" | "findings"> & {
   activeDrilldown?: DashboardDrilldownSelection | null;
+  drilldownAnalysisDisabled?: boolean;
   onDrilldownChange?: (selection: DashboardDrilldownSelection | null) => void;
+  onDrilldownAnalysis?: (filter: AnalyticsFilter) => void;
   widgets: readonly DashboardWidget[];
 }) {
   const datasetsById = new Map(
@@ -794,8 +821,10 @@ export function DashboardWidgetGrid({
           <DashboardWidgetCard
             activeDrilldown={activeDrilldown}
             datasetsById={datasetsById}
+            drilldownAnalysisDisabled={drilldownAnalysisDisabled}
             findingsById={findingsById}
             onDrilldownChange={onDrilldownChange}
+            onDrilldownAnalysis={onDrilldownAnalysis}
             presentation={lgLayoutPlan.get(widget.id)?.presentation}
             widget={widget}
           />

@@ -1,21 +1,25 @@
 "use client";
 
-import { ChevronRight, Crosshair, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Crosshair, X } from "lucide-react";
 
 import type { Finding } from "@/lib/analytics/findings";
 import { dimensionCatalog } from "@/lib/analytics/dimension-catalog";
 import { metricCatalog } from "@/lib/analytics/metric-catalog";
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
+import type { AnalyticsFilter } from "@/lib/analytics/query-schema";
 
 import {
   createDashboardDrilldown,
+  createDashboardDrilldownFilter,
   type DashboardDrilldownSelection,
 } from "./dashboard-drilldown-data";
 import { formatChangeWithDirection, formatMetricValue } from "./formatters";
 
 type DashboardDrilldownProps = {
   dataset: AnalyticsDataset;
+  disabled?: boolean;
   findings: readonly Finding[];
+  onAnalyzeSelection?: (filter: AnalyticsFilter) => void;
   onDismiss: () => void;
   selection: DashboardDrilldownSelection;
 };
@@ -36,7 +40,9 @@ function formatSharePercent(value: number): string {
 
 export function DashboardDrilldown({
   dataset,
+  disabled = false,
   findings,
+  onAnalyzeSelection,
   onDismiss,
   selection,
 }: DashboardDrilldownProps) {
@@ -49,6 +55,10 @@ export function DashboardDrilldown({
   const dimensionLabel = drilldown.dataset.groupBy
     ? dimensionCatalog[drilldown.dataset.groupBy].label
     : "선택값";
+  const drilldownFilter = createDashboardDrilldownFilter(
+    dataset,
+    selection.label,
+  );
   const isRelatedFinding = (finding: Finding) =>
     finding.evidenceQueryIds.includes(drilldown.dataset.queryId);
   const relatedFinding =
@@ -137,10 +147,25 @@ export function DashboardDrilldown({
             ? relatedFinding.fallbackText
             : `${drilldown.dataset.dataRange.startDate}부터 ${drilldown.dataset.dataRange.endDate}까지의 검증된 ${dimensionLabel} 집계입니다.`}
         </p>
-        <span className="inline-flex shrink-0 items-center gap-1 text-[9px] font-semibold text-[#4f46e5]">
-          Query ref {drilldown.dataset.queryId}
-          <ChevronRight aria-hidden="true" className="size-3" />
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {drilldownFilter && onAnalyzeSelection ? (
+            <button
+              className="inline-flex min-h-8 items-center gap-1 rounded-md bg-[#4f46e5] px-2.5 text-[10px] font-semibold text-white transition-colors hover:bg-[#3f37c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] disabled:cursor-not-allowed disabled:bg-[#9296a0]"
+              disabled={disabled}
+              onClick={() => onAnalyzeSelection(drilldownFilter)}
+              type="button"
+            >
+              {disabled ? "분석 준비 중" : `${dimensionLabel} 상세 분석`}
+              {!disabled ? (
+                <ArrowUpRight aria-hidden="true" className="size-3" />
+              ) : null}
+            </button>
+          ) : null}
+          <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4f46e5]">
+            Query ref {drilldown.dataset.queryId}
+            <ChevronRight aria-hidden="true" className="size-3" />
+          </span>
+        </div>
       </div>
     </aside>
   );

@@ -48,6 +48,9 @@ export function createAnalysisCacheKey(
     ...(request.currentContext
       ? { currentContext: request.currentContext }
       : {}),
+    ...(request.drilldownFilter
+      ? { drilldownFilter: request.drilldownFilter }
+      : {}),
   });
 }
 

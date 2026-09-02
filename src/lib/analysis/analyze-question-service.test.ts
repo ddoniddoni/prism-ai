@@ -62,6 +62,41 @@ describe("AnalyzeQuestionService", () => {
     });
   });
 
+  it("enforces a selected chart filter in the Context and every executed query", async () => {
+    const service = new AnalyzeQuestionService();
+    const initial = await service.execute({
+      question: "이번 달 성과를 보여줘.",
+      requestId: "drilldown-initial-request",
+    });
+    const drilldown = await service.execute({
+      question: "선택한 카테고리 Electronics을 자세히 분석해줘.",
+      requestId: "drilldown-followup-request",
+      sessionId: initial.sessionId,
+      currentContext: initial.context,
+      drilldownFilter: {
+        dimension: "category",
+        operator: "eq",
+        values: ["Electronics"],
+      },
+    });
+
+    expect(drilldown.context.filters).toEqual(
+      expect.arrayContaining([
+        { dimension: "category", operator: "eq", values: ["Electronics"] },
+      ]),
+    );
+    expect(
+      drilldown.plan.queries.every((query) =>
+        query.filters.some(
+          (filter) =>
+            filter.dimension === "category" &&
+            filter.operator === "eq" &&
+            filter.values.includes("Electronics"),
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("keeps fulfilled query results when one repository query is unavailable", async () => {
     const localRepository = new LocalAnalyticsRepository();
     const repository: AnalyticsRepository = {

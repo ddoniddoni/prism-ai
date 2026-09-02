@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 
-import { createDashboardDrilldown } from "./dashboard-drilldown-data";
+import {
+  createDashboardDrilldown,
+  createDashboardDrilldownFilter,
+} from "./dashboard-drilldown-data";
 
 const dataset: AnalyticsDataset = {
   queryId: "category",
@@ -68,5 +71,19 @@ describe("createDashboardDrilldown", () => {
 
   it("rejects a selection label that is not in the verified dataset", () => {
     expect(createDashboardDrilldown(dataset, "Unknown")).toBeUndefined();
+  });
+
+  it("only creates an eq filter for a verified filterable chart dimension", () => {
+    expect(createDashboardDrilldownFilter(dataset, "Electronics")).toEqual({
+      dimension: "category",
+      operator: "eq",
+      values: ["Electronics"],
+    });
+    expect(
+      createDashboardDrilldownFilter(
+        { ...dataset, groupBy: "date" },
+        "Electronics",
+      ),
+    ).toBeUndefined();
   });
 });
