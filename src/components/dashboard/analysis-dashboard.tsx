@@ -381,6 +381,7 @@ export function AnalysisDashboard({
         dashboard={activeResponse.dashboard}
         datasets={activeResponse.datasets}
         findings={activeResponse.findings}
+        key={activeResponse.analysisId}
       />
       <div className="mt-5">
         <FollowUpPrompt

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { memo, type ReactNode } from "react";
+import { memo, type ReactNode, useState } from "react";
 
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import type { Finding } from "@/lib/analytics/findings";
@@ -23,6 +23,8 @@ import {
   formatMetricValue,
   getComparisonLabel,
 } from "./formatters";
+import { DashboardDrilldown } from "./dashboard-drilldown";
+import type { DashboardDrilldownSelection } from "./dashboard-drilldown-data";
 
 const PrismTrendChart = dynamic(
   () => import("./prism-trend-chart").then((module) => module.PrismTrendChart),
@@ -105,11 +107,13 @@ type DashboardRendererProps = {
 };
 
 type DashboardWidgetProps = {
+  activeDrilldown?: DashboardDrilldownSelection | null;
   widget: DashboardWidget;
   datasetsById: ReadonlyMap<string, AnalyticsDataset>;
   findingsById: ReadonlyMap<string, Finding>;
   cardClassName?: string;
   controls?: ReactNode;
+  onDrilldownChange?: (selection: DashboardDrilldownSelection | null) => void;
   presentation?: DashboardWidgetPresentation;
 };
 
@@ -272,11 +276,33 @@ function MetricWidget({
   );
 }
 
+function getActiveDrilldown(
+  activeDrilldown: DashboardDrilldownSelection | null | undefined,
+  widgetId: string,
+  queryId: string,
+): DashboardDrilldownSelection | undefined {
+  return activeDrilldown?.widgetId === widgetId &&
+    activeDrilldown.queryId === queryId
+    ? activeDrilldown
+    : undefined;
+}
+
+function createDrilldownSelection(
+  widgetId: string,
+  queryId: string,
+  label: string,
+): DashboardDrilldownSelection {
+  return { label, queryId, widgetId };
+}
+
 function TimeSeriesWidget({
+  activeDrilldown,
   widget,
   datasetsById,
   cardClassName,
   controls,
+  findingsById,
+  onDrilldownChange,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "timeSeries") {
@@ -284,6 +310,11 @@ function TimeSeriesWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
+  const selectedDrilldown = getActiveDrilldown(
+    activeDrilldown,
+    widget.id,
+    widget.config.queryId,
+  );
 
   return (
     <WidgetFrame
@@ -297,7 +328,20 @@ function TimeSeriesWidget({
         points={dataset?.points ?? []}
         presentation={presentation}
         title={widget.title}
+        onSelectPoint={(label) =>
+          onDrilldownChange?.(
+            createDrilldownSelection(widget.id, widget.config.queryId, label),
+          )
+        }
       />
+      {dataset && selectedDrilldown ? (
+        <DashboardDrilldown
+          dataset={dataset}
+          findings={[...findingsById.values()]}
+          onDismiss={() => onDrilldownChange?.(null)}
+          selection={selectedDrilldown}
+        />
+      ) : null}
       <details className="mt-2 text-[11px] text-[#595e6b]">
         <summary className="cursor-pointer font-medium text-[#4f46e5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]">
           차트 데이터 표 보기
@@ -332,10 +376,13 @@ function TimeSeriesWidget({
 }
 
 function CategoryBarWidget({
+  activeDrilldown,
   widget,
   datasetsById,
   cardClassName,
   controls,
+  findingsById,
+  onDrilldownChange,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "categoryBar") {
@@ -343,6 +390,11 @@ function CategoryBarWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
+  const selectedDrilldown = getActiveDrilldown(
+    activeDrilldown,
+    widget.id,
+    widget.config.queryId,
+  );
 
   return (
     <WidgetFrame
@@ -357,16 +409,32 @@ function CategoryBarWidget({
         points={dataset?.points ?? []}
         presentation={presentation}
         title={widget.title}
+        onSelectPoint={(label) =>
+          onDrilldownChange?.(
+            createDrilldownSelection(widget.id, widget.config.queryId, label),
+          )
+        }
       />
+      {dataset && selectedDrilldown ? (
+        <DashboardDrilldown
+          dataset={dataset}
+          findings={[...findingsById.values()]}
+          onDismiss={() => onDrilldownChange?.(null)}
+          selection={selectedDrilldown}
+        />
+      ) : null}
     </WidgetFrame>
   );
 }
 
 function DonutWidget({
+  activeDrilldown,
   widget,
   datasetsById,
   cardClassName,
   controls,
+  findingsById,
+  onDrilldownChange,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "donut") {
@@ -374,6 +442,11 @@ function DonutWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
+  const selectedDrilldown = getActiveDrilldown(
+    activeDrilldown,
+    widget.id,
+    widget.config.queryId,
+  );
 
   return (
     <WidgetFrame
@@ -387,16 +460,32 @@ function DonutWidget({
         points={dataset?.points ?? []}
         presentation={presentation}
         title={widget.title}
+        onSelectPoint={(label) =>
+          onDrilldownChange?.(
+            createDrilldownSelection(widget.id, widget.config.queryId, label),
+          )
+        }
       />
+      {dataset && selectedDrilldown ? (
+        <DashboardDrilldown
+          dataset={dataset}
+          findings={[...findingsById.values()]}
+          onDismiss={() => onDrilldownChange?.(null)}
+          selection={selectedDrilldown}
+        />
+      ) : null}
     </WidgetFrame>
   );
 }
 
 function StackedBarWidget({
+  activeDrilldown,
   widget,
   datasetsById,
   cardClassName,
   controls,
+  findingsById,
+  onDrilldownChange,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "stackedBar") {
@@ -413,6 +502,13 @@ function StackedBarWidget({
   const metric =
     datasetsById.get(widget.config.series[0]?.queryId ?? "")?.metric ??
     "revenue";
+  const selectedDataset = activeDrilldown
+    ? datasetsById.get(activeDrilldown.queryId)
+    : undefined;
+  const selectedDrilldown =
+    activeDrilldown?.widgetId === widget.id && selectedDataset
+      ? activeDrilldown
+      : undefined;
 
   return (
     <WidgetFrame
@@ -427,16 +523,32 @@ function StackedBarWidget({
         presentation={presentation}
         series={series}
         title={widget.title}
+        onSelectPoint={(queryId, label) =>
+          onDrilldownChange?.(
+            createDrilldownSelection(widget.id, queryId, label),
+          )
+        }
       />
+      {selectedDataset && selectedDrilldown ? (
+        <DashboardDrilldown
+          dataset={selectedDataset}
+          findings={[...findingsById.values()]}
+          onDismiss={() => onDrilldownChange?.(null)}
+          selection={selectedDrilldown}
+        />
+      ) : null}
     </WidgetFrame>
   );
 }
 
 function CalendarHeatmapWidget({
+  activeDrilldown,
   widget,
   datasetsById,
   cardClassName,
   controls,
+  findingsById,
+  onDrilldownChange,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "calendarHeatmap") {
@@ -444,6 +556,11 @@ function CalendarHeatmapWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
+  const selectedDrilldown = getActiveDrilldown(
+    activeDrilldown,
+    widget.id,
+    widget.config.queryId,
+  );
 
   return (
     <WidgetFrame
@@ -458,7 +575,20 @@ function CalendarHeatmapWidget({
         points={dataset?.points ?? []}
         presentation={presentation}
         title={widget.title}
+        onSelectPoint={(label) =>
+          onDrilldownChange?.(
+            createDrilldownSelection(widget.id, widget.config.queryId, label),
+          )
+        }
       />
+      {dataset && selectedDrilldown ? (
+        <DashboardDrilldown
+          dataset={dataset}
+          findings={[...findingsById.values()]}
+          onDismiss={() => onDrilldownChange?.(null)}
+          selection={selectedDrilldown}
+        />
+      ) : null}
     </WidgetFrame>
   );
 }
@@ -620,10 +750,14 @@ export function DashboardHeader({ dashboard }: { dashboard: DashboardSpec }) {
 }
 
 export function DashboardWidgetGrid({
+  activeDrilldown,
   widgets,
   datasets,
   findings,
+  onDrilldownChange,
 }: Pick<DashboardRendererProps, "datasets" | "findings"> & {
+  activeDrilldown?: DashboardDrilldownSelection | null;
+  onDrilldownChange?: (selection: DashboardDrilldownSelection | null) => void;
   widgets: readonly DashboardWidget[];
 }) {
   const datasetsById = new Map(
@@ -658,8 +792,10 @@ export function DashboardWidgetGrid({
           key={widget.id}
         >
           <DashboardWidgetCard
+            activeDrilldown={activeDrilldown}
             datasetsById={datasetsById}
             findingsById={findingsById}
+            onDrilldownChange={onDrilldownChange}
             presentation={lgLayoutPlan.get(widget.id)?.presentation}
             widget={widget}
           />
@@ -674,12 +810,17 @@ export function DashboardRenderer({
   datasets,
   findings,
 }: DashboardRendererProps) {
+  const [activeDrilldown, setActiveDrilldown] =
+    useState<DashboardDrilldownSelection | null>(null);
+
   return (
     <section aria-labelledby="analysis-dashboard-title" className="mt-7">
       <DashboardHeader dashboard={dashboard} />
       <DashboardWidgetGrid
+        activeDrilldown={activeDrilldown}
         datasets={datasets}
         findings={findings}
+        onDrilldownChange={setActiveDrilldown}
         widgets={dashboard.widgets}
       />
     </section>

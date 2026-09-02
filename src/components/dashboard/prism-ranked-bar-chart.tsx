@@ -1,7 +1,7 @@
 "use client";
 
 import { ResponsiveBar, type BarTooltipProps } from "@nivo/bar";
-import { useId, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import type { MetricKey } from "@/lib/analytics/metric-catalog";
@@ -21,6 +21,7 @@ import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type PrismRankedBarChartProps = {
   metric: MetricKey;
+  onSelectPoint?: (label: string) => void;
   points: readonly DataPoint[];
   presentation?: DashboardWidgetPresentation;
   title: string;
@@ -95,6 +96,7 @@ function createPrismRankedBarTooltip(metric: MetricKey) {
 
 export function PrismRankedBarChart({
   metric,
+  onSelectPoint,
   points,
   presentation = "standard",
   title,
@@ -114,6 +116,12 @@ export function PrismRankedBarChart({
           )
           .join(", ")}.`
       : `${title} 차트에 표시할 데이터가 없습니다.`;
+  const handleBarClick = useCallback(
+    (datum: { data: PrismRankedBarDatum }) => {
+      onSelectPoint?.(datum.data.label);
+    },
+    [onSelectPoint],
+  );
 
   if (data.length === 0) {
     return (
@@ -178,6 +186,7 @@ export function PrismRankedBarChart({
           layout="horizontal"
           margin={{ bottom: 30, left: 88, right: 80, top: 2 }}
           motionConfig="gentle"
+          onClick={handleBarClick}
           padding={0.38}
           role="img"
           theme={nivoTheme}

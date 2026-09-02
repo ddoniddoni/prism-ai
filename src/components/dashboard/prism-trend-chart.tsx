@@ -1,7 +1,11 @@
 "use client";
 
-import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
-import { useId, useMemo } from "react";
+import {
+  ResponsiveLine,
+  type PointOrSliceData,
+  type SliceTooltipProps,
+} from "@nivo/line";
+import { useCallback, useId, useMemo } from "react";
 
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import type { MetricKey } from "@/lib/analytics/metric-catalog";
@@ -17,6 +21,7 @@ import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type PrismTrendChartProps = {
   metric: MetricKey;
+  onSelectPoint?: (label: string) => void;
   points: readonly DataPoint[];
   presentation?: DashboardWidgetPresentation;
   title: string;
@@ -127,6 +132,7 @@ function createPrismTrendSliceTooltip(metric: MetricKey) {
 
 export function PrismTrendChart({
   metric,
+  onSelectPoint,
   points,
   presentation = "standard",
   title,
@@ -148,6 +154,21 @@ export function PrismTrendChart({
       ? `${title}: ${formatAxisLabel(firstPoint.label)} ${formatMetricValue(metric, firstPoint.value)}에서 ${formatAxisLabel(latestPoint.label)} ${formatMetricValue(metric, latestPoint.value)}까지의 추이입니다.`
       : `${title} 차트에 표시할 데이터가 없습니다.`;
   const chartHeightClassName = chartHeightClassNames[presentation];
+  const handleChartClick = useCallback(
+    (datum: Readonly<PointOrSliceData<PrismTrendChartSeries>>) => {
+      const selectedPoint =
+        "points" in datum
+          ? (datum.points.find((point) => point.seriesId === "현재 기간") ??
+            datum.points[0])
+          : datum;
+      const label = selectedPoint?.data.x;
+
+      if (typeof label === "string") {
+        onSelectPoint?.(label);
+      }
+    },
+    [onSelectPoint],
+  );
 
   if (validPoints.length === 0) {
     return (
@@ -236,6 +257,7 @@ export function PrismTrendChart({
           lineWidth={3}
           margin={{ bottom: 36, left: 66, right: 16, top: 10 }}
           motionConfig="gentle"
+          onClick={handleChartClick}
           role="img"
           sliceTooltip={sliceTooltip}
           theme={nivoTheme}

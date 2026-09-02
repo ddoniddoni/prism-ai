@@ -57,6 +57,7 @@ import {
   DashboardWidgetCard,
   DashboardWidgetGrid,
 } from "./dashboard-renderer";
+import type { DashboardDrilldownSelection } from "./dashboard-drilldown-data";
 
 type DashboardEditorProps = {
   dashboard: DashboardSpec;
@@ -363,6 +364,8 @@ export function DashboardEditor({
   datasets,
   findings,
 }: DashboardEditorProps) {
+  const [activeDrilldown, setActiveDrilldown] =
+    useState<DashboardDrilldownSelection | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorStatus, setEditorStatus] = useState("");
   const [activeBreakpoint, setActiveBreakpoint] =
@@ -503,6 +506,12 @@ export function DashboardEditor({
     },
     [dashboard.id, layouts],
   );
+  const handleDrilldownChange = useCallback(
+    (selection: DashboardDrilldownSelection | null) => {
+      setActiveDrilldown(selection);
+    },
+    [],
+  );
 
   return (
     <section aria-labelledby="analysis-dashboard-title" className="mt-7">
@@ -520,8 +529,10 @@ export function DashboardEditor({
       <div className="dashboard-grid-container" ref={containerRef}>
         {!hasHydrated || !mounted ? (
           <DashboardWidgetGrid
+            activeDrilldown={activeDrilldown}
             datasets={datasets}
             findings={findings}
+            onDrilldownChange={handleDrilldownChange}
             widgets={widgets}
           />
         ) : widgets.length === 0 ? (
@@ -557,6 +568,7 @@ export function DashboardEditor({
             {widgets.map((widget) => {
               const card = (
                 <DashboardWidgetCard
+                  activeDrilldown={activeDrilldown}
                   cardClassName="overflow-visible lg:col-span-12"
                   controls={
                     isEditing ? (
@@ -569,6 +581,7 @@ export function DashboardEditor({
                   }
                   datasetsById={datasetsById}
                   findingsById={findingsById}
+                  onDrilldownChange={handleDrilldownChange}
                   presentation={
                     activeLayoutPlan.get(widget.id)?.presentation ?? "standard"
                   }
