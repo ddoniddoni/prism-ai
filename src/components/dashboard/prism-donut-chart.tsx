@@ -1,7 +1,7 @@
 "use client";
 
 import { ResponsivePie, type PieTooltipProps } from "@nivo/pie";
-import { useId, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import { metricCatalog, type MetricKey } from "@/lib/analytics/metric-catalog";
@@ -18,6 +18,7 @@ import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type PrismDonutChartProps = {
   metric: MetricKey;
+  onSelectPoint?: (label: string) => void;
   points: readonly DataPoint[];
   presentation?: DashboardWidgetPresentation;
   title: string;
@@ -85,6 +86,7 @@ function createPrismDonutTooltip(metric: MetricKey, total: number) {
 
 export function PrismDonutChart({
   metric,
+  onSelectPoint,
   points,
   presentation = "standard",
   title,
@@ -108,6 +110,12 @@ export function PrismDonutChart({
           )
           .join(", ")}.`
       : `${title} 차트에 표시할 데이터가 없습니다.`;
+  const handleSelectPoint = useCallback(
+    (label: string) => {
+      onSelectPoint?.(label);
+    },
+    [onSelectPoint],
+  );
 
   if (data.length === 0) {
     return (
@@ -144,6 +152,7 @@ export function PrismDonutChart({
           isInteractive
           margin={{ bottom: 7, left: 7, right: 7, top: 7 }}
           motionConfig="gentle"
+          onClick={(datum) => handleSelectPoint(datum.data.label)}
           padAngle={1.5}
           role="presentation"
           sortByValue={false}
@@ -169,37 +178,46 @@ export function PrismDonutChart({
           const percentage = getPrismDonutPercentage(datum.value, total);
 
           return (
-            <li className="py-2" key={datum.id}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-[#343844]">
-                  <span
-                    aria-hidden="true"
-                    className="size-2.5 shrink-0 rounded-full shadow-[0_1px_3px_rgba(25,28,30,0.18)]"
-                    style={{ backgroundColor: datum.color }}
-                  />
-                  <span className="truncate">{datum.label}</span>
-                </span>
-                <span className="shrink-0 text-right">
-                  <strong className="block font-mono text-[13px] font-semibold tracking-[-0.035em] text-[#272b35]">
-                    {formatMetricValue(metric, datum.value)}
-                  </strong>
-                  <span className="text-[10px] font-medium text-[#777587]">
-                    {formatPercentage(percentage)}
-                  </span>
-                </span>
-              </div>
-              <div
-                aria-hidden="true"
-                className="mt-1.5 h-px overflow-hidden bg-[#e9ebf0]"
+            <li key={datum.id}>
+              <button
+                aria-label={`${datum.label} 상세 근거 보기`}
+                className="group w-full py-2 text-left outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-2"
+                onClick={() => handleSelectPoint(datum.label)}
+                type="button"
               >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-[#343844]">
+                    <span
+                      aria-hidden="true"
+                      className="size-2.5 shrink-0 rounded-full shadow-[0_1px_3px_rgba(25,28,30,0.18)]"
+                      style={{ backgroundColor: datum.color }}
+                    />
+                    <span className="truncate group-hover:text-[#4f46e5]">
+                      {datum.label}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <strong className="block font-mono text-[13px] font-semibold tracking-[-0.035em] text-[#272b35]">
+                      {formatMetricValue(metric, datum.value)}
+                    </strong>
+                    <span className="text-[10px] font-medium text-[#777587]">
+                      {formatPercentage(percentage)}
+                    </span>
+                  </span>
+                </div>
                 <div
-                  className="h-full"
-                  style={{
-                    backgroundColor: datum.color,
-                    width: `${Math.min(percentage, 100)}%`,
-                  }}
-                />
-              </div>
+                  aria-hidden="true"
+                  className="mt-1.5 h-px overflow-hidden bg-[#e9ebf0]"
+                >
+                  <div
+                    className="h-full"
+                    style={{
+                      backgroundColor: datum.color,
+                      width: `${Math.min(percentage, 100)}%`,
+                    }}
+                  />
+                </div>
+              </button>
             </li>
           );
         })}

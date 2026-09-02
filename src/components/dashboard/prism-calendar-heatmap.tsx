@@ -17,6 +17,7 @@ import {
 
 type PrismCalendarHeatmapProps = {
   metric: MetricKey;
+  onSelectPoint?: (label: string) => void;
   points: readonly DataPoint[];
   presentation?: DashboardWidgetPresentation;
   title: string;
@@ -169,6 +170,7 @@ function CalendarFeatureSummary({
 
 export function PrismCalendarHeatmap({
   metric,
+  onSelectPoint,
   points,
   presentation = "compact",
   title,
@@ -269,7 +271,10 @@ export function PrismCalendarHeatmap({
                   aria-pressed={isActive}
                   className={`relative grid place-items-center rounded-[5px] border border-white/75 font-semibold tabular-nums shadow-[0_1px_2px_rgba(25,28,30,0.1)] transition duration-150 hover:z-10 hover:-translate-y-0.5 hover:scale-110 focus-visible:z-10 focus-visible:-translate-y-0.5 focus-visible:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#312e81] motion-reduce:transition-none ${presentationClassNames.day} ${isIntense ? "text-white" : "text-[#565867]"} ${isActive ? "ring-2 ring-[#312e81] ring-offset-2" : ""}`}
                   key={cell.date}
-                  onClick={() => setActiveDate(cell.date)}
+                  onClick={() => {
+                    setActiveDate(cell.date);
+                    onSelectPoint?.(cell.date);
+                  }}
                   onFocus={() => setActiveDate(cell.date)}
                   onMouseEnter={() => setActiveDate(cell.date)}
                   style={{

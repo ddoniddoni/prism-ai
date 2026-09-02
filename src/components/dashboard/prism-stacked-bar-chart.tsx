@@ -26,6 +26,7 @@ import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type PrismStackedBarChartProps = {
   metric: MetricKey;
+  onSelectPoint?: (queryId: string, label: string) => void;
   presentation?: DashboardWidgetPresentation;
   series: readonly PrismStackedBarSeries[];
   title: string;
@@ -182,6 +183,7 @@ function PrismStackedBarItem({
 
 export function PrismStackedBarChart({
   metric,
+  onSelectPoint,
   presentation = "standard",
   series,
   title,
@@ -213,6 +215,12 @@ export function PrismStackedBarChart({
         .join(", ")}.`
     : `${title} 차트에 표시할 데이터가 없습니다.`;
   const chartHeightClassName = chartHeightClassNames[presentation];
+  const handleBarClick = useCallback(
+    (datum: { id: string | number; indexValue: string | number }) => {
+      onSelectPoint?.(String(datum.id), String(datum.indexValue));
+    },
+    [onSelectPoint],
+  );
 
   if (data.length === 0 || series.length < 2) {
     return (
@@ -305,6 +313,7 @@ export function PrismStackedBarChart({
           keys={series.map((item) => item.id)}
           margin={{ bottom: 34, left: 64, right: 14, top: 10 }}
           motionConfig="gentle"
+          onClick={handleBarClick}
           padding={0.32}
           role="img"
           theme={nivoTheme}
