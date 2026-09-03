@@ -121,6 +121,8 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - 비교 기준은 Header의 작은 Select Control에서 `비교 없음`·이전 기간·이전 달·전년 동기 중 하나로 바로 바꿀 수 있다. 이 선택도 분석 중에는 비활성화된다.
 - 조건 변경 요청은 현재 Context와 검증된 Filter 또는 비교 기준만 받는 전용 Schema를 사용한다. 서버가 변경된 Context를 Planner에 전달하고, Filter 변경은 최종 Filter를 모든 Query DSL에 다시 강제하며 비교 변경은 모든 Query의 비교 모드를 고정한다. 차트 선택 상세 분석과 같은 요청에서 섞이면 거부한다.
 - 조건 변경은 새 Cache Key로 분리한다. 조건 표시·제거·비교 선택, Schema 경계, Context Filter·비교 기준 재적용을 검증하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- 같은 `sessionId`를 가진 Local Analysis History를 시간순 버전으로 묶는 `Analysis trail`을 추가했다. 버전마다 질문·기간·주 지표·비교·첫 Filter와 이전 버전에서 바뀐 조건을 보여주며, 사용자는 저장된 검증 응답을 다시 열어 당시 Dashboard를 복원할 수 있다. 버전 열기는 새 분석이나 AI 호출을 만들지 않는다.
+- 세션 범위·시간순 정렬·조건 변경 Label을 검증하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
@@ -177,8 +179,15 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-03 | Drilldown 선택 참조는 선택된 Widget에만 전달하고 Grid 파생값을 메모화하며, `layouts` 변경에 React `key`를 쓰지 않음 | 한 카드의 선택·높이 상태가 관계없는 Nivo Chart의 재마운트·모션을 다시 시작시키지 않게 하기 위함 |
 | 2026-09-03 | 선택값 후속 분석은 현재 Context의 단일 허용 `eq` Filter를 서버에서 모든 Query DSL에 강제 | UI나 모델이 분석 범위를 임의로 넓히지 못하게 하면서도, 사용자가 검증된 Chart 값에서 바로 좁은 분석으로 이어지게 하기 위함 |
 | 2026-09-03 | Dashboard Filter·비교 기준 변경은 전용 Context Override로 서버에서 재적용 | 조건 제거·전체 해제·비교 선택이 자연어 해석이나 Client-only State에 의존하지 않고, 다음 Query 범위를 결정론적으로 바꾸게 하기 위함 |
+| 2026-09-03 | Dashboard Version History는 같은 `sessionId`의 Local History Response만 다시 연다 | 버전 복원이 API·AI 호출이나 Client가 만든 숫자에 의존하지 않고, 당시 검증된 결과를 정확히 재현하게 하기 위함 |
 
 ## 검증 결과
+
+- `npm run lint`: 통과 (Dashboard Version History)
+- `npm run typecheck`: 통과 (Dashboard Version History)
+- `npm run build`: 통과 (Dashboard Version History, Next.js Webpack production build)
+- 세션 Version History Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test`, `npm run test:e2e`, `npm run check`, `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run lint`: 통과 (Drilldown Render Isolation·Calendar Selection)
 - `npm run typecheck`: 통과 (Drilldown Render Isolation·Calendar Selection)

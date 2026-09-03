@@ -27,6 +27,7 @@ import {
 import {
   createAnalysisHistoryEntry,
   saveAnalysisHistory,
+  type AnalysisHistoryEntry,
 } from "@/lib/history/local-analysis-history";
 
 import {
@@ -34,6 +35,7 @@ import {
   useLocalAnalysisHistory,
 } from "@/components/history/use-local-analysis-history";
 import { FollowUpPrompt } from "./follow-up-prompt";
+import { DashboardVersionHistory } from "./dashboard-version-history";
 
 type AnalysisDashboardProps = {
   dashboardId: string;
@@ -376,6 +378,18 @@ export function AnalysisDashboard({
     mutateAnalysis({ ...nextAnalysis, dashboardId });
   }
 
+  function openAnalysisVersion(entry: AnalysisHistoryEntry) {
+    if (
+      !activeResponse ||
+      entry.response.sessionId !== activeResponse.sessionId
+    ) {
+      return;
+    }
+
+    setPendingAnalysis(null);
+    queryClient.setQueryData(analysisQueryKey, entry.response);
+  }
+
   if (displayStatus === "loading" && !activeResponse) {
     return <DashboardLoadingState />;
   }
@@ -454,6 +468,12 @@ export function AnalysisDashboard({
           </button>
         </section>
       ) : null}
+      <DashboardVersionHistory
+        activeAnalysisId={activeResponse.analysisId}
+        entries={historyEntries}
+        onSelectVersion={openAnalysisVersion}
+        sessionId={activeResponse.sessionId}
+      />
       <DashboardEditor
         dashboard={activeResponse.dashboard}
         comparisonControlsDisabled={displayStatus === "loading"}
