@@ -20,6 +20,7 @@ type PrismCalendarHeatmapProps = {
   onSelectPoint?: (label: string) => void;
   points: readonly DataPoint[];
   presentation?: DashboardWidgetPresentation;
+  selectedDate?: string;
   title: string;
 };
 
@@ -173,6 +174,7 @@ export function PrismCalendarHeatmap({
   onSelectPoint,
   points,
   presentation = "compact",
+  selectedDate,
   title,
 }: PrismCalendarHeatmapProps) {
   const chartId = useId().replace(/:/g, "");
@@ -184,9 +186,10 @@ export function PrismCalendarHeatmap({
   );
   const activeCell = useMemo(
     () =>
-      data.cells.find((cell) => cell.date === activeDate && cell.hasData) ??
-      data.peakCell,
-    [activeDate, data.cells, data.peakCell],
+      data.cells.find(
+        (cell) => cell.date === (selectedDate ?? activeDate) && cell.hasData,
+      ) ?? data.peakCell,
+    [activeDate, data.cells, data.peakCell, selectedDate],
   );
   const summaryId = `prism-calendar-heatmap-summary-${chartId}`;
   const chartSummary = data.peakCell

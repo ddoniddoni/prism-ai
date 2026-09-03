@@ -5,6 +5,7 @@ import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import {
   createDashboardDrilldown,
   createDashboardDrilldownFilter,
+  getDashboardWidgetDrilldown,
 } from "./dashboard-drilldown-data";
 
 const dataset: AnalyticsDataset = {
@@ -85,5 +86,16 @@ describe("createDashboardDrilldown", () => {
         "Electronics",
       ),
     ).toBeUndefined();
+  });
+
+  it("keeps a Drilldown selection scoped to its own widget", () => {
+    const selection = {
+      widgetId: "calendar",
+      queryId: "trend",
+      label: "2026-07-16",
+    };
+
+    expect(getDashboardWidgetDrilldown(selection, "calendar")).toBe(selection);
+    expect(getDashboardWidgetDrilldown(selection, "category")).toBeNull();
   });
 });

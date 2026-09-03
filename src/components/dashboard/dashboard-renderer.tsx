@@ -2,7 +2,7 @@
 
 import { SlidersHorizontal, X } from "lucide-react";
 import dynamic from "next/dynamic";
-import { memo, type ReactNode, useState } from "react";
+import { memo, type ReactNode, useMemo, useState } from "react";
 
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import type { Finding } from "@/lib/analytics/findings";
@@ -34,7 +34,10 @@ import {
   getDashboardContextFilterLabel,
   removeDashboardContextFilter,
 } from "./dashboard-context-controls-data";
-import type { DashboardDrilldownSelection } from "./dashboard-drilldown-data";
+import {
+  getDashboardWidgetDrilldown,
+  type DashboardDrilldownSelection,
+} from "./dashboard-drilldown-data";
 
 const PrismTrendChart = dynamic(
   () => import("./prism-trend-chart").then((module) => module.PrismTrendChart),
@@ -604,6 +607,7 @@ function CalendarHeatmapWidget({
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
         presentation={presentation}
+        selectedDate={selectedDrilldown?.label}
         title={widget.title}
         onSelectPoint={(label) =>
           onDrilldownChange?.(
@@ -884,26 +888,33 @@ export function DashboardWidgetGrid({
   onDrilldownAnalysis?: (filter: AnalyticsFilter) => void;
   widgets: readonly DashboardWidget[];
 }) {
-  const datasetsById = new Map(
-    datasets.map((dataset) => [dataset.queryId, dataset]),
+  const datasetsById = useMemo(
+    () => new Map(datasets.map((dataset) => [dataset.queryId, dataset])),
+    [datasets],
   );
-  const findingsById = new Map(
-    findings.map((finding) => [finding.id, finding]),
+  const findingsById = useMemo(
+    () => new Map(findings.map((finding) => [finding.id, finding])),
+    [findings],
   );
-  const layoutDataDensity: DashboardLayoutDataDensity = Object.fromEntries(
-    datasets.map((dataset) => [dataset.queryId, dataset.points.length]),
+  const layoutDataDensity = useMemo<DashboardLayoutDataDensity>(
+    () =>
+      Object.fromEntries(
+        datasets.map((dataset) => [dataset.queryId, dataset.points.length]),
+      ),
+    [datasets],
   );
-  const mdLayoutPlan = createDashboardLayoutPlan(
-    widgets,
-    "md",
-    layoutDataDensity,
+  const mdLayoutPlan = useMemo(
+    () => createDashboardLayoutPlan(widgets, "md", layoutDataDensity),
+    [layoutDataDensity, widgets],
   );
-  const lgLayoutPlan = createDashboardLayoutPlan(
-    widgets,
-    "lg",
-    layoutDataDensity,
+  const lgLayoutPlan = useMemo(
+    () => createDashboardLayoutPlan(widgets, "lg", layoutDataDensity),
+    [layoutDataDensity, widgets],
   );
-  const orderedWidgets = getDashboardGridWidgetOrder(widgets, lgLayoutPlan);
+  const orderedWidgets = useMemo(
+    () => getDashboardGridWidgetOrder(widgets, lgLayoutPlan),
+    [lgLayoutPlan, widgets],
+  );
 
   return (
     <div
@@ -916,7 +927,10 @@ export function DashboardWidgetGrid({
           key={widget.id}
         >
           <DashboardWidgetCard
-            activeDrilldown={activeDrilldown}
+            activeDrilldown={getDashboardWidgetDrilldown(
+              activeDrilldown,
+              widget.id,
+            )}
             datasetsById={datasetsById}
             drilldownAnalysisDisabled={drilldownAnalysisDisabled}
             findingsById={findingsById}
