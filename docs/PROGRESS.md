@@ -123,6 +123,8 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - 조건 변경은 새 Cache Key로 분리한다. 조건 표시·제거·비교 선택, Schema 경계, Context Filter·비교 기준 재적용을 검증하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - 같은 `sessionId`를 가진 Local Analysis History를 시간순 버전으로 묶는 `Analysis trail`을 추가했다. 버전마다 질문·기간·주 지표·비교·첫 Filter와 이전 버전에서 바뀐 조건을 보여주며, 사용자는 저장된 검증 응답을 다시 열어 당시 Dashboard를 복원할 수 있다. 버전 열기는 새 분석이나 AI 호출을 만들지 않는다.
 - 세션 범위·시간순 정렬·조건 변경 Label을 검증하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- Insight는 Finding의 검증된 `evidenceQueryIds`와 현재 표시 중인 위젯만 연결한다. 사용자가 근거 칩을 누르면 해당 Card로 부드럽게 이동하고 키보드 포커스·Indigo Highlight를 적용하며, 숨긴 위젯이나 유효하지 않은 Finding은 이동 대상으로 노출하지 않는다.
+- Insight 근거 위젯 매칭을 검증하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 
 ## 진행 중
 
@@ -180,6 +182,7 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-03 | 선택값 후속 분석은 현재 Context의 단일 허용 `eq` Filter를 서버에서 모든 Query DSL에 강제 | UI나 모델이 분석 범위를 임의로 넓히지 못하게 하면서도, 사용자가 검증된 Chart 값에서 바로 좁은 분석으로 이어지게 하기 위함 |
 | 2026-09-03 | Dashboard Filter·비교 기준 변경은 전용 Context Override로 서버에서 재적용 | 조건 제거·전체 해제·비교 선택이 자연어 해석이나 Client-only State에 의존하지 않고, 다음 Query 범위를 결정론적으로 바꾸게 하기 위함 |
 | 2026-09-03 | Dashboard Version History는 같은 `sessionId`의 Local History Response만 다시 연다 | 버전 복원이 API·AI 호출이나 Client가 만든 숫자에 의존하지 않고, 당시 검증된 결과를 정확히 재현하게 하기 위함 |
+| 2026-09-03 | Insight의 근거 링크는 현재 렌더된 위젯에만 연결한다 | `evidenceQueryIds`가 있어도 사용자가 숨긴 Card나 Sanitizer가 제거한 참조로 이동시키지 않고, 모든 링크를 실제 검증 결과로 제한하기 위함 |
 
 ## 검증 결과
 
@@ -187,6 +190,13 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - `npm run typecheck`: 통과 (Dashboard Version History)
 - `npm run build`: 통과 (Dashboard Version History, Next.js Webpack production build)
 - 세션 Version History Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test`, `npm run test:e2e`, `npm run check`, `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
+- `npm run lint`: 통과 (Insight Evidence Navigation)
+- `npm run typecheck`: 통과 (Insight Evidence Navigation)
+- `npm run build`: 통과 (Insight Evidence Navigation, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`, `git diff --check`: 통과 (Insight Evidence Navigation)
+- Insight 근거 위젯 매칭 Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
 - `npm run test`, `npm run test:e2e`, `npm run check`, `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run lint`: 통과 (Drilldown Render Isolation·Calendar Selection)

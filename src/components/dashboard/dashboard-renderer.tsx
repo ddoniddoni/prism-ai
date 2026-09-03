@@ -1,8 +1,13 @@
 "use client";
 
-import { SlidersHorizontal, X } from "lucide-react";
+import {
+  ArrowRight,
+  ChartNoAxesCombined,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import dynamic from "next/dynamic";
-import { memo, type ReactNode, useMemo, useState } from "react";
+import { memo, type ReactNode, useCallback, useMemo, useState } from "react";
 
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import type { Finding } from "@/lib/analytics/findings";
@@ -38,6 +43,10 @@ import {
   getDashboardWidgetDrilldown,
   type DashboardDrilldownSelection,
 } from "./dashboard-drilldown-data";
+import {
+  getInsightEvidenceTargetsByWidgetId,
+  type DashboardInsightEvidenceTarget,
+} from "./dashboard-insight-evidence-data";
 
 const PrismTrendChart = dynamic(
   () => import("./prism-trend-chart").then((module) => module.PrismTrendChart),
@@ -127,8 +136,11 @@ type DashboardWidgetProps = {
   cardClassName?: string;
   controls?: ReactNode;
   drilldownAnalysisDisabled?: boolean;
+  evidenceTargets?: readonly DashboardInsightEvidenceTarget[];
+  isEvidenceHighlighted?: boolean;
   onDrilldownChange?: (selection: DashboardDrilldownSelection | null) => void;
   onDrilldownAnalysis?: (filter: AnalyticsFilter) => void;
+  onEvidenceNavigate?: (target: DashboardInsightEvidenceTarget) => void;
   presentation?: DashboardWidgetPresentation;
 };
 
@@ -196,6 +208,7 @@ function WidgetFrame({
   controls,
   descriptionClassName,
   density = "default",
+  isEvidenceHighlighted = false,
   presentation = "standard",
   widget,
 }: {
@@ -204,6 +217,7 @@ function WidgetFrame({
   controls?: ReactNode;
   descriptionClassName?: string;
   density?: "compact" | "default" | "feature";
+  isEvidenceHighlighted?: boolean;
   presentation?: DashboardWidgetPresentation;
   widget: DashboardWidget;
 }) {
@@ -217,8 +231,9 @@ function WidgetFrame({
   return (
     <section
       aria-labelledby={`${widget.id}-title`}
-      className={`w-full self-start rounded-xl border border-[#e1e2e4] bg-white ${resolvedDensity === "compact" ? "p-3" : resolvedDensity === "feature" ? "p-4 sm:p-5" : "p-4"} ${className ?? ""}`}
+      className={`w-full scroll-mt-24 self-start rounded-xl border border-[#e1e2e4] bg-white transition-[box-shadow,border-color] ${isEvidenceHighlighted ? "border-[#4f46e5] ring-2 ring-[#c3c0ff] ring-offset-2 ring-offset-[#f8f9fb]" : ""} ${resolvedDensity === "compact" ? "p-3" : resolvedDensity === "feature" ? "p-4 sm:p-5" : "p-4"} ${className ?? ""}`}
       id={widget.id}
+      tabIndex={-1}
     >
       <div className="flex flex-wrap items-start justify-between gap-2.5">
         <div className="min-w-0">
@@ -256,6 +271,7 @@ function MetricWidget({
   datasetsById,
   cardClassName,
   controls,
+  isEvidenceHighlighted,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "metric") {
@@ -271,6 +287,7 @@ function MetricWidget({
       controls={controls}
       density="compact"
       descriptionClassName="sr-only"
+      isEvidenceHighlighted={isEvidenceHighlighted}
       presentation={presentation}
       widget={widget}
     >
@@ -318,6 +335,7 @@ function TimeSeriesWidget({
   controls,
   drilldownAnalysisDisabled,
   findingsById,
+  isEvidenceHighlighted,
   onDrilldownChange,
   onDrilldownAnalysis,
   presentation,
@@ -337,6 +355,7 @@ function TimeSeriesWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      isEvidenceHighlighted={isEvidenceHighlighted}
       presentation={presentation}
       widget={widget}
     >
@@ -402,6 +421,7 @@ function CategoryBarWidget({
   controls,
   drilldownAnalysisDisabled,
   findingsById,
+  isEvidenceHighlighted,
   onDrilldownChange,
   onDrilldownAnalysis,
   presentation,
@@ -422,6 +442,7 @@ function CategoryBarWidget({
       className={cardClassName}
       controls={controls}
       descriptionClassName="sr-only"
+      isEvidenceHighlighted={isEvidenceHighlighted}
       presentation={presentation}
       widget={widget}
     >
@@ -458,6 +479,7 @@ function DonutWidget({
   controls,
   drilldownAnalysisDisabled,
   findingsById,
+  isEvidenceHighlighted,
   onDrilldownChange,
   onDrilldownAnalysis,
   presentation,
@@ -477,6 +499,7 @@ function DonutWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      isEvidenceHighlighted={isEvidenceHighlighted}
       presentation={presentation}
       widget={widget}
     >
@@ -513,6 +536,7 @@ function StackedBarWidget({
   controls,
   drilldownAnalysisDisabled,
   findingsById,
+  isEvidenceHighlighted,
   onDrilldownChange,
   onDrilldownAnalysis,
   presentation,
@@ -544,6 +568,7 @@ function StackedBarWidget({
       className={cardClassName}
       controls={controls}
       descriptionClassName="sr-only"
+      isEvidenceHighlighted={isEvidenceHighlighted}
       presentation={presentation}
       widget={widget}
     >
@@ -580,6 +605,7 @@ function CalendarHeatmapWidget({
   controls,
   drilldownAnalysisDisabled,
   findingsById,
+  isEvidenceHighlighted,
   onDrilldownChange,
   onDrilldownAnalysis,
   presentation,
@@ -600,6 +626,7 @@ function CalendarHeatmapWidget({
       className={cardClassName}
       controls={controls}
       density={presentation === "feature" ? "feature" : "compact"}
+      isEvidenceHighlighted={isEvidenceHighlighted}
       presentation={presentation}
       widget={widget}
     >
@@ -634,6 +661,7 @@ function TableWidget({
   datasetsById,
   cardClassName,
   controls,
+  isEvidenceHighlighted,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "rankingTable" && widget.type !== "dataTable") {
@@ -646,6 +674,7 @@ function TableWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      isEvidenceHighlighted={isEvidenceHighlighted}
       presentation={presentation}
       widget={widget}
     >
@@ -691,6 +720,9 @@ function InsightWidget({
   findingsById,
   cardClassName,
   controls,
+  evidenceTargets = [],
+  isEvidenceHighlighted,
+  onEvidenceNavigate,
   presentation,
 }: DashboardWidgetProps) {
   if (widget.type !== "insight") {
@@ -709,6 +741,7 @@ function InsightWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      isEvidenceHighlighted={isEvidenceHighlighted}
       presentation={presentation}
       widget={widget}
     >
@@ -716,9 +749,35 @@ function InsightWidget({
         <p className="text-[13px] leading-6 text-[#191c1e]">
           {finding?.fallbackText ?? "검증된 Finding을 찾지 못했습니다."}
         </p>
-        <p className="mt-3 text-[9px] tracking-[0.09em] text-[#777587] uppercase">
-          Evidence · {finding?.evidenceQueryIds.join(", ") ?? "unavailable"}
-        </p>
+        {evidenceTargets.length > 0 ? (
+          <div className="mt-4 border-t border-black/8 pt-3">
+            <p className="text-[9px] font-semibold tracking-[0.1em] text-[#777587] uppercase">
+              검증된 근거 데이터
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {evidenceTargets.map((target) => (
+                <button
+                  aria-label={`${target.widgetTitle} 근거 데이터로 이동`}
+                  className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-md bg-white/90 px-2.5 py-1.5 text-left text-[11px] font-semibold text-[#3525cd] shadow-[0_1px_1px_rgba(25,28,30,0.05)] transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+                  key={target.widgetId}
+                  onClick={() => onEvidenceNavigate?.(target)}
+                  type="button"
+                >
+                  <ChartNoAxesCombined
+                    aria-hidden="true"
+                    className="size-3 shrink-0"
+                  />
+                  <span className="truncate">{target.widgetTitle}</span>
+                  <ArrowRight aria-hidden="true" className="size-3 shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-[9px] tracking-[0.09em] text-[#777587] uppercase">
+            Evidence · {finding?.evidenceQueryIds.join(", ") ?? "unavailable"}
+          </p>
+        )}
       </div>
     </WidgetFrame>
   );
@@ -879,15 +938,23 @@ export function DashboardWidgetGrid({
   widgets,
   datasets,
   findings,
+  highlightedEvidenceWidgetId,
   onDrilldownChange,
   onDrilldownAnalysis,
+  onEvidenceNavigate,
 }: Pick<DashboardRendererProps, "datasets" | "findings"> & {
   activeDrilldown?: DashboardDrilldownSelection | null;
   drilldownAnalysisDisabled?: boolean;
+  highlightedEvidenceWidgetId?: string | null;
   onDrilldownChange?: (selection: DashboardDrilldownSelection | null) => void;
   onDrilldownAnalysis?: (filter: AnalyticsFilter) => void;
+  onEvidenceNavigate?: (target: DashboardInsightEvidenceTarget) => void;
   widgets: readonly DashboardWidget[];
 }) {
+  const [
+    defaultHighlightedEvidenceWidgetId,
+    setDefaultHighlightedEvidenceWidgetId,
+  ] = useState<string | null>(null);
   const datasetsById = useMemo(
     () => new Map(datasets.map((dataset) => [dataset.queryId, dataset])),
     [datasets],
@@ -895,6 +962,10 @@ export function DashboardWidgetGrid({
   const findingsById = useMemo(
     () => new Map(findings.map((finding) => [finding.id, finding])),
     [findings],
+  );
+  const evidenceTargetsByWidgetId = useMemo(
+    () => getInsightEvidenceTargetsByWidgetId(widgets, findingsById),
+    [findingsById, widgets],
   );
   const layoutDataDensity = useMemo<DashboardLayoutDataDensity>(
     () =>
@@ -915,6 +986,28 @@ export function DashboardWidgetGrid({
     () => getDashboardGridWidgetOrder(widgets, lgLayoutPlan),
     [lgLayoutPlan, widgets],
   );
+  const handleDefaultEvidenceNavigation = useCallback(
+    (target: DashboardInsightEvidenceTarget) => {
+      setDefaultHighlightedEvidenceWidgetId(target.widgetId);
+
+      const targetElement = document.getElementById(target.widgetId);
+
+      if (!targetElement) {
+        return;
+      }
+
+      targetElement.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "center",
+      });
+      targetElement.focus({ preventScroll: true });
+    },
+    [],
+  );
+  const activeHighlightedEvidenceWidgetId =
+    highlightedEvidenceWidgetId ?? defaultHighlightedEvidenceWidgetId;
 
   return (
     <div
@@ -933,9 +1026,16 @@ export function DashboardWidgetGrid({
             )}
             datasetsById={datasetsById}
             drilldownAnalysisDisabled={drilldownAnalysisDisabled}
+            evidenceTargets={evidenceTargetsByWidgetId.get(widget.id)}
             findingsById={findingsById}
+            isEvidenceHighlighted={
+              activeHighlightedEvidenceWidgetId === widget.id
+            }
             onDrilldownChange={onDrilldownChange}
             onDrilldownAnalysis={onDrilldownAnalysis}
+            onEvidenceNavigate={
+              onEvidenceNavigate ?? handleDefaultEvidenceNavigation
+            }
             presentation={lgLayoutPlan.get(widget.id)?.presentation}
             widget={widget}
           />

@@ -65,6 +65,10 @@ import {
   getDashboardWidgetDrilldown,
   type DashboardDrilldownSelection,
 } from "./dashboard-drilldown-data";
+import {
+  getInsightEvidenceTargetsByWidgetId,
+  type DashboardInsightEvidenceTarget,
+} from "./dashboard-insight-evidence-data";
 
 type DashboardEditorProps = {
   dashboard: DashboardSpec;
@@ -387,6 +391,8 @@ export function DashboardEditor({
     useState<DashboardDrilldownSelection | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorStatus, setEditorStatus] = useState("");
+  const [highlightedEvidenceWidgetId, setHighlightedEvidenceWidgetId] =
+    useState<string | null>(null);
   const [activeBreakpoint, setActiveBreakpoint] =
     useState<EditorBreakpoint>("lg");
   const currentBreakpoint = useRef<EditorBreakpoint>("lg");
@@ -480,6 +486,10 @@ export function DashboardEditor({
     () => new Map(findings.map((finding) => [finding.id, finding])),
     [findings],
   );
+  const evidenceTargetsByWidgetId = useMemo(
+    () => getInsightEvidenceTargetsByWidgetId(widgets, findingsById),
+    [findingsById, widgets],
+  );
   const activeLayoutPlan = useMemo(
     () =>
       createDashboardLayoutPlan(widgets, activeBreakpoint, layoutDataDensity),
@@ -520,6 +530,27 @@ export function DashboardEditor({
     },
     [],
   );
+  const handleEvidenceNavigation = useCallback(
+    (target: DashboardInsightEvidenceTarget) => {
+      setHighlightedEvidenceWidgetId(target.widgetId);
+
+      const targetElement = window.document.getElementById(target.widgetId);
+
+      if (!targetElement) {
+        return;
+      }
+
+      targetElement.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "center",
+      });
+      targetElement.focus({ preventScroll: true });
+      setEditorStatus(`${target.widgetTitle} 근거 데이터로 이동했습니다.`);
+    },
+    [],
+  );
 
   return (
     <section aria-labelledby="analysis-dashboard-title" className="mt-7">
@@ -546,9 +577,11 @@ export function DashboardEditor({
             activeDrilldown={activeDrilldown}
             datasets={datasets}
             drilldownAnalysisDisabled={drilldownAnalysisDisabled}
+            highlightedEvidenceWidgetId={highlightedEvidenceWidgetId}
             findings={findings}
             onDrilldownChange={handleDrilldownChange}
             onDrilldownAnalysis={onDrilldownAnalysis}
+            onEvidenceNavigate={handleEvidenceNavigation}
             widgets={widgets}
           />
         ) : widgets.length === 0 ? (
@@ -599,9 +632,14 @@ export function DashboardEditor({
                   }
                   datasetsById={datasetsById}
                   drilldownAnalysisDisabled={drilldownAnalysisDisabled}
+                  evidenceTargets={evidenceTargetsByWidgetId.get(widget.id)}
                   findingsById={findingsById}
+                  isEvidenceHighlighted={
+                    highlightedEvidenceWidgetId === widget.id
+                  }
                   onDrilldownChange={handleDrilldownChange}
                   onDrilldownAnalysis={onDrilldownAnalysis}
+                  onEvidenceNavigate={handleEvidenceNavigation}
                   presentation={
                     activeLayoutPlan.get(widget.id)?.presentation ?? "standard"
                   }
