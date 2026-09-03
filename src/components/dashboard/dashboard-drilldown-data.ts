@@ -12,6 +12,13 @@ export type DashboardDrilldownSelection = {
   widgetId: string;
 };
 
+export function getDashboardWidgetDrilldown(
+  selection: DashboardDrilldownSelection | null | undefined,
+  widgetId: string,
+): DashboardDrilldownSelection | null {
+  return selection?.widgetId === widgetId ? selection : null;
+}
+
 export type DashboardDrilldown = {
   averageValue: number | null;
   comparison: {

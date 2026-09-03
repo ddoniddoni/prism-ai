@@ -61,7 +61,10 @@ import {
   DashboardWidgetCard,
   DashboardWidgetGrid,
 } from "./dashboard-renderer";
-import type { DashboardDrilldownSelection } from "./dashboard-drilldown-data";
+import {
+  getDashboardWidgetDrilldown,
+  type DashboardDrilldownSelection,
+} from "./dashboard-drilldown-data";
 
 type DashboardEditorProps = {
   dashboard: DashboardSpec;
@@ -469,17 +472,6 @@ export function DashboardEditor({
       sm: balancedLayouts.sm.filter((item) => visibleWidgetIds.has(item.i)),
     };
   }, [document, layoutDataDensity, resolvedWidgets, widgets]);
-  const layoutKey = useMemo(
-    () =>
-      (["lg", "md", "sm"] as const)
-        .map((breakpoint) =>
-          (layouts[breakpoint] ?? [])
-            .map((item) => `${item.i}:${item.x},${item.y},${item.w},${item.h}`)
-            .join("|"),
-        )
-        .join("/"),
-    [layouts],
-  );
   const datasetsById = useMemo(
     () => new Map(datasets.map((dataset) => [dataset.queryId, dataset])),
     [datasets],
@@ -576,7 +568,6 @@ export function DashboardEditor({
             compactor={verticalCompactor}
             containerPadding={[0, 0]}
             dragConfig={isEditing ? activeDragConfig : inactiveDragConfig}
-            key={layoutKey}
             layouts={layouts}
             margin={editorGridMargin}
             onBreakpointChange={(breakpoint) => {
@@ -592,7 +583,10 @@ export function DashboardEditor({
             {widgets.map((widget) => {
               const card = (
                 <DashboardWidgetCard
-                  activeDrilldown={activeDrilldown}
+                  activeDrilldown={getDashboardWidgetDrilldown(
+                    activeDrilldown,
+                    widget.id,
+                  )}
                   cardClassName="overflow-visible lg:col-span-12"
                   controls={
                     isEditing ? (

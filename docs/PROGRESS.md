@@ -111,7 +111,9 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - Calendar Heatmap의 Feature Canvas에는 가장 높은 일자·기간 합계·일평균·강한 요일·분석 일수를 계산해 표시하는 `Month signals` 패널을 추가했다. 모든 값은 검증된 일별 DataPoint에서 결정론적으로 계산하며, Feature Card의 남는 폭을 분석 근거로 채운다.
 - Trend·Ranked Bar·Donut·Stacked Bar·Calendar Heatmap의 데이터 포인트를 선택하면 같은 Widget 안에 `Selected evidence` Drilldown을 연다. 현재 값, 그룹 평균, 순위, 비교 변화 또는 합계형 지표의 기간 내 비중, 관련 Finding과 Query Ref를 검증된 Dataset에서만 다시 계산해 표시한다.
 - Drilldown 상태는 `widgetId`·`queryId`·`label`만 가진 일시적 Client UI 상태다. 선택값으로 SQL·Query DSL·AI 출력을 만들지 않으며, 후속 분석 응답이 도착하면 Editor를 새 Analysis ID로 다시 마운트해 이전 선택을 보존하지 않는다.
+- Drilldown 선택은 선택된 Widget에만 전달하고, Grid가 만드는 Dataset·Finding Map과 자동 Layout Plan은 입력이 바뀔 때만 다시 계산한다. Calendar는 이 선택 날짜를 명시적 prop으로 받아 선택 Ring·Detail을 부모 Drilldown과 같은 값으로 유지한다. Calendar 상세 영역의 높이 변화는 `react-grid-layout`의 `layouts` prop으로 반영하고, React `key`로 Grid 전체를 재마운트하지 않는다. 따라서 Calendar 날짜 선택처럼 국소적인 상호작용이 다른 Nivo Chart의 불필요한 재마운트·재애니메이션을 유발하지 않는다.
 - Drilldown 계산(순위·평균·비중·비교값) Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- Drilldown 선택 범위를 Widget 단위로 확인하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - 카테고리·디바이스·지역처럼 허용된 차원 값의 `Selected evidence`에는 명시적인 `상세 분석` 액션을 추가했다. 날짜는 Filterable Dimension이 아니므로 근거 조회만 가능하다.
 - 상세 분석 요청은 현재 Analysis Context와 단일 `eq` 선택 Filter를 Zod로 검증한다. 서버는 Planner에 좁혀진 Context를 전달하고, 최종 Context Filter를 모든 Query DSL에 다시 강제한 뒤 Repository를 실행한다.
 - 선택 Filter를 Cache Key에 포함해, 같은 질문이라도 서로 다른 차트 선택 결과가 Cache를 공유하지 않게 했다. 선택 Filter·Query 강제·Cache 분리에 대한 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
@@ -172,10 +174,18 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-02 | 자동 배치는 빈 Canvas 예산을 초과하는 Feature 후보를 거부 | Dashboard를 억지로 꽉 채우거나 반대로 큰 빈 영역을 방치하지 않고, 정보 밀도가 충분한 후보만 넓은 Canvas로 승격하기 위함 |
 | 2026-09-02 | Feature Calendar는 결정론적 Month signals를 동반 | 넓어진 카드의 빈 폭을 장식으로 채우지 않고, 실제 일별 Dataset에서 재현 가능한 추가 분석을 제공하기 위함 |
 | 2026-09-03 | Chart Drilldown은 검증된 Dataset을 재해석하는 UI 상태로 제한 | 차트 클릭만으로 허용되지 않은 DB Filter·SQL·LLM 수치를 만들지 않고도, 사용자가 선택값의 근거를 즉시 확인하게 하기 위함 |
+| 2026-09-03 | Drilldown 선택 참조는 선택된 Widget에만 전달하고 Grid 파생값을 메모화하며, `layouts` 변경에 React `key`를 쓰지 않음 | 한 카드의 선택·높이 상태가 관계없는 Nivo Chart의 재마운트·모션을 다시 시작시키지 않게 하기 위함 |
 | 2026-09-03 | 선택값 후속 분석은 현재 Context의 단일 허용 `eq` Filter를 서버에서 모든 Query DSL에 강제 | UI나 모델이 분석 범위를 임의로 넓히지 못하게 하면서도, 사용자가 검증된 Chart 값에서 바로 좁은 분석으로 이어지게 하기 위함 |
 | 2026-09-03 | Dashboard Filter·비교 기준 변경은 전용 Context Override로 서버에서 재적용 | 조건 제거·전체 해제·비교 선택이 자연어 해석이나 Client-only State에 의존하지 않고, 다음 Query 범위를 결정론적으로 바꾸게 하기 위함 |
 
 ## 검증 결과
+
+- `npm run lint`: 통과 (Drilldown Render Isolation·Calendar Selection)
+- `npm run typecheck`: 통과 (Drilldown Render Isolation·Calendar Selection)
+- `npm run build`: 통과 (Drilldown Render Isolation·Calendar Selection, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Drilldown Render Isolation·Calendar Selection)
+- Drilldown Widget 범위 Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test`, `npm run test:e2e`, `npm run check`, `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
 - `npm run lint`: 통과 (Dashboard Context Controls)
 - `npm run typecheck`: 통과 (Dashboard Context Controls)
