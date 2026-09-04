@@ -83,6 +83,20 @@ function normalizeQuestion(question: string): string {
   return question.trim().replaceAll(/\s+/g, " ").toLocaleLowerCase("ko-KR");
 }
 
+function resolveProductUnitsRegion(
+  question: string,
+): { label: string; value: string } | undefined {
+  if (question.includes("경기도") || question.includes("gyeonggi")) {
+    return { label: "경기도", value: "Gyeonggi" };
+  }
+
+  if (question.includes("서울") || question.includes("seoul")) {
+    return { label: "서울", value: "Seoul" };
+  }
+
+  return undefined;
+}
+
 function createQuery(
   id: string,
   metric: MetricKey,
@@ -116,6 +130,8 @@ function rootCauseDefinition(): MockAnalysisDefinition {
 }
 
 function resolveDefinition(question: string): MockAnalysisDefinition {
+  const productUnitsRegion = resolveProductUnitsRegion(question);
+
   if (question.includes("선택한") && question.includes("자세히")) {
     return rootCauseDefinition();
   }
@@ -177,25 +193,31 @@ function resolveDefinition(question: string): MockAnalysisDefinition {
   }
 
   if (
-    (question.includes("서울") || question.includes("seoul")) &&
+    productUnitsRegion &&
     (question.includes("제품") || question.includes("상품")) &&
-    (question.includes("판매량") || question.includes("판매 수량"))
+    question.includes("판매") &&
+    (question.includes("수량") || question.includes("판매량"))
   ) {
     return {
       intent: "ranking",
-      goal: "서울에서 발생한 주문의 상품별 판매 수량을 확인합니다.",
+      goal: `${productUnitsRegion.label}에서 발생한 주문의 상품별 판매 수량을 확인합니다.`,
       primaryMetric: "unitsSold",
       period: { preset: "lastMonth" },
       compareWith: "none",
-      filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+      filters: [
+        {
+          dimension: "region",
+          operator: "eq",
+          values: [productUnitsRegion.value],
+        },
+      ],
       focusDimension: "product",
-      title: "서울 판매 상품 수량",
-      subtitle:
-        "서울에서 발생한 주문만 대상으로 상품별 판매 수량을 확인합니다.",
+      title: `${productUnitsRegion.label} 판매 상품 수량`,
+      subtitle: `${productUnitsRegion.label}에서 발생한 주문만 대상으로 상품별 판매 수량을 확인합니다.`,
       widgetTitles: {
-        primary: "서울 상품 판매량",
-        trend: "기간별 서울 판매량",
-        focus: "서울 상품별 판매량",
+        primary: `${productUnitsRegion.label} 상품 판매량`,
+        trend: `기간별 ${productUnitsRegion.label} 판매량`,
+        focus: `${productUnitsRegion.label} 상품별 판매량`,
       },
     };
   }

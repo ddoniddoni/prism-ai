@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createAICallBudget } from "./provider";
 import { GeminiAIProvider, type GeminiModelClient } from "./gemini-provider";
+import { analysisPlanSchema } from "./schemas/analysis-plan";
 
 const validPlan = {
   intent: "overview",
@@ -24,6 +25,23 @@ const validPlan = {
     },
   ],
   analysisGoal: "이번 달 핵심 성과를 확인합니다.",
+};
+
+const periodLabelDashboard = {
+  title: "경기도 판매 수량 분석",
+  subtitle: "최근 30일 경기도 판매 흐름을 확인합니다.",
+  summary: "선택 기간의 검증된 결과를 보여줍니다.",
+  widgets: [
+    {
+      id: "primary-metric",
+      type: "metric",
+      title: "경기도 판매 수량",
+      queryIds: ["primary"],
+      findingIds: [],
+      size: "medium",
+      config: { queryId: "primary", metric: "unitsSold" },
+    },
+  ],
 };
 
 function createFakeClient(responseTexts: readonly string[]): {
@@ -72,6 +90,9 @@ describe("GeminiAIProvider", () => {
     expect(fake.requests).toHaveLength(1);
     expect(fake.requests[0]?.config?.responseMimeType).toBe("application/json");
     expect(fake.requests[0]?.config?.responseJsonSchema).toBeDefined();
+    expect(
+      JSON.stringify(fake.requests[0]?.config?.responseJsonSchema),
+    ).not.toContain("minLength");
   });
 
   it("uses one correction retry after an invalid structured response", async () => {
@@ -91,6 +112,36 @@ describe("GeminiAIProvider", () => {
       }),
     ).resolves.toEqual(validPlan);
     expect(fake.requests).toHaveLength(2);
+  });
+
+  it("allows a period label without accepting a model-generated business value", async () => {
+    const fake = createFakeClient([JSON.stringify(periodLabelDashboard)]);
+    const provider = new GeminiAIProvider({
+      apiKey: "test-key",
+      model: "gemini-test-model",
+      timeoutMs: 100,
+      maxCallsPerAnalysis: 4,
+      client: fake.client,
+    });
+
+    await expect(
+      provider.createDashboard({
+        dashboardId: "dashboard-test",
+        plan: analysisPlanSchema.parse(validPlan),
+        context: {
+          primaryMetric: "unitsSold",
+          period: { preset: "last30Days" },
+          compareWith: "none",
+          filters: [],
+        },
+        datasets: [],
+        findings: [],
+      }),
+    ).resolves.toMatchObject({
+      title: "경기도 판매 수량 분석",
+      widgets: [expect.objectContaining({ id: "primary-metric" })],
+    });
+    expect(fake.requests).toHaveLength(1);
   });
 
   it("reports a timeout when the SDK abort signal expires", async () => {

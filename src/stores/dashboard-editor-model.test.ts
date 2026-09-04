@@ -176,6 +176,51 @@ describe("dashboard editor model", () => {
     ]);
   });
 
+  it("pairs product ranking evidence into two balanced analysis lanes", () => {
+    const dashboardWidgets = [
+      widgets[0],
+      {
+        id: "product-bars",
+        type: "categoryBar",
+        title: "상품별 판매 수량",
+        queryIds: ["product-query"],
+        findingIds: [],
+        size: "large",
+        config: { queryId: "product-query", orientation: "horizontal" },
+      },
+      {
+        id: "product-ranking",
+        type: "rankingTable",
+        title: "상품 순위",
+        queryIds: ["product-query"],
+        findingIds: [],
+        size: "medium",
+        config: { queryId: "product-query" },
+      },
+      {
+        id: "product-insight",
+        type: "insight",
+        title: "핵심 분석",
+        queryIds: ["product-query"],
+        findingIds: ["finding-1"],
+        size: "medium",
+        config: { findingId: "finding-1", tone: "neutral" },
+      },
+    ] satisfies DashboardWidget[];
+
+    const plan = createDashboardLayoutPlan(dashboardWidgets, "lg", {
+      "product-query": 5,
+    });
+
+    expect([...plan.values()]).toMatchObject([
+      { id: "revenue", x: 0, y: 0, w: 4, h: 4 },
+      { id: "product-bars", x: 4, y: 0, w: 8, h: 7 },
+      { id: "product-ranking", x: 0, y: 4, w: 4, h: 7 },
+      { id: "product-insight", x: 4, y: 7, w: 8, h: 4 },
+    ]);
+    expect(getDashboardUnusedCanvasRatio(plan, "lg")).toBe(0);
+  });
+
   it("places a compact calendar below the KPI and wide comparison below the trend", () => {
     const dashboardWidgets = [
       widgets[0],

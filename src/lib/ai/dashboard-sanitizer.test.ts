@@ -13,6 +13,21 @@ const dataset = {
   warnings: [],
 };
 
+const supportingDatasets = [
+  {
+    ...dataset,
+    queryId: "trend",
+    groupBy: "date" as const,
+    points: [{ label: "2026-07-01", value: 100 }],
+  },
+  {
+    ...dataset,
+    queryId: "focus",
+    groupBy: "product" as const,
+    points: [{ label: "상품 A", value: 100 }],
+  },
+];
+
 describe("Dashboard spec sanitizer", () => {
   it("removes widgets that reference unavailable datasets", () => {
     const dashboard = dashboardSpecSchema.parse({
@@ -50,5 +65,44 @@ describe("Dashboard spec sanitizer", () => {
       type: "metric",
       queryIds: ["primary"],
     });
+  });
+
+  it("retains verified trend and breakdown datasets in a fallback dashboard", () => {
+    const dashboard = dashboardSpecSchema.parse({
+      id: "dashboard-test",
+      title: "테스트",
+      subtitle: "테스트 대시보드",
+      summary: "결정론적 데이터만 표시합니다.",
+      context: {
+        primaryMetric: "revenue",
+        period: { preset: "lastMonth" },
+        compareWith: "none",
+        filters: [],
+      },
+      widgets: [
+        {
+          id: "invalid-widget",
+          type: "metric",
+          title: "잘못된 참조",
+          queryIds: ["unknown"],
+          findingIds: [],
+          size: "small",
+          config: { queryId: "unknown", metric: "revenue" },
+        },
+      ],
+    });
+
+    const result = sanitizeDashboardSpec({
+      dashboard,
+      datasets: [dataset, ...supportingDatasets],
+      findings: [],
+    });
+
+    expect(result.fallbackUsed).toBe(true);
+    expect(result.dashboard.widgets.map((widget) => widget.type)).toEqual([
+      "metric",
+      "timeSeries",
+      "categoryBar",
+    ]);
   });
 });

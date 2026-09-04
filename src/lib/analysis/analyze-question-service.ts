@@ -1,6 +1,7 @@
 import { buildFindings } from "@/lib/analytics/findings";
 import { createAIProvider } from "@/lib/ai/create-provider";
 import { sanitizeDashboardSpec } from "@/lib/ai/dashboard-sanitizer";
+import { LiveProviderUnavailableError } from "@/lib/ai/fallback-provider";
 import { UnsupportedQuestionError } from "@/lib/ai/mock-provider";
 import { createAICallBudget, type AIProvider } from "@/lib/ai/provider";
 import {
@@ -23,6 +24,7 @@ import {
   type AnalyzeRequest,
   type AnalyzeResponse,
 } from "./schemas";
+import { applyQuestionFilters } from "./question-filter-resolver";
 
 export type AnalyzeQuestionServiceDependencies = {
   repository: AnalyticsRepository;
@@ -76,6 +78,10 @@ export class AnalyzeQuestionService {
         callBudget,
       });
     } catch (error) {
+      if (error instanceof LiveProviderUnavailableError) {
+        throw new AnalyzeQuestionServiceError("AI_UNAVAILABLE", error.message);
+      }
+
       if (error instanceof UnsupportedQuestionError) {
         throw new AnalyzeQuestionServiceError(
           "UNSUPPORTED_QUESTION",
@@ -89,7 +95,10 @@ export class AnalyzeQuestionService {
       );
     }
 
-    const plan = normalizeAnalysisPlan(rawPlan);
+    const plan = applyQuestionFilters(
+      normalizeAnalysisPlan(rawPlan),
+      request.question,
+    );
     const plannedContext = mergeAnalysisContext(plannerContext, plan);
     const context = request.contextOverride
       ? applyAnalysisContextOverride(plannedContext, request.contextOverride)

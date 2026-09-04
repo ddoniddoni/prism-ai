@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  LiveProviderUnavailableError,
+  FallbackAIProvider,
+} from "./fallback-provider";
 import { MockAIProvider } from "./mock-provider";
-import { FallbackAIProvider } from "./fallback-provider";
 import type { AIProvider } from "./provider";
 
 const failingGeminiProvider: AIProvider = {
@@ -37,5 +40,16 @@ describe("FallbackAIProvider", () => {
       mockMode: false,
       fallbackUsed: true,
     });
+  });
+
+  it("does not label an unavailable live provider as an unsupported question", async () => {
+    const provider = new FallbackAIProvider(
+      failingGeminiProvider,
+      new MockAIProvider(),
+    );
+
+    await expect(
+      provider.createPlan({ question: "경기도 판매 상품 수량을 보여줘" }),
+    ).rejects.toBeInstanceOf(LiveProviderUnavailableError);
   });
 });

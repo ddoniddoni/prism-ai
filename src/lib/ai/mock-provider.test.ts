@@ -16,6 +16,7 @@ const supportedQuestions = [
   "광고비 대비 성과를 보여줘.",
   "환불률이 높은 지역을 알려줘.",
   "서울에서 산 제품들 판매량만 보여줘.",
+  "경기도 판매 상품 수량을 보여줘.",
   "지난달 매출의 디바이스별 구성을 보여줘.",
   "지난달 매출 집중도를 달력 히트맵으로 보여줘.",
 ] as const;
@@ -68,6 +69,28 @@ describe("MockAIProvider", () => {
           metric: "unitsSold",
           groupBy: "product",
           filters: [{ dimension: "region", operator: "eq", values: ["Seoul"] }],
+        }),
+      ]),
+    );
+  });
+
+  it("maps Gyeonggi product units to the allowlisted region filter", async () => {
+    const provider = new MockAIProvider();
+    const plan = await provider.createPlan({
+      question: "경기도 판매 상품 수량을 보여줘.",
+    });
+
+    expect(plan.contextPatch.filters).toEqual([
+      { dimension: "region", operator: "eq", values: ["Gyeonggi"] },
+    ]);
+    expect(plan.queries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "focus",
+          groupBy: "product",
+          filters: [
+            { dimension: "region", operator: "eq", values: ["Gyeonggi"] },
+          ],
         }),
       ]),
     );

@@ -1,8 +1,9 @@
 import "server-only";
 
 import { GoogleGenAI, type GenerateContentParameters } from "@google/genai";
-import { z } from "zod";
+import type { z } from "zod";
 
+import { createGeminiStructuredOutputSchema } from "./gemini-structured-output-schema";
 import { createAnalysisPlanPrompt } from "./prompts/analysis-plan-prompt";
 import { createDashboardComposerPrompt } from "./prompts/dashboard-composer-prompt";
 import {
@@ -58,14 +59,6 @@ export class GeminiProviderError extends Error {
   }
 }
 
-function createJsonSchema(schema: z.ZodType): unknown {
-  const { $schema: schemaVersion, ...jsonSchema } = z.toJSONSchema(schema);
-
-  void schemaVersion;
-
-  return jsonSchema;
-}
-
 function parseJsonText(text: string): unknown {
   try {
     return JSON.parse(text);
@@ -75,6 +68,12 @@ function parseJsonText(text: string): unknown {
       "Gemini가 JSON 형식의 응답을 반환하지 않았습니다.",
     );
   }
+}
+
+const temporalNumberPattern = /\d+\s*(?:일|주|개월|달|분기|년|월)/gu;
+
+function containsBusinessDisplayNumber(text: string): boolean {
+  return /\d/u.test(text.replaceAll(temporalNumberPattern, ""));
 }
 
 function validateDashboardComposition(
@@ -93,7 +92,7 @@ function validateDashboardComposition(
     ]),
   ];
 
-  return displayTexts.some((text) => /\d/u.test(text))
+  return displayTexts.some((text) => containsBusinessDisplayNumber(text))
     ? "Dashboard 표시 문구에 숫자를 포함할 수 없습니다."
     : undefined;
 }
@@ -221,7 +220,7 @@ export class GeminiAIProvider implements AIProvider {
         config: {
           abortSignal: timeoutSignal,
           responseMimeType: "application/json",
-          responseJsonSchema: createJsonSchema(schema),
+          responseJsonSchema: createGeminiStructuredOutputSchema(schema),
           temperature: 0,
         },
       });

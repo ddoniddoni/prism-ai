@@ -3,11 +3,16 @@
 import { ResponsivePie, type PieTooltipProps } from "@nivo/pie";
 import { useCallback, useId, useMemo } from "react";
 
+import type { DimensionKey } from "@/lib/analytics/dimension-catalog";
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import { metricCatalog, type MetricKey } from "@/lib/analytics/metric-catalog";
 import type { DashboardWidgetPresentation } from "@/stores/dashboard-layout";
 
-import { formatMetricAxisValue, formatMetricValue } from "./formatters";
+import {
+  formatDimensionValue,
+  formatMetricAxisValue,
+  formatMetricValue,
+} from "./formatters";
 import {
   createPrismDonutData,
   getPrismDonutPercentage,
@@ -17,6 +22,7 @@ import {
 import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type PrismDonutChartProps = {
+  dimension?: DimensionKey;
   metric: MetricKey;
   onSelectPoint?: (label: string) => void;
   points: readonly DataPoint[];
@@ -85,6 +91,7 @@ function createPrismDonutTooltip(metric: MetricKey, total: number) {
 }
 
 export function PrismDonutChart({
+  dimension,
   metric,
   onSelectPoint,
   points,
@@ -93,7 +100,13 @@ export function PrismDonutChart({
 }: PrismDonutChartProps) {
   const chartId = useId().replace(/:/g, "");
   const prefersReducedMotion = usePrefersReducedMotion();
-  const data = useMemo(() => createPrismDonutData(points), [points]);
+  const data = useMemo(
+    () =>
+      createPrismDonutData(points, (label) =>
+        formatDimensionValue(dimension, label),
+      ),
+    [dimension, points],
+  );
   const total = useMemo(() => getPrismDonutTotal(data), [data]);
   const tooltip = useMemo(
     () => createPrismDonutTooltip(metric, total),
@@ -152,7 +165,7 @@ export function PrismDonutChart({
           isInteractive
           margin={{ bottom: 7, left: 7, right: 7, top: 7 }}
           motionConfig="gentle"
-          onClick={(datum) => handleSelectPoint(datum.data.label)}
+          onClick={(datum) => handleSelectPoint(datum.data.sourceLabel)}
           padAngle={1.5}
           role="presentation"
           sortByValue={false}
@@ -182,7 +195,7 @@ export function PrismDonutChart({
               <button
                 aria-label={`${datum.label} 상세 근거 보기`}
                 className="group w-full py-2 text-left outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-[#4f46e5] focus-visible:ring-offset-2"
-                onClick={() => handleSelectPoint(datum.label)}
+                onClick={() => handleSelectPoint(datum.sourceLabel)}
                 type="button"
               >
                 <div className="flex items-center justify-between gap-3">

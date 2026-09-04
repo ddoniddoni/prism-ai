@@ -95,6 +95,9 @@ function createFallbackDashboard(
     },
   ];
   const trendDataset = datasets.find((dataset) => dataset.groupBy === "date");
+  const breakdownDataset = datasets.find(
+    (dataset) => dataset.groupBy && dataset.groupBy !== "date",
+  );
   const driverFinding = findings.find((finding) => finding.type === "driver");
 
   if (trendDataset) {
@@ -106,6 +109,21 @@ function createFallbackDashboard(
       findingIds: [],
       size: "large",
       config: { queryId: trendDataset.queryId, xKey: "label" },
+    });
+  }
+
+  if (breakdownDataset) {
+    widgets.push({
+      id: "fallback-breakdown",
+      type: "categoryBar",
+      title: "주요 세그먼트 비교",
+      queryIds: [breakdownDataset.queryId],
+      findingIds: [],
+      size: "medium",
+      config: {
+        queryId: breakdownDataset.queryId,
+        orientation: "horizontal",
+      },
     });
   }
 

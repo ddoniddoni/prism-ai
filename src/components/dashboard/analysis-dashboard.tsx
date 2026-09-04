@@ -121,13 +121,13 @@ async function requestAnalysis({
 function getProviderLabel(response: AnalyzeResponse): string {
   if (response.meta.mockMode) {
     return response.meta.fallbackUsed
-      ? "Mock AI · fallback active"
-      : "Mock AI · verified result";
+      ? "로컬 AI · 복구 모드"
+      : "로컬 AI · 검증 결과";
   }
 
   return response.meta.fallbackUsed
-    ? "Gemini · mock fallback active"
-    : "Gemini · verified result";
+    ? "Gemini · 로컬 AI 복구"
+    : "Gemini · 검증 결과";
 }
 
 const loadingCards = ["매출", "주문", "전환율", "ROAS"] as const;
@@ -450,7 +450,7 @@ export function AnalysisDashboard({
           ) : (
             <CircleCheck aria-hidden="true" className="size-3" />
           )}
-          {displayStatus === "loading" ? "Updating" : "Verified"}
+          {displayStatus === "loading" ? "업데이트 중" : "검증 완료"}
         </span>
       </section>
       {displayStatus === "error" ? (

@@ -4,8 +4,10 @@ import { SlidersHorizontal, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { memo, type ReactNode, useMemo, useState } from "react";
 
+import { dimensionCatalog } from "@/lib/analytics/dimension-catalog";
 import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import type { Finding } from "@/lib/analytics/findings";
+import { metricCatalog } from "@/lib/analytics/metric-catalog";
 import {
   compareModes,
   type AnalyticsFilter,
@@ -26,8 +28,11 @@ import {
 
 import {
   formatChangeWithDirection,
+  formatDimensionValue,
   formatMetricValue,
   getComparisonLabel,
+  getPeriodLabel,
+  localizeAnalyticsText,
 } from "./formatters";
 import { DashboardDrilldown } from "./dashboard-drilldown";
 import {
@@ -190,10 +195,88 @@ function getDashboardGridWidgetOrder(
     .map((item) => item.widget);
 }
 
+type DashboardWidgetDisplayCopy = {
+  description: string;
+  label: string;
+  title: string;
+};
+
+function getDashboardWidgetDisplayCopy(
+  widget: DashboardWidget,
+  dataset?: AnalyticsDataset,
+): DashboardWidgetDisplayCopy {
+  const metric =
+    metricCatalog[
+      dataset?.metric ??
+        (widget.type === "metric" ? widget.config.metric : "revenue")
+    ].label;
+  const dimension = dataset?.groupBy
+    ? dimensionCatalog[dataset.groupBy].label
+    : "항목";
+
+  switch (widget.type) {
+    case "metric":
+      return {
+        description: `선택 기간의 ${metric} 집계 결과`,
+        label: "핵심 지표",
+        title: `핵심 ${metric}`,
+      };
+    case "timeSeries":
+      return {
+        description: `기간별 ${metric} 변화를 확인합니다.`,
+        label: "기간 추이",
+        title: `기간별 ${metric} 추이`,
+      };
+    case "categoryBar":
+      return {
+        description: `${dimension} 기준으로 정렬한 ${metric}입니다.`,
+        label: "비교 차트",
+        title: `${dimension}별 ${metric}`,
+      };
+    case "stackedBar":
+      return {
+        description: `기간별 ${metric} 구성을 비교합니다.`,
+        label: "구성 추이",
+        title: `기간별 ${metric} 구성`,
+      };
+    case "calendarHeatmap":
+      return {
+        description: `일자별 ${metric} 집중도를 확인합니다.`,
+        label: "일별 집중도",
+        title: `일자별 ${metric} 집중도`,
+      };
+    case "donut":
+      return {
+        description: `${dimension}별 ${metric} 비중입니다.`,
+        label: "구성비",
+        title: `${dimension}별 ${metric} 구성`,
+      };
+    case "rankingTable":
+      return {
+        description: `검증 데이터 기준 ${dimension}별 순위입니다.`,
+        label: "순위표",
+        title: `${dimension} 순위`,
+      };
+    case "dataTable":
+      return {
+        description: `검증된 ${dimension}별 ${metric} 원본 값입니다.`,
+        label: "데이터 표",
+        title: `${dimension}별 ${metric} 데이터`,
+      };
+    case "insight":
+      return {
+        description: "계산된 결과와 검증 근거를 요약합니다.",
+        label: "분석 인사이트",
+        title: "핵심 분석",
+      };
+  }
+}
+
 function WidgetFrame({
   children,
   className,
   controls,
+  dataset,
   descriptionClassName,
   density = "default",
   presentation = "standard",
@@ -202,11 +285,13 @@ function WidgetFrame({
   children: ReactNode;
   className?: string;
   controls?: ReactNode;
+  dataset?: AnalyticsDataset;
   descriptionClassName?: string;
   density?: "compact" | "default" | "feature";
   presentation?: DashboardWidgetPresentation;
   widget: DashboardWidget;
 }) {
+  const displayCopy = getDashboardWidgetDisplayCopy(widget, dataset);
   const resolvedDensity =
     density === "compact" || presentation === "compact"
       ? "compact"
@@ -223,27 +308,27 @@ function WidgetFrame({
       <div className="flex flex-wrap items-start justify-between gap-2.5">
         <div className="min-w-0">
           <p className="text-[9px] font-semibold tracking-[0.11em] text-[#777587] uppercase">
-            {widget.type}
+            {displayCopy.label}
           </p>
           <h2
             className="mt-1 text-[15px] font-semibold tracking-[-0.02em] break-words text-[#191c1e]"
             id={`${widget.id}-title`}
           >
-            {widget.title}
+            {displayCopy.title}
           </h2>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded border border-[#dde2e8] bg-[#f8f9fb] px-1.5 py-0.5 text-[9px] text-[#777587]">
-            {widget.queryIds.length} data ref
+            {widget.queryIds.length}개 데이터 근거
           </span>
           {controls}
         </div>
       </div>
-      {widget.description ? (
+      {displayCopy.description ? (
         <p
           className={`mt-1.5 text-[12px] leading-5 break-words text-[#595e6b] ${descriptionClassName ?? ""}`}
         >
-          {widget.description}
+          {displayCopy.description}
         </p>
       ) : null}
       <div className="mt-3">{children}</div>
@@ -269,6 +354,7 @@ function MetricWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      dataset={dataset}
       density="compact"
       descriptionClassName="sr-only"
       presentation={presentation}
@@ -337,6 +423,7 @@ function TimeSeriesWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      dataset={dataset}
       presentation={presentation}
       widget={widget}
     >
@@ -344,7 +431,7 @@ function TimeSeriesWidget({
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
         presentation={presentation}
-        title={widget.title}
+        title={getDashboardWidgetDisplayCopy(widget, dataset).title}
         onSelectPoint={(label) =>
           onDrilldownChange?.(
             createDrilldownSelection(widget.id, widget.config.queryId, label),
@@ -367,7 +454,9 @@ function TimeSeriesWidget({
         </summary>
         <div className="mt-2 max-h-44 overflow-auto">
           <table className="w-full text-left text-xs">
-            <caption className="sr-only">{widget.title} 원본 데이터</caption>
+            <caption className="sr-only">
+              {getDashboardWidgetDisplayCopy(widget, dataset).title} 원본 데이터
+            </caption>
             <thead className="text-[#777587]">
               <tr>
                 <th className="pb-2 font-medium">날짜</th>
@@ -421,15 +510,17 @@ function CategoryBarWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      dataset={dataset}
       descriptionClassName="sr-only"
       presentation={presentation}
       widget={widget}
     >
       <PrismRankedBarChart
+        dimension={dataset?.groupBy}
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
         presentation={presentation}
-        title={widget.title}
+        title={getDashboardWidgetDisplayCopy(widget, dataset).title}
         onSelectPoint={(label) =>
           onDrilldownChange?.(
             createDrilldownSelection(widget.id, widget.config.queryId, label),
@@ -477,14 +568,16 @@ function DonutWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      dataset={dataset}
       presentation={presentation}
       widget={widget}
     >
       <PrismDonutChart
+        dimension={dataset?.groupBy}
         metric={dataset?.metric ?? "revenue"}
         points={dataset?.points ?? []}
         presentation={presentation}
-        title={widget.title}
+        title={getDashboardWidgetDisplayCopy(widget, dataset).title}
         onSelectPoint={(label) =>
           onDrilldownChange?.(
             createDrilldownSelection(widget.id, widget.config.queryId, label),
@@ -525,9 +618,18 @@ function StackedBarWidget({
     const dataset = datasetsById.get(item.queryId);
 
     return dataset
-      ? [{ id: item.queryId, label: item.label, points: dataset.points }]
+      ? [
+          {
+            id: item.queryId,
+            label: formatDimensionValue("device", item.label),
+            points: dataset.points,
+          },
+        ]
       : [];
   });
+  const primaryDataset = datasetsById.get(
+    widget.config.series[0]?.queryId ?? "",
+  );
   const metric =
     datasetsById.get(widget.config.series[0]?.queryId ?? "")?.metric ??
     "revenue";
@@ -543,6 +645,7 @@ function StackedBarWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      dataset={primaryDataset}
       descriptionClassName="sr-only"
       presentation={presentation}
       widget={widget}
@@ -551,7 +654,7 @@ function StackedBarWidget({
         metric={metric}
         presentation={presentation}
         series={series}
-        title={widget.title}
+        title={getDashboardWidgetDisplayCopy(widget, primaryDataset).title}
         onSelectPoint={(queryId, label) =>
           onDrilldownChange?.(
             createDrilldownSelection(widget.id, queryId, label),
@@ -599,6 +702,7 @@ function CalendarHeatmapWidget({
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      dataset={dataset}
       density={presentation === "feature" ? "feature" : "compact"}
       presentation={presentation}
       widget={widget}
@@ -608,7 +712,7 @@ function CalendarHeatmapWidget({
         points={dataset?.points ?? []}
         presentation={presentation}
         selectedDate={selectedDrilldown?.label}
-        title={widget.title}
+        title={getDashboardWidgetDisplayCopy(widget, dataset).title}
         onSelectPoint={(label) =>
           onDrilldownChange?.(
             createDrilldownSelection(widget.id, widget.config.queryId, label),
@@ -641,42 +745,62 @@ function TableWidget({
   }
 
   const dataset = datasetsById.get(widget.config.queryId);
+  const hasComparison = Boolean(dataset?.comparisonRange);
+  const displayCopy = getDashboardWidgetDisplayCopy(widget, dataset);
 
   return (
     <WidgetFrame
       className={cardClassName}
       controls={controls}
+      dataset={dataset}
       presentation={presentation}
       widget={widget}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-96 text-left text-[12px]">
-          <caption className="sr-only">{widget.title} 데이터 표</caption>
+      <div className="min-w-0">
+        <table className="w-full table-fixed text-left text-[11px] sm:text-[12px]">
+          <caption className="sr-only">{displayCopy.title} 데이터 표</caption>
+          <colgroup>
+            {widget.type === "rankingTable" ? <col className="w-9" /> : null}
+            <col />
+            <col className="w-[34%]" />
+            {hasComparison ? <col className="w-[24%]" /> : null}
+          </colgroup>
           <thead className="border-b border-[#dde2e8] text-[9px] tracking-[0.1em] text-[#777587] uppercase">
             <tr>
               {widget.type === "rankingTable" ? (
-                <th className="w-12 pb-3 font-medium">순위</th>
+                <th className="pb-2.5 font-medium">순위</th>
               ) : null}
-              <th className="pb-3 font-medium">세그먼트</th>
-              <th className="pb-3 text-right font-medium">현재</th>
-              <th className="pb-3 text-right font-medium">변화</th>
+              <th className="pb-2.5 font-medium">항목</th>
+              <th className="pb-2.5 text-right font-medium">현재</th>
+              {hasComparison ? (
+                <th className="pb-2.5 text-right font-medium">변화</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {(dataset?.points ?? []).map((point, index) => (
               <tr className="border-b border-[#eef0f2]" key={point.label}>
                 {widget.type === "rankingTable" ? (
-                  <td className="py-3 font-mono text-[#777587]">{index + 1}</td>
+                  <td className="py-2.5 font-mono text-[#777587]">
+                    {index + 1}
+                  </td>
                 ) : null}
-                <td className="py-3 font-medium text-[#191c1e]">
-                  {point.label}
+                <td className="min-w-0 py-2.5 font-medium text-[#191c1e]">
+                  <span
+                    className="block truncate"
+                    title={formatDimensionValue(dataset?.groupBy, point.label)}
+                  >
+                    {formatDimensionValue(dataset?.groupBy, point.label)}
+                  </span>
                 </td>
-                <td className="py-3 text-right text-[#424753]">
+                <td className="py-2.5 text-right text-[#424753]">
                   {formatMetricValue(dataset?.metric ?? "revenue", point.value)}
                 </td>
-                <td className="py-3 text-right text-[#595e6b]">
-                  {formatChangeWithDirection(point.percentChange)}
-                </td>
+                {hasComparison ? (
+                  <td className="py-2.5 text-right text-[#595e6b]">
+                    {formatChangeWithDirection(point.percentChange)}
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
@@ -714,10 +838,12 @@ function InsightWidget({
     >
       <div className={`rounded-lg border p-4 ${toneClass[widget.config.tone]}`}>
         <p className="text-[13px] leading-6 text-[#191c1e]">
-          {finding?.fallbackText ?? "검증된 Finding을 찾지 못했습니다."}
+          {finding
+            ? localizeAnalyticsText(finding.fallbackText)
+            : "검증된 분석 근거를 찾지 못했습니다."}
         </p>
         <p className="mt-3 text-[9px] tracking-[0.09em] text-[#777587] uppercase">
-          Evidence · {finding?.evidenceQueryIds.join(", ") ?? "unavailable"}
+          검증 근거 · {finding?.evidenceQueryIds.length ?? 0}개 데이터
         </p>
       </div>
     </WidgetFrame>
@@ -747,6 +873,28 @@ export const DashboardWidgetCard = memo(function DashboardWidgetCard(
   return <Widget {...props} />;
 });
 
+function getDashboardHeaderCopy(dashboard: DashboardSpec): {
+  subtitle: string;
+  summary: string;
+  title: string;
+} {
+  const primaryMetric = metricCatalog[dashboard.context.primaryMetric].label;
+  const [singleFilter] = dashboard.context.filters;
+  const scope =
+    dashboard.context.filters.length === 1 && singleFilter?.values.length === 1
+      ? formatDimensionValue(singleFilter.dimension, singleFilter.values[0])
+      : undefined;
+  const period = getPeriodLabel(dashboard.context.period);
+
+  return {
+    subtitle: scope
+      ? `${period} ${scope} 범위의 검증 데이터를 기준으로 분석했습니다.`
+      : `${period} 전체 데이터를 기준으로 분석했습니다.`,
+    summary: "표시된 수치는 결정론적 분석 엔진이 계산한 결과입니다.",
+    title: `${scope ? `${scope} ` : ""}${primaryMetric} 분석 결과`,
+  };
+}
+
 export function DashboardHeader({
   dashboard,
   comparisonControlsDisabled = false,
@@ -762,23 +910,24 @@ export function DashboardHeader({
 }) {
   const canChangeComparison = Boolean(onComparisonChange);
   const canChangeFilters = Boolean(onFiltersChange);
+  const headerCopy = getDashboardHeaderCopy(dashboard);
 
   return (
     <div className="py-2 sm:py-3">
       <p className="text-[10px] font-semibold tracking-[0.12em] text-[#4f46e5] uppercase">
-        Generated from verified refs
+        검증된 데이터 기반
       </p>
       <h1
         className="mt-2 max-w-4xl text-[28px] leading-tight font-semibold tracking-[-0.04em] text-[#191c1e] sm:text-[34px]"
         id="analysis-dashboard-title"
       >
-        {dashboard.title}
+        {headerCopy.title}
       </h1>
       <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[#595e6b]">
-        {dashboard.subtitle}
+        {headerCopy.subtitle}
       </p>
       <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#777587]">
-        {dashboard.summary}
+        {headerCopy.summary}
       </p>
       <div className="mt-4 rounded-lg border border-[#dde2e8] bg-[#f8f9fb] p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -799,7 +948,7 @@ export function DashboardHeader({
         </div>
         <div className="mt-2.5 flex flex-wrap gap-2 text-[11px] text-[#595e6b]">
           <span className="rounded-md border border-[#dde2e8] bg-white px-2.5 py-1.5">
-            {dashboard.context.period.preset}
+            {getPeriodLabel(dashboard.context.period)}
           </span>
           {canChangeComparison ? (
             <label className="rounded-md border border-[#c3c0ff] bg-white text-[#3525cd] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#4f46e5]">

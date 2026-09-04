@@ -13,14 +13,14 @@ describe("Dashboard context controls", () => {
         operator: "eq",
         values: ["Electronics"],
       }),
-    ).toBe("카테고리 · Electronics");
+    ).toBe("카테고리 · 전자제품");
     expect(
       getDashboardContextFilterLabel({
         dimension: "region",
         operator: "notIn",
         values: ["Seoul"],
       }),
-    ).toBe("지역 · Seoul 제외");
+    ).toBe("지역 · 서울 제외");
   });
 
   it("removes only the selected filter", () => {

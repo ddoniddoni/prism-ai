@@ -9,11 +9,13 @@ export type PrismRankedBarDatum = {
   id: string;
   label: string;
   rank: number;
+  sourceLabel: string;
   value: number;
 };
 
 export function createPrismRankedBarData(
   points: readonly DataPoint[],
+  formatLabel: (label: string) => string = (label) => label,
 ): readonly PrismRankedBarDatum[] {
   const drawablePoints = points.flatMap((point, index) => {
     if (point.value === null) {
@@ -25,7 +27,8 @@ export function createPrismRankedBarData(
         change: point.percentChange ?? 0,
         hasChange: point.percentChange === undefined ? 0 : 1,
         id: `${point.label}-${index}`,
-        label: point.label,
+        label: formatLabel(point.label),
+        sourceLabel: point.label,
         value: Math.abs(point.value),
       },
     ];
@@ -43,4 +46,15 @@ export function createPrismRankedBarData(
 
 export function getPrismRankedBarChartHeight(itemCount: number): number {
   return Math.min(264, Math.max(176, itemCount * 40 + 48));
+}
+
+export function getPrismRankedBarLeftMargin(
+  data: readonly PrismRankedBarDatum[],
+): number {
+  const longestLabelLength = Math.max(
+    0,
+    ...data.map((datum) => [...datum.label].length),
+  );
+
+  return Math.min(176, Math.max(88, longestLabelLength * 12 + 24));
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { formatChangeWithDirection, formatMetricAxisValue } from "./formatters";
+import {
+  formatChangeWithDirection,
+  formatDimensionValue,
+  formatMetricAxisValue,
+} from "./formatters";
 
 describe("formatChangeWithDirection", () => {
   it("adds a text direction without relying on color", () => {
@@ -12,10 +16,19 @@ describe("formatChangeWithDirection", () => {
 });
 
 describe("formatMetricAxisValue", () => {
-  it("uses compact K and M labels for chart axes", () => {
-    expect(formatMetricAxisValue("revenue", 124_500)).toBe("₩124.5K");
-    expect(formatMetricAxisValue("adSpend", 2_500_000)).toBe("₩2.5M");
-    expect(formatMetricAxisValue("orders", 12_340)).toBe("12.3K");
+  it("uses Korean compact units for chart axes", () => {
+    expect(formatMetricAxisValue("revenue", 124_500)).toBe("₩12.5만");
+    expect(formatMetricAxisValue("adSpend", 2_500_000)).toBe("₩250만");
+    expect(formatMetricAxisValue("orders", 12_340)).toBe("1.2만");
     expect(formatMetricAxisValue("roas", 3.141)).toBe("3.1×");
+  });
+});
+
+describe("formatDimensionValue", () => {
+  it("keeps canonical data values in code while exposing Korean labels", () => {
+    expect(formatDimensionValue("region", "Gyeonggi")).toBe("경기도");
+    expect(formatDimensionValue("product", "Quiet Air Purifier")).toBe(
+      "저소음 공기청정기",
+    );
   });
 });
