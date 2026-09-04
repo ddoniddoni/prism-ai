@@ -11,6 +11,8 @@ type AnalysisCacheEntry = {
   response: AnalyzeResponse;
 };
 
+export const analysisCacheSemanticsVersion = "2026-09-product-units";
+
 export type AnalysisCacheScope = {
   aiLiveEnabled: boolean;
   aiProvider: "gemini" | "mock";
@@ -43,6 +45,7 @@ export function createAnalysisCacheKey(
   scope: AnalysisCacheScope,
 ): string {
   return stableSerialize({
+    analysisCacheSemanticsVersion,
     scope,
     question: request.question,
     ...(request.currentContext

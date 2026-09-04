@@ -128,7 +128,7 @@ function CalendarFeatureSummary({
   return (
     <aside className="w-full rounded-xl border border-[#dfe2f5] bg-[linear-gradient(145deg,#f8f9ff_0%,#f2f3ff_100%)] p-4 shadow-[0_10px_26px_rgba(79,70,229,0.06)] sm:p-5">
       <p className="text-[9px] font-semibold tracking-[0.12em] text-[#5750c8] uppercase">
-        Month signals
+        월간 신호
       </p>
       <div className="mt-3 border-b border-[#dfe2f5] pb-3.5">
         <span className="text-[11px] text-[#676b7a]">가장 높은 일자</span>

@@ -296,7 +296,7 @@ function EditorToolbar({
     <div className="mt-5 flex flex-col gap-3 rounded-xl border border-[#dde2e8] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-[10px] font-semibold tracking-[0.1em] text-[#4f46e5] uppercase">
-          Layout editor
+          레이아웃 편집
         </p>
         <p className="mt-1 text-[12px] text-[#595e6b]">
           {isEditing

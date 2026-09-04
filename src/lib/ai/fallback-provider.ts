@@ -7,6 +7,15 @@ import type {
 import type { AnalysisPlan } from "./schemas/analysis-plan";
 import type { DashboardSpec } from "./schemas/dashboard-spec";
 
+export class LiveProviderUnavailableError extends Error {
+  constructor() {
+    super(
+      "Gemini가 현재 이 질문의 분석 계획을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    );
+    this.name = "LiveProviderUnavailableError";
+  }
+}
+
 export class FallbackAIProvider implements AIProvider {
   private fallbackUsed = false;
 
@@ -27,7 +36,12 @@ export class FallbackAIProvider implements AIProvider {
       return await this.primary.createPlan(input);
     } catch {
       this.fallbackUsed = true;
-      return this.fallback.createPlan(input);
+
+      try {
+        return await this.fallback.createPlan(input);
+      } catch {
+        throw new LiveProviderUnavailableError();
+      }
     }
   }
 

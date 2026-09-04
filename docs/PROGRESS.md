@@ -40,16 +40,19 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - Local Storage는 `useSyncExternalStore` 경계로 구독해 Server Shell을 유지하면서 브라우저 저장소 변경을 반영한다.
 - Context 병합·Filter 교체/제거, Mock Follow-up, Service 순차 Follow-up, Local History 검증/20개 제한, Follow-up과 History 재열기 E2E 시나리오를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - 공식 `@google/genai` SDK 2.19.0을 추가하고 `GeminiAIProvider`를 Server-only Module로 구현했다.
-- Gemini Plan과 Dashboard Composition 요청에 JSON Schema를 제공하고, 응답 JSON을 Zod로 다시 검증한다. Schema 또는 Semantic 검증 실패 시 교정 요청은 최대 1회다.
-- Gemini Composer는 Dashboard ID와 검증된 Context를 생성하지 않는다. 서버가 값을 주입하며, 숫자를 포함한 모델 표시 문구는 거부하고 Mock Composer로 복구한다.
+- Gemini Plan과 Dashboard Composition에는 Gemini Generate Content가 지원하는 최소 구조 JSON Schema만 전달하고, 응답 JSON은 원본 Zod Schema와 Semantic 규칙으로 다시 검증한다. Schema 또는 Semantic 검증 실패 시 교정 요청은 최대 1회다.
+- Gemini Composer는 Dashboard ID와 검증된 Context를 생성하지 않는다. 서버가 값을 주입하며, 기간을 설명하는 숫자는 허용하되 매출·수량·비율 같은 Business Number를 포함한 모델 표시 문구는 거부하고 결정론적 Dashboard Fallback으로 복구한다.
 - Analysis별 호출 Budget을 공유하고 기본 한도를 4회로 설정했다. 정상 Plan·Composer 2회와 각 단계의 교정 Retry 1회를 포함하는 상한이다.
 - `AI_PROVIDER=gemini`이지만 설정이 불완전하거나 Live 호출이 실패하면 Mock Provider로 안전하게 Fallback하고 Response Metadata에 상태를 남긴다.
+- 지역명이 명시된 질문은 Planner가 실제 Dataset Value를 받지 않더라도 등록된 별칭 Resolver가 `경기도 → Gyeonggi` 같은 canonical Filter를 Query와 Context에 결정론적으로 적용한다.
+- `상품`과 `판매 수량` 또는 `판매량`이 함께 있는 질문은 총계·일별 추이·상품별 상위 순위의 세 검증 Query로 결정론적으로 확장한다. Composer가 실패해도 이 세 Dataset을 모두 보존해 Dashboard Fallback으로 표시한다.
 - Gemini Provider, Fallback, Provider Factory, 환경 선택에 대한 주입형 Unit Test를 추가했다. 실제 Gemini Key나 네트워크 호출은 사용하지 않는다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - 공식 Supabase SDK와 CLI를 lockfile에 고정하고, CLI로 Phase 6 migration을 생성했다.
 - `analytics_daily`, Dataset Metadata, 선택적 Persisted History, 운영 Event Table을 만드는 Supabase Migration을 추가했다. 네 Table 모두 RLS를 활성화하고 `anon`·`authenticated` 권한을 제거했다.
 - `SupabaseAnalyticsRepository`가 Local Repository와 동일한 Contract로 서버 전용 Secret Client에서 Row를 읽고, Snake Case DB Row를 검증된 Analytics Row로 변환한 뒤 같은 결정론적 Engine을 사용하도록 구현했다.
 - Supabase 설정이 불완전하면 `DATA_SOURCE=supabase`여도 Local Repository로 안전하게 복구한다. `npm run seed:supabase`는 Local Synthetic Data와 Dataset Version을 서버 Secret으로만 적재한다.
 - 의미상 같은 질문과 Context에 대해 LRU·TTL 메모리 Cache를 적용하고, Cached Response는 현재 Request·Session·Dashboard ID로 다시 묶어 식별자를 재사용하지 않는다.
+- Query와 Dashboard 해석 규칙이 바뀌면 `analysisCacheSemanticsVersion`도 갱신해, 개발 중이나 장기 실행 Server에서 이전 의미의 Cache를 재사용하지 않는다.
 - Concurrent 동일 분석은 한 번만 실행하도록 Request Deduplication을 추가했다. Cache 확인은 Rate Limit보다 먼저 수행하며, 새 분석만 UTC 일 단위 Client Limit을 소비한다.
 - Gemini Live Kill Switch(`AI_LIVE_ENABLED=false`)가 즉시 Mock Provider로 복구하도록 추가했다.
 - 질문·IP·Secret을 로그나 Supabase Event에 저장하지 않고, 해시된 분석 Key와 Provider·Cache·Partial·Fallback·Duration Metadata만 기록한다. Persisted History는 명시적 Opt-in일 때만 저장한다.
@@ -123,6 +126,9 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - 조건 변경은 새 Cache Key로 분리한다. 조건 표시·제거·비교 선택, Schema 경계, Context Filter·비교 기준 재적용을 검증하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
 - 같은 `sessionId`를 가진 Local Analysis History를 시간순 버전으로 묶는 `Analysis trail`을 추가했다. 버전마다 질문·기간·주 지표·비교·첫 Filter와 이전 버전에서 바뀐 조건을 보여주며, 사용자는 저장된 검증 응답을 다시 열어 당시 Dashboard를 복원할 수 있다. 버전 열기는 새 분석이나 AI 호출을 만들지 않는다.
 - 세션 범위·시간순 정렬·조건 변경 Label을 검증하는 Unit Test를 추가했다. 테스트 실행은 사용자 요청에 따라 보류한다.
+- 상품 순위 결과(`핵심 지표 + 가로 막대 + 순위표 + 인사이트`)에는 4:8 두 레인 Evidence Layout을 적용했다. KPI·순위표는 왼쪽 레인에, 비교 차트·근거는 오른쪽 레인에 맞물려 배치되며, 비교 없는 순위표는 불필요한 변화 열과 내부 가로 스크롤을 제거한다.
+- 화면 전용 한글 표시 변환을 추가해 원본 Query Filter 값은 보존하면서 지역·상품·카테고리·디바이스·캠페인·유입 소스, 기간 Preset, 데이터 근거, Dashboard Copy, 축의 만·억 단위를 한글로 표시한다.
+- Ranked Bar의 왼쪽 여백을 고정 88px 대신 실제 표시 Label 길이에서 결정하고, 표시용 Label과 Drilldown용 원본 Label을 분리했다. 긴 상품명이 SVG 바깥으로 잘리지 않으면서도 클릭 후 검증된 원본 Filter가 유지된다.
 
 ## 진행 중
 
@@ -152,8 +158,13 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-08-31 | Gemini Structured Output은 JSON Schema 요청 후 Zod와 Semantic 규칙으로 재검증 | SDK가 형식을 보조하더라도 Application Schema와 숫자 표시 금지 규칙을 최종 신뢰 경계로 유지하기 위함 |
 | 2026-08-31 | Live 요청 Budget은 기본 4회 | Plan·Composer의 정상 2회와 각 1회 교정 요청을 허용하면서 무한 Retry를 막기 위함 |
 | 2026-08-31 | Gemini 실패 시 Mock Provider로 Fallback | Key가 없거나 Live Provider가 실패해도 Local Demo와 기존 Dashboard 복구 흐름을 유지하기 위함 |
+| 2026-09-05 | Gemini 전송용 Schema는 필드 구조·필수값·enum만 유지 | Generate Content가 거절하는 Zod의 길이·정규식·strict 제약은 전송하지 않고, 수신 응답은 원본 Zod로 최종 검증하기 위함 |
+| 2026-09-05 | 질문 속 지역명은 결정론적 별칭 Resolver로 canonical Dataset Value에 매핑 | Planner에 실제 Business Data Value를 전달하지 않으면서도 한국어 지역 질문이 유효한 Query Filter로 실행되게 하기 위함 |
+| 2026-09-05 | Composer 표시 문구의 숫자 검증은 기간 단위만 예외 처리 | `최근 30일` 같은 Context 설명은 허용하면서도 모델이 만든 매출·수량·비율을 Renderer로 보내지 않기 위함 |
+| 2026-09-05 | 지역 상품 수량은 총계·추이·상품 순위로 확장하고 Fallback도 모든 검증 Dataset을 표시 | 단일 집계로 시각 정보가 사라지거나 Composer가 복구될 때 한 장의 KPI Card만 남는 것을 막기 위함 |
 | 2026-08-31 | Supabase는 서버 Secret Client와 RLS·권한 회수로만 접근 | 공개 Demo가 Data API를 통해 Raw Analytics·History·Operation Event에 접근하지 못하게 하기 위함 |
 | 2026-08-31 | 분석 Cache는 요청 식별자를 제외한 질문·Context·실행 Scope를 Key로 사용 | 같은 분석 작업을 재사용하면서도 Response의 Analysis·Session·Dashboard ID는 현재 요청에 귀속하기 위함 |
+| 2026-09-05 | Cache Key에 분석 의미 버전을 포함 | Query 확장·Dashboard Fallback 같은 Server 해석 변경 뒤에도 이전 Dashboard Payload가 Cache Hit으로 다시 표시되지 않게 하기 위함 |
 | 2026-08-31 | Rate Limit은 Cache Miss에만 UTC 일 단위로 적용 | Cached Demo가 Limit이나 Provider 장애로 막히지 않게 하고, 새 분석의 비용만 제한하기 위함 |
 | 2026-08-31 | 운영 기록은 Raw Question 대신 SHA-256 분석 Key만 사용 | Prompt나 식별 정보를 보관하지 않고 복구 상태를 관측하기 위함 |
 | 2026-08-31 | Stitch `Prism AI Executive Analytics`를 UI Source of Truth로 사용 | 현재 제품 기능은 유지하면서 Home·Dashboard·History·Processing 전반의 시각 언어와 화면 밀도를 일관되게 맞추기 위함 |
@@ -180,6 +191,7 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-03 | 선택값 후속 분석은 현재 Context의 단일 허용 `eq` Filter를 서버에서 모든 Query DSL에 강제 | UI나 모델이 분석 범위를 임의로 넓히지 못하게 하면서도, 사용자가 검증된 Chart 값에서 바로 좁은 분석으로 이어지게 하기 위함 |
 | 2026-09-03 | Dashboard Filter·비교 기준 변경은 전용 Context Override로 서버에서 재적용 | 조건 제거·전체 해제·비교 선택이 자연어 해석이나 Client-only State에 의존하지 않고, 다음 Query 범위를 결정론적으로 바꾸게 하기 위함 |
 | 2026-09-03 | Dashboard Version History는 같은 `sessionId`의 Local History Response만 다시 연다 | 버전 복원이 API·AI 호출이나 Client가 만든 숫자에 의존하지 않고, 당시 검증된 결과를 정확히 재현하게 하기 위함 |
+| 2026-09-05 | 화면 표시값은 Presentation Localizer에서만 한글화 | Repository·Query DSL의 Canonical Value를 바꾸지 않아 Drilldown·Filter·결정론적 계산의 검증 경계를 유지하기 위함 |
 
 ## 검증 결과
 
@@ -434,9 +446,34 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 - `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
 - `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
 
+- `npm run lint`: 통과 (Gemini Structured Output Fix)
+- `npm run typecheck`: 통과 (Gemini Structured Output Fix)
+- `npm run build`: 통과 (Gemini Structured Output Fix, Next.js Webpack production build)
+- Live Gemini Planner 확인: 통과 (`gemini-3.5-flash`, `경기도 판매 상품 수량` → `unitsSold` Query와 `region = Gyeonggi` canonical Filter)
+- Live Gemini Composer 확인: 통과 (Gyeonggi 결정론적 Dataset을 기준으로 검증된 3개 Widget 구성)
+- `npm run test`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test:e2e`: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run check`: 미실행 (`npm run test`를 포함하므로 사용자 요청에 따라 보류)
+- `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
+- `npm run lint`: 통과 (Gemini Product-Units Dashboard Recovery)
+- `npm run typecheck`: 통과 (Gemini Product-Units Dashboard Recovery)
+- `npm run build`: 통과 (Gemini Product-Units Dashboard Recovery, Next.js Webpack production build)
+- Live Gemini API 재현: `경기도 판매 수량`은 단일 집계 Query·정상 Metric Dashboard를 반환했다. `경기도 판매 상품 수량`은 Composer가 모델 문구에 Business Number를 넣는 경우 안전 Fallback으로 전환되는 것을 확인했다.
+- 로컬 Analyze API 재확인: 기존 질문인 `경기도 판매 상품 수량`이 총계·일별 추이·상품별 비교·계산된 근거의 네 Widget을 반환했다. Gemini 요청 제한으로 Mock Composer로 복구된 경우에도 동일한 검증 Dataset 구성을 유지한다.
+- Gemini Structured Output·Question Resolver·Dashboard Fallback·Gyeonggi Mock Unit Test 추가: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test`, `npm run test:e2e`, `npm run check`, `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
+- `npm run lint`: 통과 (Dashboard Evidence Layout·Korean Presentation)
+- `npm run typecheck`: 통과 (Dashboard Evidence Layout·Korean Presentation)
+- `npm run build`: 통과 (Dashboard Evidence Layout·Korean Presentation, Next.js Webpack production build)
+- 변경 파일 대상 `prettier --check`와 `git diff --check`: 통과 (Dashboard Evidence Layout·Korean Presentation)
+- Layout·Label Localizer·Bar Margin Unit Test 추가 및 수정: 미실행 (사용자 요청: 테스트는 명시적으로 요청할 때만 실행)
+- `npm run test`, `npm run test:e2e`, `npm run check`, `npx react-doctor@latest --verbose --scope changed`: 미실행 (사용자 요청에 따라 보류)
+
 ## 알려진 제한 사항
 
-- Live Gemini 호출은 사용자 Key와 실제 API Quota가 있어야 검증할 수 있다. SDK Abort Signal은 클라이언트 대기를 중단하지만 Google 서비스 측 작업이나 사용량 청구를 보장해 취소하지는 않는다.
+- Gemini Generate Content의 구조화 출력은 JSON Schema 일부만 허용한다. Gemini 전송용 Schema는 필드 구조·필수값·enum만 유지해 변환하고, 원본 Zod Schema가 응답을 최종 검증한다. SDK Abort Signal은 클라이언트 대기를 중단하지만 Google 서비스 측 작업이나 사용량 청구를 보장해 취소하지는 않는다.
 - In-memory Cache와 Rate Limit·Request Deduplication은 단일 Server Instance 범위다. 여러 Instance에서 공유하려면 Redis 또는 Platform Durable Cache가 필요하다.
 - Supabase Project·Key가 아직 제공되지 않아 Migration 적용, `seed:supabase`, 실제 Row Query, RLS Advisor와 Database Test는 실행하지 않았다.
 - `.env.local`은 생성하지 않았고, 기본 Mock Mode는 환경 변수 없이 동작한다.

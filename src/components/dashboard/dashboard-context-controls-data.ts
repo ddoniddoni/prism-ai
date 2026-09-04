@@ -1,6 +1,8 @@
 import { dimensionCatalog } from "@/lib/analytics/dimension-catalog";
 import type { AnalyticsFilter } from "@/lib/analytics/query-schema";
 
+import { formatDimensionValue } from "./formatters";
+
 function getDashboardContextFilterId(filter: AnalyticsFilter): string {
   return `${filter.dimension}:${filter.operator}:${filter.values.join("\u0001")}`;
 }
@@ -9,7 +11,9 @@ export function getDashboardContextFilterLabel(
   filter: AnalyticsFilter,
 ): string {
   const dimension = dimensionCatalog[filter.dimension].label;
-  const values = filter.values.join(", ");
+  const values = filter.values
+    .map((value) => formatDimensionValue(filter.dimension, value))
+    .join(", ");
 
   if (filter.operator === "notIn") {
     return `${dimension} · ${values} 제외`;

@@ -4,6 +4,7 @@ import { AnalyzeQuestionService } from "@/lib/analysis/analyze-question-service"
 import type { AnalyzeRequest } from "@/lib/analysis/schemas";
 
 import {
+  analysisCacheSemanticsVersion,
   createAnalysisCacheKey,
   InMemoryAnalysisCache,
   rebindAnalysisResponse,
@@ -29,9 +30,10 @@ describe("InMemoryAnalysisCache", () => {
       sessionId: "session-override",
     };
 
-    expect(createAnalysisCacheKey(originalRequest, scope)).toBe(
-      createAnalysisCacheKey(followUp, scope),
-    );
+    const originalKey = createAnalysisCacheKey(originalRequest, scope);
+
+    expect(originalKey).toBe(createAnalysisCacheKey(followUp, scope));
+    expect(originalKey).toContain(analysisCacheSemanticsVersion);
   });
 
   it("keeps different selected chart filters in separate cache entries", () => {

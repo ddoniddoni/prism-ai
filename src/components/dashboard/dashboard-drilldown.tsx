@@ -13,7 +13,12 @@ import {
   createDashboardDrilldownFilter,
   type DashboardDrilldownSelection,
 } from "./dashboard-drilldown-data";
-import { formatChangeWithDirection, formatMetricValue } from "./formatters";
+import {
+  formatChangeWithDirection,
+  formatDimensionValue,
+  formatMetricValue,
+  localizeAnalyticsText,
+} from "./formatters";
 
 type DashboardDrilldownProps = {
   dataset: AnalyticsDataset;
@@ -24,11 +29,14 @@ type DashboardDrilldownProps = {
   selection: DashboardDrilldownSelection;
 };
 
-function formatSelectionLabel(label: string): string {
+function formatSelectionLabel(
+  dimension: AnalyticsDataset["groupBy"],
+  label: string,
+): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(label);
 
-  if (!match) {
-    return label;
+  if (dimension !== "date" || !match) {
+    return formatDimensionValue(dimension, label);
   }
 
   return `${Number(match[2])}월 ${Number(match[3])}일`;
@@ -66,10 +74,14 @@ export function DashboardDrilldown({
       (finding) =>
         isRelatedFinding(finding) && finding.segment === drilldown.point.label,
     ) ?? findings.find((finding) => isRelatedFinding(finding));
+  const selectionLabel = formatSelectionLabel(
+    drilldown.dataset.groupBy,
+    drilldown.point.label,
+  );
 
   return (
     <aside
-      aria-label={`${formatSelectionLabel(drilldown.point.label)} 상세 근거`}
+      aria-label={`${selectionLabel} 상세 근거`}
       className="mt-3 overflow-hidden rounded-lg border border-[#c9cbff] bg-[linear-gradient(135deg,#f6f7ff_0%,#ffffff_58%)]"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#dde0fb] px-3 py-2.5 sm:px-3.5">
@@ -79,10 +91,10 @@ export function DashboardDrilldown({
           </span>
           <div className="min-w-0">
             <p className="text-[9px] font-semibold tracking-[0.1em] text-[#4f46e5] uppercase">
-              Selected evidence
+              선택한 근거
             </p>
             <p className="truncate text-[12px] font-semibold text-[#272b35]">
-              {formatSelectionLabel(drilldown.point.label)} · {dimensionLabel}
+              {selectionLabel} · {dimensionLabel}
             </p>
           </div>
         </div>
@@ -144,7 +156,7 @@ export function DashboardDrilldown({
       <div className="flex flex-col gap-2.5 px-3 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:px-3.5">
         <p className="max-w-2xl text-[10px] leading-5 text-[#595e6b]">
           {relatedFinding
-            ? relatedFinding.fallbackText
+            ? localizeAnalyticsText(relatedFinding.fallbackText)
             : `${drilldown.dataset.dataRange.startDate}부터 ${drilldown.dataset.dataRange.endDate}까지의 검증된 ${dimensionLabel} 집계입니다.`}
         </p>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -162,7 +174,7 @@ export function DashboardDrilldown({
             </button>
           ) : null}
           <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4f46e5]">
-            Query ref {drilldown.dataset.queryId}
+            검증 데이터 근거
             <ChevronRight aria-hidden="true" className="size-3" />
           </span>
         </div>

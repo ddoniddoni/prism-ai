@@ -13,11 +13,13 @@ export type PrismDonutDatum = {
   color: string;
   id: string;
   label: string;
+  sourceLabel: string;
   value: number;
 };
 
 export function createPrismDonutData(
   points: readonly DataPoint[],
+  formatLabel: (label: string) => string = (label) => label,
 ): readonly PrismDonutDatum[] {
   return points.flatMap((point, index) => {
     const value = Math.abs(point.value ?? 0);
@@ -30,7 +32,8 @@ export function createPrismDonutData(
       {
         color: prismDonutColors[index % prismDonutColors.length],
         id: `${point.label}-${index}`,
-        label: point.label,
+        label: formatLabel(point.label),
+        sourceLabel: point.label,
         value,
       },
     ];

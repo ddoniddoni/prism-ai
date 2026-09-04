@@ -441,6 +441,70 @@ function createMetricCalendarPlan(
   ]);
 }
 
+function createMetricRankingEvidencePlan(
+  widgets: readonly DashboardWidget[],
+  dataDensity: DashboardLayoutDataDensity,
+  heightOverrides: DashboardLayoutHeightOverrides,
+): DashboardLayoutPlan | undefined {
+  if (widgets.length !== 4) {
+    return undefined;
+  }
+
+  const metricWidget = widgets.find((widget) => widget.type === "metric");
+  const barWidget = widgets.find((widget) => widget.type === "categoryBar");
+  const rankingWidget = widgets.find(
+    (widget) => widget.type === "rankingTable" || widget.type === "dataTable",
+  );
+  const insightWidget = widgets.find((widget) => widget.type === "insight");
+
+  if (
+    !metricWidget ||
+    !barWidget ||
+    !rankingWidget ||
+    !insightWidget ||
+    barWidget.config.queryId !== rankingWidget.config.queryId
+  ) {
+    return undefined;
+  }
+
+  const metricProfile = withHeightOverride(
+    metricWidget,
+    getDefaultProfile(metricWidget, dataDensity),
+    heightOverrides,
+  );
+  const barProfile = withHeightOverride(
+    barWidget,
+    { h: 7, presentation: "feature", w: 8 },
+    heightOverrides,
+  );
+  const rankingProfile = withHeightOverride(
+    rankingWidget,
+    { h: 7, presentation: "compact", w: 4 },
+    heightOverrides,
+  );
+  const insightProfile = withHeightOverride(
+    insightWidget,
+    { h: 4, presentation: "standard", w: 8 },
+    heightOverrides,
+  );
+
+  return new Map([
+    [
+      metricWidget.id,
+      { ...metricProfile, id: metricWidget.id, w: 4, x: 0, y: 0 },
+    ],
+    [barWidget.id, { ...barProfile, id: barWidget.id, w: 8, x: 4, y: 0 }],
+    [
+      rankingWidget.id,
+      { ...rankingProfile, id: rankingWidget.id, w: 4, x: 0, y: 4 },
+    ],
+    [
+      insightWidget.id,
+      { ...insightProfile, id: insightWidget.id, w: 8, x: 4, y: 7 },
+    ],
+  ]);
+}
+
 /**
  * Creates deterministic widget rectangles from validated widget semantics and
  * measured query-result density. It intentionally does not use LLM output or
@@ -462,6 +526,7 @@ export function createDashboardLayoutPlan(
   }
 
   return (
+    createMetricRankingEvidencePlan(widgets, dataDensity, heightOverrides) ??
     createMetricCalendarPlan(widgets, dataDensity, heightOverrides) ??
     createDesktopBentoPlan(widgets, dataDensity, heightOverrides) ??
     createSequentialLayoutPlan(

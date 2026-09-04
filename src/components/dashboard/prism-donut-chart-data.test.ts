@@ -18,8 +18,20 @@ const points: readonly DataPoint[] = [
 describe("PrismDonutChart data", () => {
   it("keeps only drawable segments with a deterministic color", () => {
     expect(createPrismDonutData(points)).toEqual([
-      { color: "#4f46e5", id: "Organic-0", label: "Organic", value: 320_000 },
-      { color: "#6172e8", id: "Paid-1", label: "Paid", value: 180_000 },
+      {
+        color: "#4f46e5",
+        id: "Organic-0",
+        label: "Organic",
+        sourceLabel: "Organic",
+        value: 320_000,
+      },
+      {
+        color: "#6172e8",
+        id: "Paid-1",
+        label: "Paid",
+        sourceLabel: "Paid",
+        value: 180_000,
+      },
     ]);
   });
 

@@ -3,11 +3,13 @@
 import { ResponsiveBar, type BarTooltipProps } from "@nivo/bar";
 import { useCallback, useId, useMemo } from "react";
 
+import type { DimensionKey } from "@/lib/analytics/dimension-catalog";
 import type { DataPoint } from "@/lib/analytics/query-engine";
 import type { MetricKey } from "@/lib/analytics/metric-catalog";
 import type { DashboardWidgetPresentation } from "@/stores/dashboard-layout";
 
 import {
+  formatDimensionValue,
   formatChangeWithDirection,
   formatMetricAxisValue,
   formatMetricValue,
@@ -15,11 +17,13 @@ import {
 import {
   createPrismRankedBarData,
   getPrismRankedBarChartHeight,
+  getPrismRankedBarLeftMargin,
   type PrismRankedBarDatum,
 } from "./prism-ranked-bar-chart-data";
 import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type PrismRankedBarChartProps = {
+  dimension?: DimensionKey;
   metric: MetricKey;
   onSelectPoint?: (label: string) => void;
   points: readonly DataPoint[];
@@ -95,6 +99,7 @@ function createPrismRankedBarTooltip(metric: MetricKey) {
 }
 
 export function PrismRankedBarChart({
+  dimension,
   metric,
   onSelectPoint,
   points,
@@ -103,9 +108,16 @@ export function PrismRankedBarChart({
 }: PrismRankedBarChartProps) {
   const chartId = useId().replace(/:/g, "");
   const prefersReducedMotion = usePrefersReducedMotion();
-  const data = useMemo(() => createPrismRankedBarData(points), [points]);
+  const data = useMemo(
+    () =>
+      createPrismRankedBarData(points, (label) =>
+        formatDimensionValue(dimension, label),
+      ),
+    [dimension, points],
+  );
   const tooltip = useMemo(() => createPrismRankedBarTooltip(metric), [metric]);
   const chartHeight = getPresentationChartHeight(data.length, presentation);
+  const leftMargin = useMemo(() => getPrismRankedBarLeftMargin(data), [data]);
   const summaryId = `prism-ranked-bar-chart-summary-${chartId}`;
   const chartSummary =
     data.length > 0
@@ -118,7 +130,7 @@ export function PrismRankedBarChart({
       : `${title} 차트에 표시할 데이터가 없습니다.`;
   const handleBarClick = useCallback(
     (datum: { data: PrismRankedBarDatum }) => {
-      onSelectPoint?.(datum.data.label);
+      onSelectPoint?.(datum.data.sourceLabel);
     },
     [onSelectPoint],
   );
@@ -147,7 +159,7 @@ export function PrismRankedBarChart({
         <span className="font-semibold tracking-[0.09em] text-[#777587] uppercase">
           높은 순
         </span>
-        <span className="font-mono text-[#777587]">{data.length} segments</span>
+        <span className="font-mono text-[#777587]">{data.length}개 항목</span>
       </div>
       <div style={{ height: chartHeight }}>
         <ResponsiveBar
@@ -184,7 +196,7 @@ export function PrismRankedBarChart({
           labelSkipWidth={0}
           labelTextColor="#343844"
           layout="horizontal"
-          margin={{ bottom: 30, left: 88, right: 80, top: 2 }}
+          margin={{ bottom: 30, left: leftMargin, right: 80, top: 2 }}
           motionConfig="gentle"
           onClick={handleBarClick}
           padding={0.38}

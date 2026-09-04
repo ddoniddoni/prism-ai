@@ -5,6 +5,7 @@ import type { DataPoint } from "@/lib/analytics/query-engine";
 import {
   createPrismRankedBarData,
   getPrismRankedBarChartHeight,
+  getPrismRankedBarLeftMargin,
 } from "./prism-ranked-bar-chart-data";
 
 const points: readonly DataPoint[] = [
@@ -24,6 +25,7 @@ describe("PrismRankedBarChart data", () => {
         id: "Desktop-1",
         label: "Desktop",
         rank: 1,
+        sourceLabel: "Desktop",
         value: 320_000,
       },
       {
@@ -33,6 +35,7 @@ describe("PrismRankedBarChart data", () => {
         id: "Tablet-3",
         label: "Tablet",
         rank: 2,
+        sourceLabel: "Tablet",
         value: 210_000,
       },
       {
@@ -42,6 +45,7 @@ describe("PrismRankedBarChart data", () => {
         id: "Mobile-0",
         label: "Mobile",
         rank: 3,
+        sourceLabel: "Mobile",
         value: 180_000,
       },
     ]);
@@ -50,5 +54,13 @@ describe("PrismRankedBarChart data", () => {
   it("keeps the chart height dense for short rankings and bounded for long ones", () => {
     expect(getPrismRankedBarChartHeight(3)).toBe(176);
     expect(getPrismRankedBarChartHeight(20)).toBe(264);
+  });
+
+  it("reserves enough left space for the longest localized label", () => {
+    const data = createPrismRankedBarData(points, (label) =>
+      label === "Desktop" ? "오빗 무선 이어폰" : label,
+    );
+
+    expect(getPrismRankedBarLeftMargin(data)).toBeGreaterThan(88);
   });
 });
