@@ -6,9 +6,16 @@ Phase 8: Portfolio 완성
 
 ## 상태
 
-Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측정 완료 · README·Architecture Diagram·Demo 자료 진행 전 · 테스트 실행 보류
+Phase 8 Dashboard 모듈 분리·문서 현행화·다섯 차트 번들 측정 완료 · README Architecture Diagram·Demo 가이드 작성 · 테스트·브라우저 검증 보류
 
 ## 완료
+
+- 2026-09-06: Dashboard Renderer의 Header·공통 Frame·Registry·위젯별 Dataset 연결을 별도 Module로 분리했다. 기존 Chart 동적 로딩, Widget memo, 선택 Callback과 표시 JSX는 유지하고 Renderer는 Grid 조합을 담당한다.
+- Editor의 Toolbar·Widget Control과 콘텐츠 높이 Observer를 분리했다. Store와 순수 자동 Layout 규칙, Custom Layout 보존 정책은 유지한다.
+- README를 Phase 8 기능·현재 스택·설계 경계 기준으로 갱신하고 Architecture Diagram과 `docs/DEMO.md`를 추가했다. Architecture·제품 명세·의존성 계획도 실제 Nivo·Editor·9개 추천 질문과 일치시켰다.
+- Architecture의 Cache Key와 취소 설명을 구현에 맞췄다. Dataset Version·Model ID는 현재 Cache Key에 없으며 사용자 취소의 전체 Pipeline 전파와 실시간 진행 Stream은 미구현으로 명시했다.
+- 번들 측정기가 동적 Import 대상 Module 이름을 찾도록 변경하고 누적 막대·캘린더 및 초기 자산+Editor+다섯 Chart의 중복 제거 합계를 추가했다. 새 빌드의 수치와 측정 제한은 `docs/PERFORMANCE.md`에 기록했다.
+- 기존 E2E의 오래된 Heading·Provider·Filter·Chart 문구를 현재 한글 UI에 맞췄고 History 재열기 시 새 Analyze 요청이 없는 기대값을 추가했다. E2E는 3100 포트의 별도 Production Server에서 Mock·Local·Live 비활성화를 강제하며 기존 개발 서버를 재사용하지 않는다. E2E 실행 전에 build가 필요하다. 테스트는 실행하지 않았다.
 
 - Phase 0 Bootstrap을 완료했다.
 - 2024-09-01부터 2026-08-30까지 10,935개의 고정 시드 일별 합성 E-commerce 데이터를 생성했다.
@@ -132,12 +139,14 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 
 ## 진행 중
 
-- Phase 8의 Accessibility·Responsive 1차 보완, Nivo 기반 `PrismTrendChart`·`PrismDonutChart`·`PrismRankedBarChart`, 재현 가능한 정적 Bundle 측정을 마쳤다. 다음 README, Architecture Diagram, Screenshot, Demo Scenario와 배포 준비가 남아 있다.
+- README·Architecture Diagram·Demo 가이드와 현재 정적 Bundle 기록을 갱신했다. 실제 Desktop·Mobile 시나리오, Screenshot·Demo 영상과 배포 환경 성능 확인이 남아 있다. 테스트는 사용자 요청에 따라 보류한다.
 
 ## 결정 사항
 
 | 날짜 | 결정 | 이유 |
 |---|---|---|
+| 2026-09-06 | Dashboard 표현을 Header·Frame·Registry·개별 Widget으로 분리하고 Editor Control·높이 관찰을 추출 | 새 위젯과 편집 기능이 하나의 Renderer에 누적되지 않게 하면서 기존 지연 로딩·상태 소유권을 유지하기 위함 |
+| 2026-09-06 | E2E는 별도 Production Server에서 Mock·Local 설정을 강제 | 개발 서버의 Live Provider 설정을 재사용하지 않고 재현 가능한 검증 환경을 만들기 위함 |
 | 2026-08-31 | npm만 사용 | Project Owner의 선택과 단일 Lockfile 유지 |
 | 2026-08-31 | Local Data와 MockAIProvider를 기본값으로 사용 | API 비용과 Secret 없이 Portfolio Demo 전체가 동작해야 함 |
 | 2026-08-31 | AI 책임을 Planner와 Dashboard Composer 두 개로 제한 | 숫자 분석은 결정론적 코드가 담당하고 Model Call 비용을 줄이기 위함 |
@@ -194,6 +203,18 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 | 2026-09-05 | 화면 표시값은 Presentation Localizer에서만 한글화 | Repository·Query DSL의 Canonical Value를 바꾸지 않아 Drilldown·Filter·결정론적 계산의 검증 경계를 유지하기 위함 |
 
 ## 검증 결과
+
+### 2026-09-06: Dashboard 책임 분리와 문서 현행화
+
+- `npm run lint`: 통과.
+- `npm run typecheck`: 통과.
+- `AI_PROVIDER=mock AI_LIVE_ENABLED=false DATA_SOURCE=local PERSIST_ANALYSIS_HISTORY=false npm run build`: 통과 (Next.js 16.3.3 Webpack production build).
+- 변경한 TypeScript·TSX·README 대상 `prettier --check`: 통과. `git diff --check`: 통과. 전체 Repository의 `format:check`는 실행하지 않았다.
+- `npm run analyze:bundle`: 최초 실행은 tsx의 IPC 소켓 생성이 Sandbox에서 `EPERM`으로 차단됐다. 동일 읽기 전용 명령을 승인된 Sandbox 밖에서 재실행해 통과했다. 초기 229.9 KiB gzip, Editor와 다섯 Chart까지 중복 제거 합계 400.6 KiB gzip.
+- `npm run test`, `npm run test:e2e`, `npm run check`, react-doctor: 미실행 (이번 세션의 사용자 요청). E2E 기대값·실행 환경을 갱신했지만 동작 통과로 간주하지 않는다.
+- Browser 시나리오·Web Vitals·Live API·실제 DB 검증: 미실행. 이번 확인은 소스 검토, lint·타입 검사·빌드·정적 번들 측정 범위다.
+
+### 이전 작업의 검증 기록
 
 - `npm run lint`: 통과 (Dashboard Version History)
 - `npm run typecheck`: 통과 (Dashboard Version History)
@@ -473,6 +494,9 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 
 ## 알려진 제한 사항
 
+- 2026-09-06 기준 Browser → Route → Provider 사용자 취소 전파와 서버 단계별 진행 Stream은 미구현이다. Gemini 요청별 Timeout만 구현돼 있다.
+- 현재 Cache Key는 실제 Dataset Version과 Gemini Model ID를 포함하지 않는다. 동일 Process에서 데이터·모델을 변경하면 TTL 만료 또는 재시작이 필요하다.
+
 - Gemini Generate Content의 구조화 출력은 JSON Schema 일부만 허용한다. Gemini 전송용 Schema는 필드 구조·필수값·enum만 유지해 변환하고, 원본 Zod Schema가 응답을 최종 검증한다. SDK Abort Signal은 클라이언트 대기를 중단하지만 Google 서비스 측 작업이나 사용량 청구를 보장해 취소하지는 않는다.
 - In-memory Cache와 Rate Limit·Request Deduplication은 단일 Server Instance 범위다. 여러 Instance에서 공유하려면 Redis 또는 Platform Durable Cache가 필요하다.
 - Supabase Project·Key가 아직 제공되지 않아 Migration 적용, `seed:supabase`, 실제 Row Query, RLS Advisor와 Database Test는 실행하지 않았다.
@@ -484,4 +508,4 @@ Phase 8 접근성·반응형 1차 보완, Nivo Chart 3종과 번들 성능 측�
 
 ## 다음 권장 작업
 
-README에서 Frontend·AI·성능 설계 결정을 정리한 뒤 Architecture Diagram과 Portfolio Demo 자료를 완성한다.
+테스트 실행이 허용되면 `npm run check` 후 `npm run test:e2e`로 현재 회귀 상태를 확인한다. `docs/DEMO.md`의 Desktop·Mobile 대표 시나리오를 확인하고 실제 Screenshot·Demo 영상과 배포 환경 Web Vitals를 기록한다.

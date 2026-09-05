@@ -21,11 +21,15 @@ test("starts an analysis from a recommended question and renders a verified dash
   await page.getByRole("button", { name: "분석 시작하기" }).click();
 
   await expect(page).toHaveURL(/\/dashboard\/mock-preview\?question=/);
-  await expect(page.getByText("지난달 매출이 왜 감소했어?")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "지난달 매출 변화의 신호", level: 1 }),
+    page
+      .getByRole("region", { name: "Submitted question" })
+      .getByText("지난달 매출이 왜 감소했어?", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Mock AI · verified result")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "매출 분석 결과", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText("로컬 AI · 검증 결과")).toBeVisible();
 });
 
 test("renders the empty history shell", async ({ page }) => {
@@ -48,29 +52,29 @@ test("edits, restores, and persists a dashboard layout", async ({ page }) => {
   );
 
   await expect(
-    page.getByRole("heading", { name: "지난달 매출 변화의 신호", level: 1 }),
+    page.getByRole("heading", { name: "매출 분석 결과", level: 1 }),
   ).toBeVisible();
   await page.getByRole("button", { name: "대시보드 편집" }).click();
   await page
     .getByRole("combobox", { name: "주요 세그먼트 비교 표시 형식" })
     .selectOption("donut");
   await expect(
-    page.getByRole("img", { name: "주요 세그먼트 비교 도넛 그래프" }),
+    page.getByRole("img", { name: "디바이스별 매출 구성 도넛 차트" }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "주요 세그먼트 비교 삭제" }).click();
   await expect(
-    page.getByRole("heading", { name: "주요 세그먼트 비교" }),
+    page.getByRole("heading", { name: "디바이스별 매출 구성", exact: true }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "대시보드 편집 실행 취소" }).click();
   await expect(
-    page.getByRole("heading", { name: "주요 세그먼트 비교" }),
+    page.getByRole("heading", { name: "디바이스별 매출 구성", exact: true }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "편집 완료" }).click();
   await page.reload();
   await expect(
-    page.getByRole("img", { name: "주요 세그먼트 비교 도넛 그래프" }),
+    page.getByRole("img", { name: "디바이스별 매출 구성 도넛 차트" }),
   ).toBeVisible();
 });
 
@@ -82,40 +86,66 @@ test("keeps context across follow-ups and reopens a saved dashboard", async ({
   );
 
   await expect(
-    page.getByRole("heading", { name: "이번 달 성과 스냅샷", level: 1 }),
+    page.getByRole("heading", { name: "매출 분석 결과", level: 1 }),
   ).toBeVisible();
   await page.getByLabel("후속 분석 질문").fill("모바일만 자세히 분석해줘.");
   await page.getByRole("button", { name: "후속 분석" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "모바일 성과 분석", level: 1 }),
+    page.getByRole("heading", { name: "모바일 매출 분석 결과", level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText("thisMonth")).toBeVisible();
-  await expect(page.getByText("device: mobile")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "모바일 매출 분석 결과", exact: true })
+      .getByText("이번 달", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "디바이스 · 모바일 조건 제거" }),
+  ).toBeVisible();
 
   await page.getByLabel("후속 분석 질문").fill("작년 같은 기간과 비교해줘.");
   await page.getByRole("button", { name: "후속 분석" }).click();
 
   await expect(
     page.getByRole("heading", {
-      name: "작년 같은 기간과의 비교",
+      name: "모바일 매출 분석 결과",
       level: 1,
     }),
   ).toBeVisible();
-  await expect(page.getByText("전년 동기 대비")).toBeVisible();
-  await expect(page.getByText("device: mobile")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "비교 기준" })).toHaveValue(
+    "previousYear",
+  );
+  await expect(
+    page.getByRole("button", { name: "디바이스 · 모바일 조건 제거" }),
+  ).toBeVisible();
 
   await page.goto("/history");
   const savedAnalysis = page.getByRole("link", {
     name: "작년 같은 기간과의 비교",
   });
   await expect(savedAnalysis).toBeVisible();
+  const analysisRequests: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/analyze"
+    ) {
+      analysisRequests.push(request.url());
+    }
+  });
   await savedAnalysis.click();
 
   await expect(
     page.getByRole("heading", {
-      name: "작년 같은 기간과의 비교",
+      name: "모바일 매출 분석 결과",
       level: 1,
     }),
   ).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "비교 기준" })).toHaveValue(
+    "previousYear",
+  );
+  await expect(
+    page.getByRole("button", { name: "디바이스 · 모바일 조건 제거" }),
+  ).toBeVisible();
+  expect(analysisRequests).toHaveLength(0);
 });
