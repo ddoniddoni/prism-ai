@@ -19,19 +19,23 @@ export function DashboardShell({
   historyEntryId,
 }: DashboardShellProps) {
   return (
-    <main className="min-h-[calc(100vh-60px)] px-4 py-6 sm:px-8 lg:py-8">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-[calc(100vh-60px)] px-4 py-6 sm:px-8 lg:py-8"
+    >
       <div className="mx-auto w-full max-w-[1440px]">
         <div className="flex flex-col gap-3 border-b border-[#dde2e8] pb-5 sm:flex-row sm:items-center sm:justify-between">
           <Link
             className="inline-flex min-h-11 items-center gap-2 text-[12px] font-semibold text-[#595e6b] hover:text-[#4f46e5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
-            href="/"
+            href={historyEntryId ? "/history" : "/#analysis-question"}
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
-            질문으로 돌아가기
+            {historyEntryId ? "분석 기록으로 돌아가기" : "새 질문 입력하기"}
           </Link>
           <p className="flex items-center gap-2 text-[11px] text-[#595e6b]">
             <Database aria-hidden="true" className="size-3.5 text-[#4f46e5]" />
-            Local dataset · {formatDataRange(dataRange)}
+            로컬 데이터 · {formatDataRange(dataRange)}
           </p>
         </div>
 
@@ -43,7 +47,7 @@ export function DashboardShell({
             className="shrink-0 text-[10px] font-semibold tracking-[0.1em] text-[#777587] uppercase"
             id="submitted-question-title"
           >
-            Submitted question
+            입력한 질문
           </p>
           <span
             aria-hidden="true"

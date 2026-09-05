@@ -60,7 +60,7 @@ export function DashboardVersionHistory({
           </span>
           <div>
             <p className="text-[10px] font-semibold tracking-[0.11em] text-[#5750c8] uppercase">
-              Analysis trail
+              분석 흐름
             </p>
             <h2 className="mt-0.5 text-[14px] font-semibold tracking-[-0.02em] text-[#242735]">
               분석 버전 기록
@@ -96,7 +96,7 @@ export function DashboardVersionHistory({
                     <span className="grid size-5 place-items-center rounded bg-white font-mono text-[9px] shadow-[0_1px_2px_rgba(41,44,68,0.08)]">
                       {version.version}
                     </span>
-                    Version
+                    버전
                   </span>
                   {isActive ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#4f46e5] px-2 py-1 text-[9px] font-semibold text-white">

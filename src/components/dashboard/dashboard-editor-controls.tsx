@@ -1,5 +1,10 @@
 "use client";
 
+import { getKoreanDisplayTitle } from "./formatters";
+import { getDashboardWidgetDisplayCopy } from "./dashboard-widget-frame";
+
+import { NativeSelect } from "@/components/ui/native-select";
+
 import {
   ArrowDown,
   ArrowUp,
@@ -41,6 +46,10 @@ export function WidgetEditorControls({
   onAction: (message: string) => void;
   widget: DashboardWidget;
 }) {
+  const title = getKoreanDisplayTitle(
+    widget.title,
+    getDashboardWidgetDisplayCopy(widget).label,
+  );
   const compatibleTypes = getCompatibleWidgetTypes(widget);
 
   function move(direction: "backward" | "forward") {
@@ -48,7 +57,7 @@ export function WidgetEditorControls({
       .getState()
       .moveWidget(dashboardId, widget.id, direction);
     onAction(
-      `${widget.title}을 ${direction === "backward" ? "앞" : "뒤"} 순서로 이동했습니다.`,
+      `${title}을 ${direction === "backward" ? "앞" : "뒤"} 순서로 이동했습니다.`,
     );
   }
 
@@ -60,24 +69,23 @@ export function WidgetEditorControls({
     useDashboardEditorStore
       .getState()
       .setWidgetType(dashboardId, widget.id, value);
-    onAction(
-      `${widget.title} 표시 형식을 ${widgetTypeLabels[value]}로 바꿨습니다.`,
-    );
+    onAction(`${title} 표시 형식을 ${widgetTypeLabels[value]}로 바꿨습니다.`);
   }
 
   return (
     <div
-      aria-label={`${widget.title} 편집 도구`}
+      aria-label={`${title} 편집 도구`}
       aria-describedby={`${widget.id}-editor-instructions`}
       className="flex flex-wrap items-center justify-end gap-1"
       role="group"
     >
       {compatibleTypes.length > 0 ? (
-        <label>
-          <span className="sr-only">{widget.title} 표시 형식</span>
-          <select
-            aria-label={`${widget.title} 표시 형식`}
-            className="h-8 rounded-md border border-[#c9ccd2] bg-white px-2 text-[11px] font-medium text-[#424753] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+        <label className="inline-flex min-w-0">
+          <span className="sr-only">{title} 표시 형식</span>
+          <NativeSelect
+            name={`${widget.id}-display-type`}
+            aria-label={`${title} 표시 형식`}
+            className="text-[12px]"
             onChange={(event) => changeType(event.target.value)}
             value={widget.type}
           >
@@ -86,11 +94,11 @@ export function WidgetEditorControls({
                 {widgetTypeLabels[type]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
       ) : null}
       <button
-        aria-label={`${widget.title}을 앞 순서로 이동`}
+        aria-label={`${title}을 앞 순서로 이동`}
         className="dashboard-control-button"
         onClick={() => move("backward")}
         title="앞 순서로 이동"
@@ -99,7 +107,7 @@ export function WidgetEditorControls({
         <ArrowUp aria-hidden="true" className="size-3.5" />
       </button>
       <button
-        aria-label={`${widget.title}을 뒤 순서로 이동`}
+        aria-label={`${title}을 뒤 순서로 이동`}
         className="dashboard-control-button"
         onClick={() => move("forward")}
         title="뒤 순서로 이동"
@@ -108,13 +116,11 @@ export function WidgetEditorControls({
         <ArrowDown aria-hidden="true" className="size-3.5" />
       </button>
       <button
-        aria-label={`${widget.title} 삭제`}
+        aria-label={`${title} 삭제`}
         className="dashboard-control-button text-[#93000a]"
         onClick={() => {
           useDashboardEditorStore.getState().hideWidget(dashboardId, widget.id);
-          onAction(
-            `${widget.title}을 삭제했습니다. 실행 취소로 복원할 수 있습니다.`,
-          );
+          onAction(`${title}을 삭제했습니다. 실행 취소로 복원할 수 있습니다.`);
         }}
         title="위젯 삭제"
         type="button"

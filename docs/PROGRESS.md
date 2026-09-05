@@ -6,9 +6,24 @@ Phase 8: Portfolio 완성
 
 ## 상태
 
-Phase 8 Dashboard 모듈 분리·문서 현행화·다섯 차트 번들 측정 완료 · README Architecture Diagram·Demo 가이드 작성 · 테스트·브라우저 검증 보류
+Phase 8 공통 탐색·홈 이동·질문 입력 개선, Dashboard 모듈 분리와 문서 현행화 완료 · 테스트·브라우저 검증 보류
 
 ## 완료
+
+- 2026-09-06 화면 한글화: Home·합성 데이터 안내·History 표·분석 오류·버전 기록·입력 키 안내·페이지 Metadata의 영문 문구를 한글로 통일했다. 제품명 Prism AI와 내부 Schema Key는 유지하고 사용자가 직접 입력한 질문은 변환하지 않는다.
+- History의 원본 기간·Filter Value를 기존 한글 Formatter로 표시하고, Live/Mock Badge와 Gemini 표시를 한글화했다. ROAS 표시명은 광고 수익률, VIP 고객은 우수 고객으로 바꿨다.
+- 저장된 시스템 문구의 Query·Finding 등은 표시 시 한글화한다. 기존 AI 생성 영어 제목은 알려진 번역을 적용하고 남는 영어가 있으면 검증된 지표/위젯 기반 한글 제목으로 표시한다. 기록 검색·삭제·복원 안내도 표시 제목을 사용한다.
+- Composer Prompt에 사용자 표시 문구는 한국어, Schema Key·참조 ID·원본 차원값은 유지하도록 명시했다. 한글 표시용 회귀 Unit Test를 추가하고 Home E2E의 제목·상태 기대값을 갱신했으나 실행하지 않았다.
+
+- 2026-09-06 Select 표현 정리: `NativeSelect` 공통 표현을 추가해 History 모드, Dashboard 비교 기준, Widget 표시 형식의 화살표·좌우 여백·모서리·Focus·Disabled 상태를 통일했다. 네이티브 select의 키보드·모바일 선택 동작은 유지한다.
+- History 검색과 모드 필터를 같은 높이의 Label 위/Input 아래 Grid로 정렬하고 `Mode / All`을 `분석 모드 / 전체`로 표시한다. 모바일은 한 열, 넓은 화면은 검색 영역과 160px 필터로 배치한다. Editor 선택 상자는 옆 조작 버튼과 같은 44px 높이로 맞추고 비교 조건은 36px로 정렬했다.
+
+- 2026-09-06 Navigation·질문 입력 정리: Desktop 로고를 홈 Link로 연결하고 Mobile과 같은 접근 가능한 이름을 사용했다. 미구현 Library·Settings·보기 탭·알림·도움말과 가짜 검색 단축키를 제거했다. 고정 Mock mode·계정처럼 보이던 Footer는 실제 브라우저 저장 안내로 바꿨다.
+- WorkspaceShell의 중복 Active Navigation/Tab을 단일 page로 정리했다. 실제 홈·분석 기록 탐색과 현재 위치를 표시하고 Dashboard에서 홈을 현재 Page로 잘못 강조하지 않는다.
+- 새 분석 Link는 질문 입력칸, 검색 Link는 실제 History 검색란으로 연결한다. 검색란은 Hydration 전에도 유지한다. Skip Link는 포커스 가능한 실제 main을 가리키며 고정 Header에 가려지지 않게 Anchor 여백을 추가했다. 기록에서 연 Dashboard는 History로 돌아가는 Link를 제공한다.
+- Prompt 제출마다 고유 Dashboard ID를 만들어 기존 `mock-preview` 공유 ID로 사용자 편집이 다른 분석에 적용될 수 있던 경로를 제거했다. 기존 기록 URL은 계속 열 수 있으며 후속 질문의 Dashboard ID 유지 정책은 바꾸지 않았다.
+- 추천 질문 선택 후 입력 Focus, Enter 제출·Shift+Enter 줄바꿈, IME Enter 보호, Route 전환 중 입력·추천 질문 비활성화를 추가했다.
+- Prompt Focus·분석 ID 분리·IME Unit Test와 Desktop/Mobile 로고·History·새 분석·검색·Skip Link E2E를 작성하고 기존 Home E2E의 새 ID 기대값을 갱신했다. 사용자 요청에 따라 실행하지 않았다.
 
 - 2026-09-06: Dashboard Renderer의 Header·공통 Frame·Registry·위젯별 Dataset 연결을 별도 Module로 분리했다. 기존 Chart 동적 로딩, Widget memo, 선택 Callback과 표시 JSX는 유지하고 Renderer는 Grid 조합을 담당한다.
 - Editor의 Toolbar·Widget Control과 콘텐츠 높이 Observer를 분리했다. Store와 순수 자동 Layout 규칙, Custom Layout 보존 정책은 유지한다.
@@ -203,6 +218,30 @@ Phase 8 Dashboard 모듈 분리·문서 현행화·다섯 차트 번들 측정 �
 | 2026-09-05 | 화면 표시값은 Presentation Localizer에서만 한글화 | Repository·Query DSL의 Canonical Value를 바꾸지 않아 Drilldown·Filter·결정론적 계산의 검증 경계를 유지하기 위함 |
 
 ## 검증 결과
+
+### 2026-09-06: 화면 한글화
+
+- `npm run lint`, `npm run typecheck`: 통과.
+- `AI_PROVIDER=mock AI_LIVE_ENABLED=false DATA_SOURCE=local PERSIST_ANALYSIS_HISTORY=false npm run build`: 통과.
+- `git diff --check`: 통과. JSX 고정 텍스트의 영문 잔여 검사에서 제품명 Prism AI만 남음을 확인했다. 사용자 입력은 원문을 보존한다.
+- 테스트·E2E·`npm run check`·react-doctor·Live Gemini 호출은 미실행. Browser 시각 검증도 실행하지 않았다.
+
+### 2026-09-06: Select 표현 정리
+
+- `npm run lint`, `npm run typecheck`: 통과.
+- `AI_PROVIDER=mock AI_LIVE_ENABLED=false DATA_SOURCE=local PERSIST_ANALYSIS_HISTORY=false npm run build`: 통과.
+- 변경한 네 TSX 파일 대상 `prettier --check`, `git diff --check`: 통과.
+- 컴퓨터 사용 도구가 접근성·화면 기록 권한 대기를 반환해 Browser 시각 확인은 완료하지 못했다. 첨부 이미지와 소스 기준으로 수정했으며 화면 확인 완료로 간주하지 않는다.
+- 테스트·E2E·`npm run check`·react-doctor: 사용자 요청에 따라 미실행. 동작을 유지하는 스타일 변경이므로 별도 Unit Test는 추가하지 않았다.
+
+### 2026-09-06: Navigation·질문 입력 정리
+
+- `npm run lint`: 통과.
+- `npm run typecheck`: 통과.
+- `AI_PROVIDER=mock AI_LIVE_ENABLED=false DATA_SOURCE=local PERSIST_ANALYSIS_HISTORY=false npm run build`: 통과 (Next.js Webpack production build).
+- `git diff --check`: 통과.
+- `npm run test`, `npm run test:e2e`, `npm run check`, react-doctor: 미실행 (사용자 요청). Browser·키보드·IME 실제 동작 검증도 미실행이며 추가한 테스트를 통과했다고 간주하지 않는다.
+- 검토 범위: 공통 Shell, Home Prompt, History 검색·재열기, Dashboard 복귀 경로와 기존 UI Action의 Handler 연결. 미구현 전역 기능을 새로 만드는 대신 실제 동작 경로만 노출하기로 결정했다.
 
 ### 2026-09-06: Dashboard 책임 분리와 문서 현행화
 

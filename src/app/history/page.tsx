@@ -3,7 +3,7 @@ import { WorkspaceShell } from "@/components/workspace-shell";
 
 export default function HistoryPage() {
   return (
-    <WorkspaceShell activeNavigation="history" activeTab="overview">
+    <WorkspaceShell page="history">
       <HistoryShell />
     </WorkspaceShell>
   );

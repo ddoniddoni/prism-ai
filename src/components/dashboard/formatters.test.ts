@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getKoreanDisplayTitle,
+  localizeAnalyticsText,
   formatChangeWithDirection,
   formatDimensionValue,
   formatMetricAxisValue,
@@ -30,5 +32,20 @@ describe("formatDimensionValue", () => {
     expect(formatDimensionValue("product", "Quiet Air Purifier")).toBe(
       "저소음 공기청정기",
     );
+  });
+});
+
+describe("Korean display copy", () => {
+  it("localizes stored system copy and uses a verified title for unknown English titles", () => {
+    expect(localizeAnalyticsText("일부 Query를 제외한 결과")).toBe(
+      "일부 조회를 제외한 결과",
+    );
+    expect(getKoreanDisplayTitle("Revenue overview", "매출 분석 결과")).toBe(
+      "매출 분석 결과",
+    );
+    expect(
+      getKoreanDisplayTitle("지난달 매출 변화의 신호", "매출 분석 결과"),
+    ).toBe("지난달 매출 변화의 신호");
+    expect(formatDimensionValue("customerSegment", "vip")).toBe("우수 고객");
   });
 });

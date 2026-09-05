@@ -21,6 +21,8 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (isPending) return;
+
     const normalizedQuestion = question.trim();
 
     if (normalizedQuestion.length < MINIMUM_QUESTION_LENGTH) {
@@ -36,9 +38,15 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
     }
 
     setError(null);
+    const dashboardId =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : Array.from(crypto.getRandomValues(new Uint32Array(4)), (value) =>
+            value.toString(16).padStart(8, "0"),
+          ).join("");
     startTransition(() => {
       router.push(
-        `/dashboard/mock-preview?question=${encodeURIComponent(normalizedQuestion)}`,
+        `/dashboard/${dashboardId}?question=${encodeURIComponent(normalizedQuestion)}`,
       );
     });
   }
@@ -46,6 +54,7 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
   function chooseQuestion(nextQuestion: string) {
     setQuestion(nextQuestion);
     setError(null);
+    questionInputRef.current?.focus();
   }
 
   return (
@@ -66,15 +75,29 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
           <textarea
             autoComplete="off"
             aria-describedby={
-              error ? "prompt-description question-error" : "prompt-description"
+              error
+                ? "prompt-description prompt-keyboard-hint question-error"
+                : "prompt-description prompt-keyboard-hint"
             }
             aria-invalid={Boolean(error)}
             className="max-h-32 min-h-[70px] w-full resize-none bg-transparent py-5 text-[15px] leading-7 text-[#191c1e] outline-none placeholder:text-[#9296a0]"
+            disabled={isPending}
             enterKeyHint="send"
             id="analysis-question"
             maxLength={MAXIMUM_QUESTION_LENGTH}
             name="question"
             onChange={(event) => setQuestion(event.target.value)}
+            onKeyDown={(event) => {
+              if (
+                event.key !== "Enter" ||
+                event.shiftKey ||
+                event.nativeEvent.isComposing ||
+                event.keyCode === 229
+              )
+                return;
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }}
             placeholder="예: 지난달 매출이 감소한 이유를 분석해줘…"
             ref={questionInputRef}
             value={question}
@@ -102,14 +125,22 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
         ) : null}
       </form>
 
+      <p
+        className="mt-2 text-right text-[11px] text-[#777587]"
+        id="prompt-keyboard-hint"
+      >
+        엔터로 분석 · 시프트+엔터로 줄바꿈
+      </p>
+
       <section aria-labelledby="recommended-questions-title" className="mt-4">
         <p className="sr-only" id="recommended-questions-title">
-          Try a known signal
+          추천 분석 질문
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           {recommendedQuestions.map((recommendedQuestion) => (
             <button
               className="min-h-11 rounded border border-[#dde2e8] bg-white px-3 py-1.5 text-left text-[12px] text-[#595e6b] transition-colors duration-100 hover:border-[#c3c0ff] hover:bg-[#f2f4f6] hover:text-[#3525cd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"
+              disabled={isPending}
               key={recommendedQuestion}
               onClick={() => chooseQuestion(recommendedQuestion)}
               type="button"

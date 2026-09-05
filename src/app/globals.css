@@ -95,6 +95,9 @@
   html {
     @apply font-sans;
   }
+  #analysis-question,
+  #history-search,
+  #main-content,
   h1,
   h2,
   h3,

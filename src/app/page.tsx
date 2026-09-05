@@ -25,15 +25,19 @@ export default async function Home() {
   ]);
 
   return (
-    <WorkspaceShell activeNavigation="home" activeTab="overview">
-      <main className="min-h-[calc(100vh-60px)] px-4 py-10 sm:px-8 lg:py-16">
+    <WorkspaceShell page="home">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-[calc(100vh-60px)] px-4 py-10 sm:px-8 lg:py-16"
+      >
         <div className="mx-auto w-full max-w-[1440px]">
           <section
             aria-labelledby="home-title"
             className="mx-auto max-w-4xl text-center"
           >
             <p className="text-[11px] font-semibold tracking-[0.14em] text-[#4f46e5] uppercase">
-              E-commerce Workspace
+              이커머스 분석 공간
             </p>
             <h1
               className="mt-4 text-[clamp(2rem,4vw,3.25rem)] leading-[1.12] font-semibold tracking-[-0.045em] text-[#191c1e]"
@@ -62,7 +66,7 @@ export default async function Home() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.13em] text-[#777587] uppercase">
-                  Workspace activity
+                  최근 활동
                 </p>
                 <h2
                   className="mt-1.5 text-xl font-semibold tracking-[-0.025em] text-[#191c1e]"

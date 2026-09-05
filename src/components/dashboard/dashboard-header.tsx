@@ -1,5 +1,7 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { SlidersHorizontal, X } from "lucide-react";
 import { metricCatalog } from "@/lib/analytics/metric-catalog";
 import {
@@ -91,16 +93,18 @@ export function DashboardHeader({
             </button>
           ) : null}
         </div>
-        <div className="mt-2.5 flex flex-wrap gap-2 text-[11px] text-[#595e6b]">
-          <span className="rounded-md border border-[#dde2e8] bg-white px-2.5 py-1.5">
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-[#595e6b]">
+          <span className="inline-flex min-h-9 items-center rounded-lg border border-[#dde2e8] bg-white px-2.5 py-1.5">
             {getPeriodLabel(dashboard.context.period)}
           </span>
           {canChangeComparison ? (
-            <label className="rounded-md border border-[#c3c0ff] bg-white text-[#3525cd] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#4f46e5]">
+            <label className="inline-flex min-w-0">
               <span className="sr-only">비교 기준</span>
-              <select
+              <NativeSelect
+                density="compact"
+                name="comparison-mode"
                 aria-label="비교 기준"
-                className="min-h-8 cursor-pointer bg-transparent py-1.5 pr-2 pl-2.5 font-medium outline-none disabled:cursor-not-allowed disabled:text-[#9296a0]"
+                className="border-[#c3c0ff] text-[#3525cd]"
                 disabled={comparisonControlsDisabled}
                 onChange={(event) => {
                   const nextCompareWith = compareModes.find(
@@ -118,15 +122,15 @@ export function DashboardHeader({
                     {getComparisonLabel(compareWith)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
           ) : (
-            <span className="rounded-md border border-[#dde2e8] bg-white px-2.5 py-1.5">
+            <span className="inline-flex min-h-9 items-center rounded-lg border border-[#dde2e8] bg-white px-2.5 py-1.5">
               {getComparisonLabel(dashboard.context.compareWith)}
             </span>
           )}
           {dashboard.context.filters.length === 0 ? (
-            <span className="rounded-md border border-dashed border-[#c9ccd2] bg-white px-2.5 py-1.5 text-[#777587]">
+            <span className="inline-flex min-h-9 items-center rounded-lg border border-dashed border-[#c9ccd2] bg-white px-2.5 py-1.5 text-[#777587]">
               전체 데이터
             </span>
           ) : (

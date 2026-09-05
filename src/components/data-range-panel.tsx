@@ -22,7 +22,7 @@ export function DataRangePanel({ dataRange, rowCount }: DataRangePanelProps) {
             className="text-[13px] font-semibold text-[#191c1e]"
             id="data-range-title"
           >
-            Local Synthetic Dataset
+            로컬 합성 데이터
           </h2>
           <p className="mt-1 text-[12px] text-[#595e6b]">
             {formatDataRange(dataRange)} · {rowCount.toLocaleString("ko-KR")}개
@@ -32,7 +32,7 @@ export function DataRangePanel({ dataRange, rowCount }: DataRangePanelProps) {
       </div>
       <p className="flex items-center gap-2 text-[12px] font-medium text-[#17835c]">
         <CheckCircle2 aria-hidden="true" className="size-4" />
-        고정 시드 검증 완료 · API 키 불필요
+        고정 시드 검증 완료 · 외부 서비스 키 불필요
       </p>
     </section>
   );

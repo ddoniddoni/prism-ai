@@ -35,7 +35,7 @@ export default async function DashboardPage({
   const dataRange = await repository.getDataRange();
 
   return (
-    <WorkspaceShell activeNavigation="home" activeTab="market">
+    <WorkspaceShell page="dashboard">
       <div data-dashboard-id={id}>
         <DashboardShell
           dashboardId={id}

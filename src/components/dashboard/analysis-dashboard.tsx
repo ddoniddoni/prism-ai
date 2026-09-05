@@ -7,6 +7,8 @@ import {
   LayoutDashboard,
   ShieldCheck,
 } from "lucide-react";
+import { localizeAnalyticsText } from "./formatters";
+
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -121,16 +123,16 @@ async function requestAnalysis({
 function getProviderLabel(response: AnalyzeResponse): string {
   if (response.meta.mockMode) {
     return response.meta.fallbackUsed
-      ? "로컬 AI · 복구 모드"
-      : "로컬 AI · 검증 결과";
+      ? "로컬 분석 · 복구 모드"
+      : "로컬 분석 · 검증 결과";
   }
 
   return response.meta.fallbackUsed
-    ? "Gemini · 로컬 AI 복구"
-    : "Gemini · 검증 결과";
+    ? "제미나이 · 로컬 분석 복구"
+    : "제미나이 · 검증 결과";
 }
 
-const loadingCards = ["매출", "주문", "전환율", "ROAS"] as const;
+const loadingCards = ["매출", "주문", "전환율", "광고 수익률"] as const;
 
 function DashboardLoadingState() {
   return (
@@ -401,7 +403,7 @@ export function AnalysisDashboard({
         role="alert"
       >
         <p className="text-[10px] font-semibold tracking-[0.12em] text-[#ba1a1a] uppercase">
-          Recoverable analysis error
+          분석을 다시 시도할 수 있어요
         </p>
         <h1 className="mt-3 text-xl font-semibold text-[#191c1e]">
           분석을 완성하지 못했습니다.
@@ -441,7 +443,7 @@ export function AnalysisDashboard({
           <p className="mt-1.5 text-[13px] leading-6 text-[#424753]">
             {displayStatus === "loading"
               ? "기존 분석을 유지한 채 후속 질문을 검증하고 있습니다."
-              : activeResponse.assistantMessage}
+              : localizeAnalyticsText(activeResponse.assistantMessage)}
           </p>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white px-2.5 py-1 text-[10px] font-semibold text-[#17835c]">
