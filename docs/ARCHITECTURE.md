@@ -16,7 +16,8 @@ LLM은 Orchestration Layer이며 Database, Calculator, Code Generator가 아니�
 ```text
 Browser
   -> POST /api/analyze
-  -> Analysis Orchestrator
+  -> AnalyzeRequestCoordinator (Cache / Dedup / Rate Limit)
+  -> AnalyzeQuestionService
       -> AIProvider.createPlan()
       -> AnalysisPlan 검증
       -> AnalysisContext Patch 병합
@@ -50,8 +51,8 @@ Core Stack:
 - TanStack Query
 - Editor 전용 Zustand
 - Zod
-- Recharts
-- date-fns
+- Nivo (`@nivo/line`, `@nivo/pie`, `@nivo/bar`)와 자체 Calendar Heatmap
+- `react-grid-layout`
 - Vitest와 React Testing Library
 - Playwright
 
@@ -81,6 +82,27 @@ Route Handler에 Metric 계산식, Prompt 작성, Repository 조회 상세, Dash
 
 ### `src/components`
 
+Dashboard의 표현 책임은 다음 파일로 나눈다.
+
+| 파일 | 책임 |
+| --- | --- |
+| `analysis-dashboard.tsx` | API Mutation, 이전 성공 응답 유지, 후속 질문·조건 변경·History 연결 |
+| `dashboard-header.tsx` | 분석 제목, 기간, Filter Chip, 비교 기준 Control |
+| `dashboard-renderer.tsx` | 읽기용 Dashboard 조합과 초기 CSS Grid |
+| `dashboard-widget-registry.tsx` | Schema의 모든 Widget Type 등록과 memo 경계 |
+| `dashboard-widget-frame.tsx` | 공통 Card, 검증 Dataset 기준 표시 문구와 Heading |
+| `widgets/*-widget.tsx` | 종류별 Dataset/Finding 연결과 차트 지연 로딩 |
+| `dashboard-editor.tsx` | 편집 Grid, 저장 상태 조정, 선택 상태 |
+| `dashboard-editor-controls.tsx` | 편집 Toolbar와 Widget Control |
+| `widget-card-height-observer.tsx` | 콘텐츠 높이 측정과 ResizeObserver 정리 |
+| `prism-*-chart.tsx`, `prism-calendar-heatmap.tsx` | 실제 차트와 키보드·선택 상호작용 |
+
+새 Widget은 Schema·Sanitizer·Registry·Layout 지원을 함께 추가한다.
+Registry는 모든 등록 Type을 TypeScript `satisfies`로 확인한다. 위젯 간 공통
+Card만 공유하며 차트별 표현과 선택 처리는 해당 Widget이 소유한다.
+`next/dynamic`은 각 Chart Widget Module 최상위에 두어 지연 로딩을 유지한다.
+
+
 재사용 가능한 표현과 사용자 상호작용을 담당한다.
 
 Component는 Typed Props를 받는다. Gemini 호출, Supabase Query, Business Metric 계산, AI JSON Parsing을 하지 않는다.
@@ -91,7 +113,6 @@ Component는 Typed Props를 받는다. Gemini 호출, Supabase Query, Business M
 - `components/prompt`
 - `components/dashboard`
 - `components/history`
-- `components/status`
 
 ### `src/lib/analytics`
 
@@ -133,14 +154,17 @@ Analytics Engine은 Repository를 통해 정규화된 Row 또는 Dataset을 받�
 
 ### `src/stores`
 
-Editor Phase 이후의 Client 전용 상태를 담당한다.
+Client 전용 Editor 상태와 순수 Layout 규칙을 담당한다.
 
 - Widget Layout
-- Selection
+- Layout·숨김 Widget·호환 표시 Type Override
 - Undo와 Redo Stack
 - 저장되지 않은 편집
 
-API Response 전체를 Zustand에 중복 저장하지 않는다.
+API Response 전체를 Zustand에 중복 저장하지 않는다. 차트 선택은 Editor의
+일시적인 React 상태이며 Store에 저장하지 않는다. `dashboard-layout.ts`는
+위젯 종류·데이터 밀도·브레이크포인트에 따른 순수 배치 규칙을 소유한다.
+저장된 Custom Layout은 자동 배치로 덮어쓰지 않는다.
 
 ## 5. 권장 Repository 구조
 
@@ -166,20 +190,19 @@ prism-ai/
 │  │  ├─ dashboard/[id]/page.tsx
 │  │  ├─ history/page.tsx
 │  │  └─ api/
-│  │     ├─ analyze/route.ts
-│  │     └─ health/route.ts
+│  │     └─ analyze/route.ts
 │  ├─ components/
 │  │  ├─ ui/
 │  │  ├─ prompt/
 │  │  ├─ dashboard/
-│  │  ├─ history/
-│  │  └─ status/
+│  │  └─ history/
 │  ├─ lib/
 │  │  ├─ ai/
 │  │  │  ├─ provider.ts
 │  │  │  ├─ create-provider.ts
 │  │  │  ├─ gemini-provider.ts
 │  │  │  ├─ mock-provider.ts
+│  │  │  ├─ dashboard-sanitizer.ts
 │  │  │  ├─ prompts/
 │  │  │  └─ schemas/
 │  │  ├─ analytics/
@@ -188,8 +211,7 @@ prism-ai/
 │  │  │  ├─ query-schema.ts
 │  │  │  ├─ query-engine.ts
 │  │  │  ├─ statistics.ts
-│  │  │  ├─ findings.ts
-│  │  │  └─ dashboard-sanitizer.ts
+│  │  │  └─ findings.ts
 │  │  ├─ data/
 │  │  │  ├─ repository.ts
 │  │  │  ├─ local-repository.ts
@@ -267,6 +289,9 @@ type AnalyzeRequest = {
   requestId: string;
   sessionId?: string;
   dashboardId?: string;
+  currentContext?: AnalysisContext;
+  drilldownFilter?: DrilldownFilter;
+  contextOverride?: ContextOverride;
 };
 ```
 
@@ -298,8 +323,10 @@ type AnalyzeResponse = {
 
 - Question 2자 이상 300자 이하
 - Request Body Zod 검증
-- 가능한 범위에서 Request ID 중복 처리
-- 긴 작업에 Abort Signal 전달
+- 현재 Context와 함께 단일 `eq` Drilldown Filter 또는 Filter·비교 Override 허용
+- Drilldown과 Context Override를 같은 요청에 보내면 거부
+- 동일 Cache Key의 동시 요청은 한 번 실행하고 응답 ID는 요청별로 다시 부여
+- Gemini 호출별 Timeout 적용. Browser 취소 Signal의 전체 Pipeline 전달은 미구현
 
 Error Code:
 
@@ -328,11 +355,17 @@ Route가 Dashboard ID를 소유한다. MVP의 검증된 `AnalysisContext`는 Ana
 
 ### Local Persistence
 
-MVP History는 Analysis Summary와 DashboardSpec을 Local Storage에 저장한다. 읽을 때 다시 검증하고 최근 20개로 제한한다.
+History는 검증된 전체 `AnalyzeResponse`와 질문·저장 시각을 Local Storage에
+저장한다. 읽을 때 Zod로 다시 검증하고 최근 20개로 제한한다. 같은 `sessionId`의
+기록을 분석 버전으로 묶으며, 저장 기록을 열 때는 API를 다시 호출하지 않는다.
+기록이 없어진 링크를 열면 질문을 사용해 재분석하는 복구 경로가 있다.
 
 ### Editor State
 
-Drag, Resize, Delete, Undo, Redo를 구현할 때 Zustand를 추가한다. Server Response는 기준 문서이고 Store는 사용자 편집만 보관한다.
+Zustand는 Drag, Resize, Delete, 표시 Type 변경, Undo, Redo를 관리한다.
+Server Response는 기준 문서이고 Store는 사용자 편집만 보관한다. 저장은
+브라우저별 최근 Dashboard 20개, Undo Stack은 30개로 제한한다.
+후속 응답은 Widget ID와 호환 Family를 기준으로 편집값을 조정한다.
 
 ## 10. Server와 Client Component 정책
 
@@ -351,19 +384,29 @@ Client Boundary는 가능한 아래쪽에 둔다.
 
 ## 11. Cache와 비용 제어
 
-이후 Phase에서 검증된 전체 Analysis Response를 다음 조합으로 Cache할 수 있다.
+현재 Cache Key는 `createAnalysisCacheKey()`가 다음 값을 안정적으로 직렬화한다.
 
 ```text
-정규화된 질문
-+ Canonical Context
-+ Dataset Version
-+ Prompt Version
-+ Provider Model ID
+analysisCacheSemanticsVersion
++ AI Provider / Live 활성화 / Data Source
++ 입력 검증에서 trim된 질문
++ 현재 AnalysisContext
++ Drilldown Filter 또는 Context Override
 ```
 
-Secret이나 검증 전 Model Output은 Cache하지 않는다.
+현재 Key에는 실제 Dataset Version과 Gemini Model ID가 들어가지 않는다.
+동일 Process에서 데이터·모델을 바꾸는 운영에서는 TTL 만료 또는 Process
+재시작이 필요하다. 의미 규칙 변경 시 `analysisCacheSemanticsVersion`을 갱신한다.
+자연어 동의어까지 동일 Key로 정규화하지는 않는다.
 
-공개 Demo에서는 추천 질문 Cache와 Mock Fallback을 우선해 Quota 소진 시에도 Portfolio가 동작하도록 한다.
+검증된 전체 응답을 LRU·TTL 메모리 Cache에 보관하며 Cache Hit는 일일 한도를
+소비하지 않는다. 동일 Key의 동시 요청은 Request Deduplicator에서 합쳐진다.
+Cache Miss의 새 분석은 UTC 일 기준 Client Limit을 소비한다. Mock도 이 제한을
+적용받는다. 새 응답은 각 요청의 Analysis·Session·Dashboard ID로 다시 묶는다.
+
+Cache·Rate Limit·Dedup은 단일 Server Instance 범위다. 운영 Event 저장 실패는
+분석 응답을 차단하지 않는다. 다중 Instance의 공유 저장소와 배포 환경에서의
+Background Event 완료 보장은 별도 운영 과제다.
 
 ## 12. Logging
 
@@ -378,3 +421,11 @@ Secret이나 검증 전 Model Output은 Cache하지 않는다.
 - 정규화된 Error Category
 
 Secret Key, 전체 Prompt, Raw Dataset을 Log에 남기지 않는다.
+
+## 13. 구현 상태와 목표의 구분
+
+현재 진행 UI는 정적인 작업 단계 안내와 Loading 상태다. 실제 Planner·Query·Composer
+진행 이벤트를 Stream하지 않는다. Gemini 호출 Timeout은 구현됐지만 사용자 취소
+버튼과 Browser → Route → Provider 전체 취소 전파는 후속 과제다.
+`PROJECT_SPEC.md`와 `QUALITY_GUIDE.md`의 Cancelled 상태는 목표 요구사항이며,
+검증 완료로 간주하지 않는다. 현재 실행한 검증은 `PROGRESS.md`를 따른다.

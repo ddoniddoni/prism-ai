@@ -43,7 +43,7 @@ Portfolio 평가자에게는 다음 역량이 보여야 한다.
 
 ### 4.1 첫 질문
 
-Home에는 큰 Prompt Input, 추천 질문 6개, 합성 데이터 기간, 최근 분석이 보인다.
+Home에는 큰 Prompt Input, 추천 질문 9개, 합성 데이터 기간, 최근 분석이 보인다.
 
 대표 질문:
 
@@ -150,7 +150,9 @@ MVP에 포함한다.
 - 제한된 Dashboard Schema
 - React Component Registry
 - 대표 질문과 후속 질문
-- Local History
+- Local History와 세션별 분석 버전 복원
+- 차트 선택 상세 분석, Filter 제거와 비교 조건 변경
+- Drag, Resize, Delete, 표시 Type 변경, Undo, Redo
 - 반응형 UI
 - 접근 가능한 Loading, Chart, Error, Keyboard Interaction
 - Unit, Integration, E2E Test
@@ -199,7 +201,7 @@ MVP에 포함한다.
 
 이는 제품 진행 상태이며 모델의 숨은 Chain of Thought를 표시하는 기능이 아니다.
 
-필수 상태:
+목표 상태 (전체 구현 완료 목록은 아니며 현재 제한은 `ARCHITECTURE.md` 13절 참고):
 
 - Idle
 - Submitting
@@ -223,7 +225,6 @@ MVP에 포함한다.
 
 - Supabase History
 - 공유 가능한 Dashboard Link
-- Drag, Resize, Delete, Undo, Redo
 - Widget 단위 자연어 편집
 - 저장된 Dashboard Template
 - PNG 또는 PDF Export

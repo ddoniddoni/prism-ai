@@ -42,7 +42,10 @@ cd prism-ai
 
 ## 3. Dependency
 
-현재 Phase에 필요할 때만 설치한다.
+기존 Checkout은 `npm ci`로 `package-lock.json`을 복원한다. 아래 목록은
+현재 선택한 Runtime을 설명하는 Bootstrap 참고이며 기존 프로젝트에 재설치하지 않는다.
+초기 후보였던 Recharts, date-fns, nanoid, Faker는 현재 사용하지 않는다.
+차트는 Nivo와 자체 Calendar Heatmap, ID는 플랫폼 API, 데이터는 고정 시드 생성기를 사용한다.
 
 Core Runtime:
 
@@ -51,9 +54,10 @@ npm install \
   @tanstack/react-query \
   zod \
   zustand \
-  recharts \
-  date-fns \
-  nanoid \
+  @nivo/line \
+  @nivo/pie \
+  @nivo/bar \
+  react-grid-layout \
   clsx \
   tailwind-merge \
   class-variance-authority \
@@ -85,8 +89,7 @@ npm install -D \
   @playwright/test \
   prettier \
   prettier-plugin-tailwindcss \
-  tsx \
-  @faker-js/faker
+  tsx
 ```
 
 기본 Application이 실행된 뒤 shadcn/ui를 초기화한다.

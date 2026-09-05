@@ -157,11 +157,23 @@ function printGroup(group: AssetGroup) {
 
 function getLoadableFiles(
   loadableManifest: RecordValue,
-  entryName: string,
+  moduleName: string,
 ): readonly string[] {
-  const entry = getRecord(loadableManifest[entryName], entryName);
+  const entries = Object.entries(loadableManifest).filter(
+    ([entryName]) =>
+      entryName.split(" -> ").at(-1)?.split("/").at(-1) === moduleName,
+  );
 
-  return getStaticChunkPaths(entry.files, entryName + ".files");
+  if (entries.length === 0) {
+    throw new Error("Missing dynamically loaded module: " + moduleName);
+  }
+
+  return unique(
+    entries.flatMap(([entryName, value]) => {
+      const entry = getRecord(value, entryName);
+      return getStaticChunkPaths(entry.files, entryName + ".files");
+    }),
+  );
 }
 
 function main() {
@@ -187,22 +199,28 @@ function main() {
     ...getModuleChunkPaths(clientModules, queryProviderPath),
     ...getCssChunkPaths(entryCssFiles),
   ]);
-  const editorFiles = getLoadableFiles(
-    loadableManifest,
-    "components/dashboard/analysis-dashboard.tsx -> ./dashboard-editor",
-  );
-  const trendFiles = getLoadableFiles(
-    loadableManifest,
-    "components/dashboard/dashboard-renderer.tsx -> ./prism-trend-chart",
-  );
-  const donutFiles = getLoadableFiles(
-    loadableManifest,
-    "components/dashboard/dashboard-renderer.tsx -> ./prism-donut-chart",
-  );
+  const editorFiles = getLoadableFiles(loadableManifest, "dashboard-editor");
+  const trendFiles = getLoadableFiles(loadableManifest, "prism-trend-chart");
+  const donutFiles = getLoadableFiles(loadableManifest, "prism-donut-chart");
   const rankedBarFiles = getLoadableFiles(
     loadableManifest,
-    "components/dashboard/dashboard-renderer.tsx -> ./prism-ranked-bar-chart",
+    "prism-ranked-bar-chart",
   );
+  const stackedBarFiles = getLoadableFiles(
+    loadableManifest,
+    "prism-stacked-bar-chart",
+  );
+  const calendarFiles = getLoadableFiles(
+    loadableManifest,
+    "prism-calendar-heatmap",
+  );
+  const allChartFiles = unique([
+    ...trendFiles,
+    ...donutFiles,
+    ...rankedBarFiles,
+    ...stackedBarFiles,
+    ...calendarFiles,
+  ]);
 
   console.log("Prism AI production bundle measurement");
   printGroup(createAssetGroup("Dashboard initial client assets", initialFiles));
@@ -210,10 +228,13 @@ function main() {
   printGroup(createAssetGroup("Trend Chart on demand", trendFiles));
   printGroup(createAssetGroup("Donut Chart on demand", donutFiles));
   printGroup(createAssetGroup("Ranked Bar Chart on demand", rankedBarFiles));
+  printGroup(createAssetGroup("Stacked Bar Chart on demand", stackedBarFiles));
+  printGroup(createAssetGroup("Calendar Heatmap on demand", calendarFiles));
+  printGroup(createAssetGroup("All chart chunks deduplicated", allChartFiles));
   printGroup(
     createAssetGroup(
-      "All chart chunks deduplicated",
-      unique([...trendFiles, ...donutFiles, ...rankedBarFiles]),
+      "Dashboard with editor and all charts deduplicated",
+      unique([...initialFiles, ...editorFiles, ...allChartFiles]),
     ),
   );
 }
