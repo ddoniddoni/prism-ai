@@ -170,6 +170,49 @@ describe("AnalyzeQuestionService", () => {
     ).toBe(true);
   });
 
+  it("applies a selected period to every query without losing existing conditions", async () => {
+    const service = new AnalyzeQuestionService();
+    const initial = await service.execute({
+      question: "서울 매출을 보여줘.",
+      requestId: "period-control-initial",
+    });
+    const period = {
+      preset: "custom",
+      startDate: "2026-06-01",
+      endDate: "2026-06-30",
+    } as const;
+    const result = await service.execute({
+      question: initial.plan.normalizedQuestion,
+      requestId: "period-control-updated",
+      currentContext: initial.context,
+      sessionId: initial.sessionId,
+      contextOverride: { period },
+    });
+    expect(result.context).toEqual({ ...initial.context, period });
+    expect(
+      result.plan.queries.every(
+        (query) => JSON.stringify(query.period) === JSON.stringify(period),
+      ),
+    ).toBe(true);
+    expect(
+      result.datasets.every(
+        (dataset) =>
+          dataset.dataRange.startDate === period.startDate &&
+          dataset.dataRange.endDate === period.endDate,
+      ),
+    ).toBe(true);
+    const cleared = await service.execute({
+      question: initial.plan.normalizedQuestion,
+      requestId: "period-control-cleared",
+      currentContext: result.context,
+      contextOverride: { filters: [] },
+    });
+    expect(cleared.context.period).toEqual(period);
+    expect(
+      cleared.plan.queries.every((query) => query.filters.length === 0),
+    ).toBe(true);
+  });
+
   it("keeps fulfilled query results when one repository query is unavailable", async () => {
     const localRepository = new LocalAnalyticsRepository();
     const repository: AnalyticsRepository = {

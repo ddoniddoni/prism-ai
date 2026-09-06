@@ -90,7 +90,7 @@ describe("dashboard editor model", () => {
       dashboardWidgets.map((widget) =>
         getDashboardWidgetSpan(widget, dashboardWidgets, "lg"),
       ),
-    ).toEqual([4, 8, 4, 8, 12]);
+    ).toEqual([4, 8, 4, 8, 4]);
     expect(
       dashboardWidgets.map((widget) =>
         getDashboardWidgetSpan(widget, dashboardWidgets, "md"),
@@ -172,7 +172,7 @@ describe("dashboard editor model", () => {
       { i: "trend", x: 4, y: 0, w: 8 },
       { i: "segments", x: 0, y: 4, w: 4 },
       { i: "ranking", x: 4, y: 8, w: 8 },
-      { i: "insight", x: 0, y: 15, w: 12 },
+      { i: "insight", x: 0, y: 10, w: 4 },
     ]);
   });
 
@@ -258,7 +258,7 @@ describe("dashboard editor model", () => {
       { i: "revenue", x: 0, y: 0, w: 4, h: 4 },
       { i: "trend", x: 4, y: 0, w: 8, h: 8 },
       { i: "segments", x: 4, y: 8, w: 8, h: 6 },
-      { i: "calendar-heatmap", x: 0, y: 4, w: 4, h: 6, minW: 4, minH: 4 },
+      { i: "calendar-heatmap", x: 0, y: 4, w: 4, h: 10, minW: 4, minH: 4 },
     ]);
   });
 
@@ -299,13 +299,13 @@ describe("dashboard editor model", () => {
     expect(layouts.lg).toMatchObject([
       { i: "revenue", x: 0, y: 0, w: 4, h: 4 },
       { i: "trend", x: 4, y: 0, w: 8, h: 8 },
-      { i: "segments", x: 0, y: 4, w: 4, h: 6 },
+      { i: "segments", x: 0, y: 4, w: 4, h: 14 },
       {
         i: "calendar-heatmap",
         x: 4,
         y: 8,
         w: 8,
-        h: 8,
+        h: 10,
       },
     ]);
     expect(getDashboardUnusedCanvasRatio(layoutPlan, "lg")).toBeLessThanOrEqual(
@@ -400,7 +400,7 @@ describe("dashboard editor model", () => {
       layouts: {
         ...document.present.layouts,
         lg: document.present.layouts.lg.map((item) =>
-          item.i === "segments" ? { ...item, x: 6, y: 12 } : item,
+          item.i === "segments" ? { ...item, x: 0, y: 12 } : item,
         ),
       },
       hiddenWidgetIds: ["revenue"],
@@ -424,7 +424,7 @@ describe("dashboard editor model", () => {
     expect(reconciled.present.typeOverrides).toEqual({ segments: "donut" });
     expect(
       reconciled.present.layouts.lg.find((item) => item.i === "segments"),
-    ).toMatchObject({ x: 6, y: 12 });
+    ).toMatchObject({ x: 0, y: 12 });
     expect(
       reconciled.present.layouts.lg.find((item) => item.i === "insight")?.y,
     ).toBeGreaterThan(12);

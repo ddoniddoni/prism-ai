@@ -15,7 +15,21 @@ import {
   useLocalAnalysisHistory,
 } from "./use-local-analysis-history";
 
+import { NativeSelect } from "@/components/ui/native-select";
+
+import { getDashboardContextFilterLabel } from "../dashboard/dashboard-context-controls-data";
+import { getPeriodLabel, getKoreanDisplayTitle } from "../dashboard/formatters";
+
+import { metricCatalog } from "@/lib/analytics/metric-catalog";
+
 type HistoryMode = "all" | "live" | "mock";
+
+function getEntryTitle(entry: AnalysisHistoryEntry): string {
+  return getKoreanDisplayTitle(
+    entry.response.dashboard.title,
+    `${metricCatalog[entry.response.context.primaryMetric].label} 분석 결과`,
+  );
+}
 
 function formatSavedAt(value: string): string {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -54,7 +68,7 @@ function ModeBadge({ entry }: { entry: AnalysisHistoryEntry }) {
         aria-hidden="true"
         className={`size-1.5 rounded-full ${mode === "live" ? "bg-[#17835c]" : "bg-[#777587]"}`}
       />
-      {mode === "live" ? "Live" : "Mock"}
+      {mode === "live" ? "실시간 분석" : "로컬 분석"}
     </span>
   );
 }
@@ -136,7 +150,7 @@ export function RecentAnalysisList() {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13px] font-semibold text-[#191c1e]">
-              {entry.response.dashboard.title}
+              {getEntryTitle(entry)}
             </span>
             <span className="mt-1 block truncate text-[12px] text-[#595e6b]">
               {entry.question}
@@ -183,7 +197,7 @@ export function HistoryList() {
     removeAnalysisHistoryEntry(window.localStorage, entry.id);
     notifyLocalAnalysisHistoryChange();
     setLastRemovedEntry(entry);
-    setHistoryStatus(`${entry.response.dashboard.title} 기록을 삭제했습니다.`);
+    setHistoryStatus(`${getEntryTitle(entry)} 기록을 삭제했습니다.`);
     undoTimeoutId.current = window.setTimeout(() => {
       setLastRemovedEntry(null);
       undoTimeoutId.current = null;
@@ -198,18 +212,8 @@ export function HistoryList() {
     clearUndoTimeout();
     saveAnalysisHistory(window.localStorage, lastRemovedEntry);
     notifyLocalAnalysisHistoryChange();
-    setHistoryStatus(
-      `${lastRemovedEntry.response.dashboard.title} 기록을 복원했습니다.`,
-    );
+    setHistoryStatus(`${getEntryTitle(lastRemovedEntry)} 기록을 복원했습니다.`);
     setLastRemovedEntry(null);
-  }
-
-  if (!isReady) {
-    return (
-      <div className="mt-8">
-        <HistoryLoadingRows />
-      </div>
-    );
   }
 
   const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
@@ -218,9 +222,7 @@ export function HistoryList() {
     const matchesQuery =
       normalizedQuery.length === 0 ||
       entry.question.toLocaleLowerCase("ko-KR").includes(normalizedQuery) ||
-      entry.response.dashboard.title
-        .toLocaleLowerCase("ko-KR")
-        .includes(normalizedQuery);
+      getEntryTitle(entry).toLocaleLowerCase("ko-KR").includes(normalizedQuery);
 
     return matchesMode && matchesQuery;
   });
@@ -232,9 +234,7 @@ export function HistoryList() {
       </p>
       {lastRemovedEntry ? (
         <div className="mb-3 flex flex-col gap-2 rounded-lg border border-[#c3c0ff] bg-[#eef2ff] px-4 py-3 text-[12px] text-[#3525cd] sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            {lastRemovedEntry.response.dashboard.title} 기록을 삭제했습니다.
-          </p>
+          <p>{getEntryTitle(lastRemovedEntry)} 기록을 삭제했습니다.</p>
           <button
             className="min-h-11 self-start rounded-md border border-[#a8a3ff] bg-white px-3 text-[12px] font-semibold text-[#3525cd] hover:bg-[#f8f9fb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] sm:self-auto"
             onClick={restoreLastRemovedEntry}
@@ -245,39 +245,49 @@ export function HistoryList() {
         </div>
       ) : null}
       <div className="overflow-hidden rounded-lg border border-[#dde2e8] bg-white">
-        <div className="flex flex-col gap-3 border-b border-[#dde2e8] bg-[#f8f9fb] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <label className="relative block w-full sm:max-w-72">
-            <span className="sr-only">분석 기록 검색</span>
-            <Search
-              aria-hidden="true"
-              className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#777587]"
-            />
-            <input
-              autoComplete="off"
-              className="h-11 w-full rounded border border-[#dde2e8] bg-white pr-3 pl-9 text-[13px] text-[#191c1e] outline-none placeholder:text-[#9296a0] focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10"
-              name="history-search"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search history…"
-              type="search"
-              value={query}
-            />
+        <div className="grid gap-3 border-b border-[#dde2e8] bg-[#f8f9fb] px-4 py-4 sm:grid-cols-[minmax(0,1fr)_10rem] sm:items-end sm:gap-4 sm:px-6">
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-[12px] font-medium text-[#595e6b]">
+              분석 기록 검색
+            </span>
+            <span className="relative block">
+              <Search
+                aria-hidden="true"
+                className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#777587]"
+              />
+              <input
+                autoComplete="off"
+                className="h-11 w-full rounded-lg border border-[#dde2e8] bg-white pr-3 pl-9 text-[13px] text-[#191c1e] outline-none placeholder:text-[#9296a0] focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10"
+                id="history-search"
+                name="history-search"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="질문이나 분석 제목 검색…"
+                type="search"
+                value={query}
+              />
+            </span>
           </label>
-          <label className="flex items-center gap-2 text-[12px] font-medium text-[#595e6b]">
-            <span>Mode</span>
-            <select
-              className="h-11 rounded border border-[#dde2e8] bg-white px-3 text-[13px] text-[#191c1e] outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10"
+          <label className="grid min-w-0 gap-1.5 text-[12px] font-medium text-[#595e6b]">
+            <span>분석 모드</span>
+            <NativeSelect
               name="history-mode"
-              onChange={(event) => setMode(event.target.value as HistoryMode)}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === "all" || value === "live" || value === "mock")
+                  setMode(value);
+              }}
               value={mode}
             >
-              <option value="all">All</option>
-              <option value="live">Live</option>
-              <option value="mock">Mock</option>
-            </select>
+              <option value="all">전체</option>
+              <option value="live">제미나이</option>
+              <option value="mock">로컬 분석</option>
+            </NativeSelect>
           </label>
         </div>
 
-        {visibleEntries.length === 0 ? (
+        {!isReady ? (
+          <HistoryLoadingRows />
+        ) : visibleEntries.length === 0 ? (
           <div className="p-5">
             <EmptyHistory filtered={entries.length > 0} />
           </div>
@@ -287,19 +297,16 @@ export function HistoryList() {
               <caption className="sr-only">저장된 분석 기록</caption>
               <thead>
                 <tr className="border-b border-[#dde2e8] bg-[#f2f4f6] text-[10px] font-semibold tracking-[0.09em] text-[#595e6b] uppercase">
-                  <th className="w-5/12 px-6 py-3 font-semibold">
-                    Analysis name
-                  </th>
-                  <th className="w-3/12 px-6 py-3 font-semibold">Context</th>
-                  <th className="w-2/12 px-6 py-3 font-semibold">Created</th>
+                  <th className="w-5/12 px-6 py-3 font-semibold">분석 제목</th>
+                  <th className="w-3/12 px-6 py-3 font-semibold">분석 조건</th>
+                  <th className="w-2/12 px-6 py-3 font-semibold">생성 시각</th>
                   <th className="w-2/12 px-6 py-3 text-right font-semibold">
-                    Mode
+                    분석 모드
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {visibleEntries.map((entry) => {
-                  const period = entry.response.dashboard.context.period.preset;
                   const firstFilter =
                     entry.response.dashboard.context.filters[0];
 
@@ -313,7 +320,7 @@ export function HistoryList() {
                           className="block font-medium text-[#191c1e] hover:text-[#4f46e5]"
                           href={createHistoryHref(entry)}
                         >
-                          {entry.response.dashboard.title}
+                          {getEntryTitle(entry)}
                         </Link>
                         <p className="mt-1 max-w-md truncate text-[12px] text-[#595e6b]">
                           {entry.question}
@@ -322,11 +329,11 @@ export function HistoryList() {
                       <td className="px-6 py-4 align-middle">
                         <div className="flex flex-wrap gap-1.5">
                           <span className="rounded bg-[#dee2f2] px-2 py-1 text-[10px] font-medium text-[#424753]">
-                            {period}
+                            {getPeriodLabel(entry.response.context.period)}
                           </span>
                           {firstFilter ? (
                             <span className="max-w-32 truncate rounded bg-[#f2f4f6] px-2 py-1 text-[10px] font-medium text-[#595e6b]">
-                              {firstFilter.values.join(", ")}
+                              {getDashboardContextFilterLabel(firstFilter)}
                             </span>
                           ) : null}
                         </div>
@@ -359,7 +366,9 @@ export function HistoryList() {
           aria-live="polite"
           className="border-t border-[#dde2e8] bg-[#f8f9fb] px-6 py-3 text-[11px] text-[#595e6b]"
         >
-          {visibleEntries.length} of {entries.length} analyses
+          {isReady
+            ? `전체 ${entries.length}개 중 ${visibleEntries.length}개 분석`
+            : "분석 기록을 불러오는 중…"}
         </div>
       </div>
     </section>

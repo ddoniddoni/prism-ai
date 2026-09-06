@@ -95,6 +95,10 @@
   html {
     @apply font-sans;
   }
+  #analysis-question,
+  #follow-up-question,
+  #history-search,
+  #main-content,
   h1,
   h2,
   h3,
@@ -178,8 +182,16 @@
     opacity: 0.42;
   }
 
-  .dashboard-grid-container .react-grid-item > section {
+  .dashboard-grid-cell {
+    border: 1px solid #e1e2e4;
+    border-radius: 0.75rem;
+    background: white;
+  }
+
+  .dashboard-grid-cell > div > section {
     width: 100%;
+    border: 0;
+    background: transparent;
   }
 
   .dashboard-grid-container .react-grid-placeholder {
@@ -198,7 +210,7 @@
     opacity: 1;
   }
 
-  .dashboard-grid-container .is-editing .react-grid-item > section:hover {
+  .dashboard-grid-container .is-editing .dashboard-grid-cell:hover {
     border-color: #c3c0ff;
     box-shadow: 0 10px 30px rgb(53 37 205 / 0.08);
   }

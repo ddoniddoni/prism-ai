@@ -63,7 +63,7 @@ const dimensionValueLabels: Readonly<Record<string, string>> = {
   "Quiet Air Purifier": "저소음 공기청정기",
   "Sports retargeting": "스포츠 리타겟팅",
   "Trail Running Bottle": "트레일 러닝 보틀",
-  "Vitamin C Serum": "비타민 C 세럼",
+  "Vitamin C Serum": "비타민 씨 세럼",
   desktop: "데스크톱",
   direct: "직접 유입",
   email: "이메일",
@@ -73,7 +73,7 @@ const dimensionValueLabels: Readonly<Record<string, string>> = {
   paidSocial: "유료 소셜",
   returning: "재방문 고객",
   tablet: "태블릿",
-  vip: "VIP 고객",
+  vip: "우수 고객",
 };
 
 const analyticsCopyLabels: Readonly<Record<string, string>> = {
@@ -86,6 +86,12 @@ const analyticsCopyLabels: Readonly<Record<string, string>> = {
   "Selected evidence": "선택한 근거",
   "Generated from verified refs": "검증된 데이터 기반",
   "Query ref": "검증 데이터 근거",
+  "Analytics Engine": "분석 엔진",
+  Query: "조회",
+  Finding: "분석 근거",
+  Composer: "대시보드 구성",
+  ROAS: "광고 수익률",
+  VIP: "우수",
   Evidence: "검증 근거",
   unavailable: "확인 불가",
 };
@@ -211,4 +217,9 @@ export function getComparisonLabel(compareWith: CompareMode): string {
   };
 
   return labels[compareWith];
+}
+
+export function getKoreanDisplayTitle(value: string, fallback: string): string {
+  const localized = localizeAnalyticsText(value);
+  return /[a-z]/i.test(localized) ? fallback : localized;
 }

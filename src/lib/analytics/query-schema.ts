@@ -38,7 +38,14 @@ export type FilterOperator = (typeof filterOperators)[number];
 
 const isoDateSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식의 날짜가 필요합니다.");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식의 날짜가 필요합니다.")
+  .refine((value) => {
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return (
+      Number.isFinite(date.getTime()) &&
+      date.toISOString().slice(0, 10) === value
+    );
+  }, "존재하는 날짜를 입력해 주세요.");
 
 const filterValueSchema = z.string().trim().min(1).max(120);
 
@@ -59,6 +66,17 @@ export const analyticsPeriodSchema = z
   .strict()
   .superRefine((period, context) => {
     if (period.preset === "custom") {
+      if (
+        period.startDate &&
+        period.endDate &&
+        period.startDate > period.endDate
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["endDate"],
+          message: "종료일은 시작일보다 빠를 수 없습니다.",
+        });
+      }
       if (!period.startDate) {
         context.addIssue({
           code: "custom",

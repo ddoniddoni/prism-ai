@@ -115,7 +115,7 @@ export const metricCatalog: Readonly<Record<MetricKey, MetricDefinition>> = {
   },
   roas: {
     key: "roas",
-    label: "ROAS",
+    label: "광고 수익률",
     description: "광고 귀속 매출을 광고비로 나눈 값입니다.",
     format: "ratio",
     aggregation: "derived",

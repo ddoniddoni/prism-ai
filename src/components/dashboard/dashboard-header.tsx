@@ -1,10 +1,14 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/native-select";
+import { DashboardPeriodControl } from "./dashboard-period-control";
+
 import { SlidersHorizontal, X } from "lucide-react";
 import { metricCatalog } from "@/lib/analytics/metric-catalog";
 import {
   compareModes,
   type AnalyticsFilter,
+  type AnalyticsPeriod,
   type CompareMode,
 } from "@/lib/analytics/query-schema";
 import type { DashboardSpec } from "@/lib/ai/schemas/dashboard-spec";
@@ -34,7 +38,7 @@ function getDashboardHeaderCopy(dashboard: DashboardSpec): {
   return {
     subtitle: scope
       ? `${period} ${scope} 범위의 검증 데이터를 기준으로 분석했습니다.`
-      : `${period} 전체 데이터를 기준으로 분석했습니다.`,
+      : `${period} ${dashboard.context.filters.length > 0 ? "선택한 조건의" : "전체"} 데이터를 기준으로 분석했습니다.`,
     summary: "표시된 수치는 결정론적 분석 엔진이 계산한 결과입니다.",
     title: `${scope ? `${scope} ` : ""}${primaryMetric} 분석 결과`,
   };
@@ -46,12 +50,14 @@ export function DashboardHeader({
   filterControlsDisabled = false,
   onComparisonChange,
   onFiltersChange,
+  onPeriodChange,
 }: {
   dashboard: DashboardSpec;
   comparisonControlsDisabled?: boolean;
   filterControlsDisabled?: boolean;
   onComparisonChange?: (compareWith: CompareMode) => void;
   onFiltersChange?: (filters: readonly AnalyticsFilter[]) => void;
+  onPeriodChange?: (period: AnalyticsPeriod) => void;
 }) {
   const canChangeComparison = Boolean(onComparisonChange);
   const canChangeFilters = Boolean(onFiltersChange);
@@ -71,9 +77,6 @@ export function DashboardHeader({
       <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[#595e6b]">
         {headerCopy.subtitle}
       </p>
-      <p className="mt-2 max-w-3xl text-[12px] leading-5 text-[#777587]">
-        {headerCopy.summary}
-      </p>
       <div className="mt-4 rounded-lg border border-[#dde2e8] bg-[#f8f9fb] p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.1em] text-[#595e6b] uppercase">
@@ -91,16 +94,27 @@ export function DashboardHeader({
             </button>
           ) : null}
         </div>
-        <div className="mt-2.5 flex flex-wrap gap-2 text-[11px] text-[#595e6b]">
-          <span className="rounded-md border border-[#dde2e8] bg-white px-2.5 py-1.5">
-            {getPeriodLabel(dashboard.context.period)}
-          </span>
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-[#595e6b]">
+          {onPeriodChange ? (
+            <DashboardPeriodControl
+              key={JSON.stringify(dashboard.context.period)}
+              period={dashboard.context.period}
+              disabled={comparisonControlsDisabled}
+              onChange={onPeriodChange}
+            />
+          ) : (
+            <span className="inline-flex min-h-9 items-center rounded-lg border border-[#dde2e8] bg-white px-2.5 py-1.5">
+              {getPeriodLabel(dashboard.context.period)}
+            </span>
+          )}
           {canChangeComparison ? (
-            <label className="rounded-md border border-[#c3c0ff] bg-white text-[#3525cd] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#4f46e5]">
+            <label className="inline-flex min-w-0">
               <span className="sr-only">비교 기준</span>
-              <select
+              <NativeSelect
+                density="compact"
+                name="comparison-mode"
                 aria-label="비교 기준"
-                className="min-h-8 cursor-pointer bg-transparent py-1.5 pr-2 pl-2.5 font-medium outline-none disabled:cursor-not-allowed disabled:text-[#9296a0]"
+                className="border-[#c3c0ff] text-[#3525cd]"
                 disabled={comparisonControlsDisabled}
                 onChange={(event) => {
                   const nextCompareWith = compareModes.find(
@@ -118,15 +132,15 @@ export function DashboardHeader({
                     {getComparisonLabel(compareWith)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
           ) : (
-            <span className="rounded-md border border-[#dde2e8] bg-white px-2.5 py-1.5">
+            <span className="inline-flex min-h-9 items-center rounded-lg border border-[#dde2e8] bg-white px-2.5 py-1.5">
               {getComparisonLabel(dashboard.context.compareWith)}
             </span>
           )}
           {dashboard.context.filters.length === 0 ? (
-            <span className="rounded-md border border-dashed border-[#c9ccd2] bg-white px-2.5 py-1.5 text-[#777587]">
+            <span className="inline-flex min-h-9 items-center rounded-lg border border-dashed border-[#c9ccd2] bg-white px-2.5 py-1.5 text-[#777587]">
               전체 데이터
             </span>
           ) : (

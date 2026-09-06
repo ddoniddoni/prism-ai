@@ -7,12 +7,12 @@ test("starts an analysis from a recommended question and renders a verified dash
 
   await expect(
     page.getByRole("heading", {
-      name: "비즈니스에 대해 무엇이든 물어보세요.",
+      name: "매출부터 광고 성과까지, 데이터에 물어보세요.",
       level: 1,
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Local Synthetic Dataset", level: 2 }),
+    page.getByRole("heading", { name: "로컬 합성 데이터", level: 2 }),
   ).toBeVisible();
 
   await page
@@ -20,23 +20,23 @@ test("starts an analysis from a recommended question and renders a verified dash
     .click();
   await page.getByRole("button", { name: "분석 시작하기" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard\/mock-preview\?question=/);
+  await expect(page).toHaveURL(/\/dashboard\/[a-f0-9-]+\?question=/);
   await expect(
     page
-      .getByRole("region", { name: "Submitted question" })
+      .getByRole("region", { name: "입력한 질문" })
       .getByText("지난달 매출이 왜 감소했어?", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "매출 분석 결과", level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText("로컬 AI · 검증 결과")).toBeVisible();
+  await expect(page.getByText("로컬 분석 · 검증 결과")).toBeVisible();
 });
 
 test("renders the empty history shell", async ({ page }) => {
   await page.goto("/history");
 
   await expect(
-    page.getByRole("heading", { name: "Analysis History", level: 1 }),
+    page.getByRole("heading", { name: "분석 기록", level: 1 }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
@@ -62,7 +62,7 @@ test("edits, restores, and persists a dashboard layout", async ({ page }) => {
     page.getByRole("img", { name: "디바이스별 매출 구성 도넛 차트" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "주요 세그먼트 비교 삭제" }).click();
+  await page.getByRole("button", { name: "주요 세그먼트 비교 숨기기" }).click();
   await expect(
     page.getByRole("heading", { name: "디바이스별 매출 구성", exact: true }),
   ).toHaveCount(0);

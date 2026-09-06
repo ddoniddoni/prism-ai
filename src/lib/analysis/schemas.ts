@@ -3,6 +3,7 @@ import { z } from "zod";
 import { analyticsDatasetSchema } from "@/lib/analytics/query-engine";
 import {
   analyticsFilterSchema,
+  analyticsPeriodSchema,
   compareModes,
 } from "@/lib/analytics/query-schema";
 import { findingSchema } from "@/lib/analytics/findings";
@@ -23,11 +24,14 @@ export const contextOverrideSchema = z
   .object({
     filters: z.array(analyticsFilterSchema).max(20).optional(),
     compareWith: z.enum(compareModes).optional(),
+    period: analyticsPeriodSchema.optional(),
   })
   .strict()
   .refine(
     (override) =>
-      override.filters !== undefined || override.compareWith !== undefined,
+      override.filters !== undefined ||
+      override.compareWith !== undefined ||
+      override.period !== undefined,
     "분석 조건 변경값이 필요합니다.",
   );
 

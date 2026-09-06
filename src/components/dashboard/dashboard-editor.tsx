@@ -14,6 +14,7 @@ import type { AnalyticsDataset } from "@/lib/analytics/query-engine";
 import type {
   AnalyticsFilter,
   CompareMode,
+  AnalyticsPeriod,
 } from "@/lib/analytics/query-schema";
 import type { DashboardSpec } from "@/lib/ai/schemas/dashboard-spec";
 import {
@@ -54,6 +55,7 @@ type DashboardEditorProps = {
   drilldownAnalysisDisabled?: boolean;
   findings: readonly Finding[];
   onContextFiltersChange?: (filters: readonly AnalyticsFilter[]) => void;
+  onPeriodChange?: (period: AnalyticsPeriod) => void;
   onComparisonChange?: (compareWith: CompareMode) => void;
   onDrilldownAnalysis?: (filter: AnalyticsFilter) => void;
 };
@@ -111,6 +113,7 @@ export function DashboardEditor({
   drilldownAnalysisDisabled = false,
   findings,
   onComparisonChange,
+  onPeriodChange,
   onContextFiltersChange,
   onDrilldownAnalysis,
 }: DashboardEditorProps) {
@@ -258,6 +261,7 @@ export function DashboardEditor({
         dashboard={dashboard}
         comparisonControlsDisabled={comparisonControlsDisabled}
         filterControlsDisabled={contextFilterControlsDisabled}
+        onPeriodChange={onPeriodChange}
         onComparisonChange={onComparisonChange}
         onFiltersChange={onContextFiltersChange}
       />
@@ -288,7 +292,7 @@ export function DashboardEditor({
               표시할 위젯이 없습니다.
             </p>
             <p className="mt-2 text-[12px] text-[#595e6b]">
-              실행 취소 또는 초기화로 위젯을 다시 불러올 수 있습니다.
+              위의 숨긴 위젯 메뉴에서 원하는 위젯을 다시 표시해 주세요.
             </p>
           </div>
         ) : (
@@ -298,7 +302,11 @@ export function DashboardEditor({
             cols={editorGridColumns}
             compactor={verticalCompactor}
             containerPadding={[0, 0]}
-            dragConfig={isEditing ? activeDragConfig : inactiveDragConfig}
+            dragConfig={
+              isEditing && activeBreakpoint !== "sm"
+                ? activeDragConfig
+                : inactiveDragConfig
+            }
             layouts={layouts}
             margin={editorGridMargin}
             onBreakpointChange={(breakpoint) => {
@@ -307,7 +315,11 @@ export function DashboardEditor({
             }}
             onDragStop={commitLayout}
             onResizeStop={commitLayout}
-            resizeConfig={isEditing ? activeResizeConfig : inactiveResizeConfig}
+            resizeConfig={
+              isEditing && activeBreakpoint !== "sm"
+                ? activeResizeConfig
+                : inactiveResizeConfig
+            }
             rowHeight={editorRowHeight}
             width={width}
           >
@@ -341,7 +353,7 @@ export function DashboardEditor({
               );
 
               return (
-                <div key={widget.id}>
+                <div className="dashboard-grid-cell" key={widget.id}>
                   <WidgetCardHeightObserver
                     onContentHeightChange={(contentHeight) =>
                       ensureWidgetContentHeight(widget.id, contentHeight)

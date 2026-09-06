@@ -201,7 +201,10 @@ function createSequentialLayoutPlan(
         : breakpoint === "md"
           ? getTabletSpan(widget, widgets)
           : profile.w;
-    const height = breakpoint === "sm" ? Math.max(3, profile.h - 1) : profile.h;
+    const height =
+      breakpoint === "sm"
+        ? Math.max(3, baseProfile.h - 1, heightOverrides[widget.id] ?? 0)
+        : profile.h;
 
     if (cursorX > 0 && cursorX + width > columns) {
       cursorX = 0;
@@ -228,6 +231,26 @@ function createSequentialLayoutPlan(
     }
   }
 
+  // Complete each row without changing reading order. This also handles odd
+  // widget counts and layouts after a widget has been hidden.
+  const rows = new Map<number, DashboardWidgetLayoutPlan[]>();
+  for (const item of plan.values()) {
+    const row = rows.get(item.y) ?? [];
+    row.push(item);
+    rows.set(item.y, row);
+  }
+  for (const row of rows.values()) {
+    const usedWidth = row.reduce((sum, item) => sum + item.w, 0);
+    let remaining = columns - usedWidth;
+    let x = 0;
+    const height = Math.max(...row.map((item) => item.h));
+    for (const [index, item] of row.entries()) {
+      const extra = Math.ceil(remaining / (row.length - index));
+      plan.set(item.id, { ...item, x, w: item.w + extra, h: height });
+      x += item.w + extra;
+      remaining -= extra;
+    }
+  }
   return plan;
 }
 
@@ -313,6 +336,29 @@ function createDesktopBentoPlanCandidate(
     const isCalendar = widget.id === calendarWidget?.id;
 
     if (!isSupporting) {
+      if (
+        widget.type === "insight" &&
+        compactLaneBottom !== analysisLaneBottom
+      ) {
+        const left = compactLaneBottom < analysisLaneBottom;
+        const y = left ? compactLaneBottom : analysisLaneBottom;
+        const h = Math.max(
+          profile.h,
+          Math.abs(compactLaneBottom - analysisLaneBottom),
+        );
+        plan.set(widget.id, {
+          ...profile,
+          id: widget.id,
+          x: left ? 0 : 4,
+          y,
+          w: left ? 4 : 8,
+          h,
+          presentation: left ? "compact" : "standard",
+        });
+        if (left) compactLaneBottom = y + h;
+        else analysisLaneBottom = y + h;
+        continue;
+      }
       const y = Math.max(compactLaneBottom, analysisLaneBottom);
 
       plan.set(widget.id, {
@@ -496,11 +542,17 @@ function createMetricRankingEvidencePlan(
     [barWidget.id, { ...barProfile, id: barWidget.id, w: 8, x: 4, y: 0 }],
     [
       rankingWidget.id,
-      { ...rankingProfile, id: rankingWidget.id, w: 4, x: 0, y: 4 },
+      {
+        ...rankingProfile,
+        id: rankingWidget.id,
+        w: 4,
+        x: 0,
+        y: metricProfile.h,
+      },
     ],
     [
       insightWidget.id,
-      { ...insightProfile, id: insightWidget.id, w: 8, x: 4, y: 7 },
+      { ...insightProfile, id: insightWidget.id, w: 8, x: 4, y: barProfile.h },
     ],
   ]);
 }
@@ -525,16 +577,42 @@ export function createDashboardLayoutPlan(
     );
   }
 
-  return (
+  const candidate =
     createMetricRankingEvidencePlan(widgets, dataDensity, heightOverrides) ??
     createMetricCalendarPlan(widgets, dataDensity, heightOverrides) ??
-    createDesktopBentoPlan(widgets, dataDensity, heightOverrides) ??
-    createSequentialLayoutPlan(
-      widgets,
-      breakpoint,
-      dataDensity,
-      heightOverrides,
-    )
+    createDesktopBentoPlan(widgets, dataDensity, heightOverrides);
+  if (
+    candidate &&
+    getDashboardUnusedCanvasRatio(candidate, breakpoint) <=
+      dashboardLayoutConstraints[breakpoint].maxUnusedCanvasRatio
+  ) {
+    // Extend lane-ending cards to the next horizontal boundary. Keep their
+    // content intrinsic so measured heights can still shrink after editing.
+    const items = [...candidate.values()];
+    const bottom = Math.max(...items.map((item) => item.y + item.h));
+    return new Map(
+      items.map((item) => {
+        const nextY = Math.min(
+          bottom,
+          ...items
+            .filter(
+              (other) =>
+                other.id !== item.id &&
+                other.y >= item.y + item.h &&
+                other.x < item.x + item.w &&
+                other.x + other.w > item.x,
+            )
+            .map((other) => other.y),
+        );
+        return [item.id, { ...item, h: nextY - item.y }];
+      }),
+    );
+  }
+  return createSequentialLayoutPlan(
+    widgets,
+    breakpoint,
+    dataDensity,
+    heightOverrides,
   );
 }
 

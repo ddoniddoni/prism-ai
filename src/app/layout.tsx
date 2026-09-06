@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Prism AI | Ask your data. Build your dashboard.",
+  title: "Prism AI | 데이터에 질문하고 대시보드를 만드세요",
   description:
-    "A generative analytics workspace built on deterministic data analysis.",
+    "데이터에서 직접 계산한 근거로 대시보드를 만드는 인공지능 분석 공간입니다.",
 };
 
 export const viewport: Viewport = {

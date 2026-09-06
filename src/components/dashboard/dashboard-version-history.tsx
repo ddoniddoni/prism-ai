@@ -15,6 +15,7 @@ import {
 
 type DashboardVersionHistoryProps = {
   activeAnalysisId: string;
+  disabled?: boolean;
   entries: readonly AnalysisHistoryEntry[];
   onSelectVersion: (entry: AnalysisHistoryEntry) => void;
   sessionId: string;
@@ -35,6 +36,7 @@ function formatVersionTime(createdAt: string): string {
 
 export function DashboardVersionHistory({
   activeAnalysisId,
+  disabled = false,
   entries,
   onSelectVersion,
   sessionId,
@@ -49,18 +51,18 @@ export function DashboardVersionHistory({
   }
 
   return (
-    <section
+    <details
       aria-label="분석 버전 기록"
       className="mt-4 overflow-hidden rounded-xl border border-[#dfe2ed] bg-white shadow-[0_8px_28px_rgba(41,44,68,0.035)]"
     >
-      <div className="flex flex-col gap-3 border-b border-[#e8eaf1] bg-[linear-gradient(105deg,#f7f8ff_0%,#ffffff_62%)] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <summary className="flex cursor-pointer flex-col gap-3 border-b border-[#e8eaf1] bg-[linear-gradient(105deg,#f7f8ff_0%,#ffffff_62%)] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#4f46e5] text-white shadow-[0_5px_12px_rgba(79,70,229,0.22)]">
             <History aria-hidden="true" className="size-3.5" />
           </span>
           <div>
             <p className="text-[10px] font-semibold tracking-[0.11em] text-[#5750c8] uppercase">
-              Analysis trail
+              분석 흐름
             </p>
             <h2 className="mt-0.5 text-[14px] font-semibold tracking-[-0.02em] text-[#242735]">
               분석 버전 기록
@@ -70,7 +72,7 @@ export function DashboardVersionHistory({
         <p className="rounded-md border border-[#dfe2ed] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#676b7a]">
           {versions.length}개 버전 · 선택해 다시 보기
         </p>
-      </div>
+      </summary>
 
       <ol className="grid gap-2.5 p-3 sm:grid-cols-2 lg:grid-cols-3">
         {versions.map((version) => {
@@ -82,12 +84,12 @@ export function DashboardVersionHistory({
             <li key={entry.id}>
               <button
                 aria-current={isActive ? "step" : undefined}
-                className={`group relative flex min-h-40 w-full flex-col rounded-lg border p-3.5 text-left transition-[border-color,box-shadow,transform] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] motion-reduce:transition-none ${
+                className={`group relative flex min-h-32 w-full flex-col rounded-lg border p-3.5 text-left transition-[border-color,box-shadow,transform] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5] motion-reduce:transition-none ${
                   isActive
                     ? "border-[#625cf0] bg-[#f4f4ff] shadow-[0_8px_20px_rgba(79,70,229,0.1)]"
                     : "border-[#e4e6ec] bg-white hover:-translate-y-0.5 hover:border-[#aaa6ff] hover:shadow-[0_8px_20px_rgba(41,44,68,0.08)]"
                 }`}
-                disabled={isActive}
+                disabled={isActive || disabled}
                 onClick={() => onSelectVersion(entry)}
                 type="button"
               >
@@ -96,7 +98,7 @@ export function DashboardVersionHistory({
                     <span className="grid size-5 place-items-center rounded bg-white font-mono text-[9px] shadow-[0_1px_2px_rgba(41,44,68,0.08)]">
                       {version.version}
                     </span>
-                    Version
+                    버전
                   </span>
                   {isActive ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#4f46e5] px-2 py-1 text-[9px] font-semibold text-white">
@@ -164,6 +166,6 @@ export function DashboardVersionHistory({
           );
         })}
       </ol>
-    </section>
+    </details>
   );
 }
