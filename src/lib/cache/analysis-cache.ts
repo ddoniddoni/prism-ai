@@ -11,7 +11,7 @@ type AnalysisCacheEntry = {
   response: AnalyzeResponse;
 };
 
-export const analysisCacheSemanticsVersion = "2026-09-product-units";
+export const analysisCacheSemanticsVersion = "2026-09-explicit-period-filters";
 
 export type AnalysisCacheScope = {
   aiLiveEnabled: boolean;

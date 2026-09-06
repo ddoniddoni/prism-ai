@@ -6,9 +6,20 @@ Phase 8: Portfolio 완성
 
 ## 상태
 
-Phase 8 공통 탐색·홈 이동·질문 입력 개선, Dashboard 모듈 분리와 문서 현행화 완료 · 테스트·브라우저 검증 보류
+Phase 8 분석 조건·근거·내보내기·배치 편의 개선 완료 · Mock/Local 브라우저 점검 완료 · 자동 테스트 보류
 
 ## 완료
+
+- 2026-09-06 제품 완성도 점검: `docs/PRODUCT_REVIEW.md`에 부족한 기능, 제거·축소한 표현, 구현 내용과 남은 우선순위를 기록했다.
+- 기간 프리셋·직접 날짜 입력을 추가하고 API의 Context Override에 기간을 포함했다. 존재하지 않는 날짜와 역전 기간은 Schema에서 거부한다. 직접 조건 변경은 원래 Context를 보존하며 모든 Query에 최종 기간·비교·Filter를 강제한다. 원래 질문에서 지역 Filter가 재생성되는 경로도 수정했다. Cache 의미 Version을 갱신했다.
+- 일반 배치의 남는 열을 분배하고 짧은 열에 Insight를 배치하며 카드 하단 경계를 맞춘다. 고정 높이 좌표·모바일 측정 높이 감소·Tablet 최소 폭 불일치를 수정했다. 긴 표와 펼친 근거를 수용하도록 편집 높이 상한을 64행으로 확대했다. 사용하지 않는 중복 Layout Fallback을 제거했다.
+- 자동 정리와 숨긴 위젯별 복구를 추가했다. 자동 정리는 표시 형식·숨김을 보존하고 Undo로 되돌릴 수 있다. 숨김·Type 변경은 Auto Layout을 불필요하게 Custom으로 바꾸지 않는다. 앞뒤 이동은 크기가 다른 위젯도 겹치지 않게 재배치하며 모바일에서는 버튼 이동을 사용한다.
+- 실제 조회·비교 기간, 실패 Query, Dataset 경고를 확인하는 조회 근거와 UTF-8 CSV 다운로드를 추가했다. CSV는 원본 숫자·null·지표별 단위를 보존하고 전체 집계와 분류별 집계를 분리하며 Spreadsheet 수식처럼 해석될 수 있는 문자열을 Escape한다.
+- Insight의 집계값·기간·지표 설명을 펼쳐 보게 하고, 100%를 넘는 기여도에는 다른 항목이 순변화를 상쇄할 수 있다는 안내를 추가했다. Partial과 Empty 상태를 일반 완료와 구분했다.
+- 버전 기록은 결과 아래 접이식 목록으로 옮겼다. 분석 요청 중 버전 전환을 막고 이전 버전 복원 시 오류 상태를 초기화한다. 후속 입력은 IME Enter를 보호하고 편집 도구에서 바로 이동할 수 있다.
+- 홈의 지원 범위·데이터 기준일을 명시하고 추천 질문을 균등한 Grid로 정렬했다. 오류에서 질문 원문을 유지해 수정하는 경로를 추가했다. 이 경로의 Query Parameter를 읽기 위해 Home은 동적 서버 렌더링을 사용한다.
+- History 저장 실패가 분석 결과 표시를 막지 않도록 결과를 먼저 표시하고 저장 실패 안내를 분리했다. 모바일 분석 상태 영역을 축소했다.
+
 
 - 2026-09-06 화면 한글화: Home·합성 데이터 안내·History 표·분석 오류·버전 기록·입력 키 안내·페이지 Metadata의 영문 문구를 한글로 통일했다. 제품명 Prism AI와 내부 Schema Key는 유지하고 사용자가 직접 입력한 질문은 변환하지 않는다.
 - History의 원본 기간·Filter Value를 기존 한글 Formatter로 표시하고, Live/Mock Badge와 Gemini 표시를 한글화했다. ROAS 표시명은 광고 수익률, VIP 고객은 우수 고객으로 바꿨다.
@@ -548,3 +559,17 @@ Phase 8 공통 탐색·홈 이동·질문 입력 개선, Dashboard 모듈 분리
 ## 다음 권장 작업
 
 테스트 실행이 허용되면 `npm run check` 후 `npm run test:e2e`로 현재 회귀 상태를 확인한다. `docs/DEMO.md`의 Desktop·Mobile 대표 시나리오를 확인하고 실제 Screenshot·Demo 영상과 배포 환경 Web Vitals를 기록한다.
+
+
+## 2026-09-06 제품 완성도 개선 검증
+
+- `npm run lint`: 통과.
+- `npm run typecheck`: 통과. 마지막 검증에서 build와 동시 실행한 1회는 `.next/types` 재생성 중 TS6053으로 실패했으며, build 완료 뒤 단독 재실행해 통과했다. 이후 Typecheck와 Build는 순차 실행한다.
+- `AI_PROVIDER=mock AI_LIVE_ENABLED=false DATA_SOURCE=local PERSIST_ANALYSIS_HISTORY=false npm run build`: 통과.
+- `git diff --check`: 통과.
+- Playwright CLI 수동 브라우저 점검: 1440×1000 Desktop, 375×812 Mobile. 추천 질문 분석·최근 7일 전환·2026-06-01~06-30 직접 기간 적용·위젯 숨김과 개별 복구·자동 정리·편집 완료·CSV 다운로드 확인. 모바일 문서 너비 375px로 가로 넘침 없음.
+- 실제 다운로드 CSV 확인: Header 포함 20행, 모든 행 14열. 최근 7일 집계는 2026-08-24~08-30, 비교 기간은 2026-08-17~08-23이며 원본 집계값을 포함했다.
+- 개발 중 새 내보내기 도구와 Editor에 같은 React Key를 사용한 오류를 브라우저에서 확인하고 Prefix로 분리했다. 새로고침 이후 확인한 흐름에서 재발하지 않았다.
+- 날짜·필터 우선순위 Service/Unit, 부분 위젯 조합의 배치·겹침·높이 보존, 개별 복구 Undo, CSV Escape/숫자/빈 값 회귀 코드를 추가했다. 기존 Layout Unit과 Home E2E의 변경된 표시·배치 기대값도 갱신했다.
+- `npm run test`, `npm run test:e2e`, `npm run check`, react-doctor: 사용자 요청에 따라 미실행. 실제 Gemini와 원격 DB는 이번 검증 범위에 포함하지 않았다.
+- 이번 변경은 작업 트리에 있으며 Commit·Push는 실행하지 않았다.

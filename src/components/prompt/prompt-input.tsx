@@ -9,11 +9,15 @@ const MAXIMUM_QUESTION_LENGTH = 300;
 
 type PromptInputProps = {
   recommendedQuestions: readonly string[];
+  initialQuestion?: string;
 };
 
-export function PromptInput({ recommendedQuestions }: PromptInputProps) {
+export function PromptInput({
+  recommendedQuestions,
+  initialQuestion = "",
+}: PromptInputProps) {
   const router = useRouter();
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(initialQuestion);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
@@ -133,10 +137,13 @@ export function PromptInput({ recommendedQuestions }: PromptInputProps) {
       </p>
 
       <section aria-labelledby="recommended-questions-title" className="mt-4">
-        <p className="sr-only" id="recommended-questions-title">
+        <p
+          className="mb-2 text-xs font-semibold text-[#595e6b]"
+          id="recommended-questions-title"
+        >
           추천 분석 질문
         </p>
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {recommendedQuestions.map((recommendedQuestion) => (
             <button
               className="min-h-11 rounded border border-[#dde2e8] bg-white px-3 py-1.5 text-left text-[12px] text-[#595e6b] transition-colors duration-100 hover:border-[#c3c0ff] hover:bg-[#f2f4f6] hover:text-[#3525cd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f46e5]"

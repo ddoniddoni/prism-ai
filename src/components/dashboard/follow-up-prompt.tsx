@@ -17,6 +17,7 @@ export function FollowUpPrompt({ disabled, onSubmit }: FollowUpPromptProps) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (disabled) return;
     const normalizedQuestion = question.trim();
 
     if (normalizedQuestion.length < 2) {
@@ -52,7 +53,7 @@ export function FollowUpPrompt({ disabled, onSubmit }: FollowUpPromptProps) {
               이어서 분석하기
             </h2>
             <p className="mt-0.5 text-[11px] text-[#777587]">
-              현재 기간과 지표를 유지합니다
+              바꾸지 않은 분석 조건은 이어집니다
             </p>
           </div>
         </div>
@@ -70,6 +71,13 @@ export function FollowUpPrompt({ disabled, onSubmit }: FollowUpPromptProps) {
           maxLength={300}
           name="follow-up-question"
           onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              (event.nativeEvent.isComposing || event.keyCode === 229)
+            )
+              event.preventDefault();
+          }}
           placeholder="예: 모바일만 자세히 분석해줘…"
           ref={inputRef}
           value={question}

@@ -10,6 +10,7 @@ import {
 import { localizeAnalyticsText } from "./formatters";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -25,6 +26,7 @@ import {
   normalizeAnalyticsFilters,
   type AnalyticsFilter,
   type CompareMode,
+  type AnalyticsPeriod,
 } from "@/lib/analytics/query-schema";
 import {
   createAnalysisHistoryEntry,
@@ -37,6 +39,7 @@ import {
   useLocalAnalysisHistory,
 } from "@/components/history/use-local-analysis-history";
 import { FollowUpPrompt } from "./follow-up-prompt";
+import { AnalysisResultTools } from "./analysis-result-tools";
 import { DashboardVersionHistory } from "./dashboard-version-history";
 
 type AnalysisDashboardProps = {
@@ -228,6 +231,7 @@ export function AnalysisDashboard({
     useState<PendingAnalysis | null>(() =>
       historyEntryId ? null : { question },
     );
+  const [storageMessage, setStorageMessage] = useState("");
   const requestedInitialAnalysis = useRef(false);
   const queryClient = useQueryClient();
   const analysisQueryKey = ["analysis-dashboard", dashboardId] as const;
@@ -254,6 +258,7 @@ export function AnalysisDashboard({
   const activePendingAnalysis = pendingAnalysis ?? historyFallback;
   const activeResponse = response ?? savedEntry?.response ?? null;
   const {
+    reset: resetAnalysis,
     error: analysisError,
     isError: isAnalysisError,
     isPending: isAnalysisPending,
@@ -261,13 +266,22 @@ export function AnalysisDashboard({
   } = useMutation({
     mutationFn: requestAnalysis,
     onSuccess: (nextResponse, input) => {
-      saveAnalysisHistory(
-        window.localStorage,
-        createAnalysisHistoryEntry(input.question, nextResponse),
-      );
-      notifyLocalAnalysisHistoryChange();
       queryClient.setQueryData(analysisQueryKey, nextResponse);
       setPendingAnalysis(null);
+      try {
+        const entry = createAnalysisHistoryEntry(input.question, nextResponse);
+        const saved = saveAnalysisHistory(window.localStorage, entry);
+        setStorageMessage(
+          saved.some((item) => item.id === entry.id)
+            ? ""
+            : "브라우저 저장 공간이 부족해 기록을 저장하지 못했습니다. 분석 데이터는 내려받을 수 있습니다.",
+        );
+        notifyLocalAnalysisHistoryChange();
+      } catch {
+        setStorageMessage(
+          "브라우저 저장소를 사용할 수 없어 기록을 저장하지 못했습니다. 현재 분석은 계속 볼 수 있습니다.",
+        );
+      }
     },
   });
   const displayStatus = isAnalysisPending
@@ -303,7 +317,7 @@ export function AnalysisDashboard({
   }
 
   function startFollowUp(nextQuestion: string) {
-    if (!activeResponse) {
+    if (!activeResponse || isAnalysisPending) {
       return;
     }
 
@@ -318,7 +332,7 @@ export function AnalysisDashboard({
   }
 
   function startContextFiltersChange(filters: readonly AnalyticsFilter[]) {
-    if (!activeResponse) {
+    if (!activeResponse || isAnalysisPending) {
       return;
     }
 
@@ -337,7 +351,11 @@ export function AnalysisDashboard({
   }
 
   function startComparisonChange(compareWith: CompareMode) {
-    if (!activeResponse || activeResponse.context.compareWith === compareWith) {
+    if (
+      !activeResponse ||
+      isAnalysisPending ||
+      activeResponse.context.compareWith === compareWith
+    ) {
       return;
     }
 
@@ -353,8 +371,25 @@ export function AnalysisDashboard({
     mutateAnalysis({ ...nextAnalysis, dashboardId });
   }
 
+  function startPeriodChange(period: AnalyticsPeriod) {
+    if (
+      !activeResponse ||
+      isAnalysisPending ||
+      JSON.stringify(activeResponse.context.period) === JSON.stringify(period)
+    )
+      return;
+    const nextAnalysis = {
+      question: activeResponse.plan.normalizedQuestion,
+      currentContext: activeResponse.context,
+      sessionId: activeResponse.sessionId,
+      contextOverride: { period },
+    };
+    setPendingAnalysis(nextAnalysis);
+    mutateAnalysis({ ...nextAnalysis, dashboardId });
+  }
+
   function startDrilldownAnalysis(filter: AnalyticsFilter) {
-    if (!activeResponse || filter.operator !== "eq") {
+    if (!activeResponse || isAnalysisPending || filter.operator !== "eq") {
       return;
     }
 
@@ -383,12 +418,14 @@ export function AnalysisDashboard({
   function openAnalysisVersion(entry: AnalysisHistoryEntry) {
     if (
       !activeResponse ||
+      isAnalysisPending ||
       entry.response.sessionId !== activeResponse.sessionId
     ) {
       return;
     }
 
     setPendingAnalysis(null);
+    resetAnalysis();
     queryClient.setQueryData(analysisQueryKey, entry.response);
   }
 
@@ -418,6 +455,16 @@ export function AnalysisDashboard({
         >
           분석 다시 시도
         </button>
+        <Link
+          className="ml-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#4f46e5] underline underline-offset-4"
+          href={`/?question=${encodeURIComponent(question)}#analysis-question`}
+        >
+          질문 수정하기
+        </Link>
+        <p className="mt-4 text-xs leading-6 text-[#595e6b]">
+          매출, 판매량, 광고 효율, 환불률에 대해 질문해 보세요. 예: 지난달
+          매출을 지역별로 보여줘.
+        </p>
       </section>
     );
   }
@@ -428,7 +475,7 @@ export function AnalysisDashboard({
 
   return (
     <>
-      <section className="mt-6 flex flex-col gap-3 rounded-lg border border-[#c3c0ff] bg-[#eef2ff] p-4 sm:flex-row sm:items-start">
+      <section className="mt-4 flex items-start gap-3 rounded-lg border border-[#c3c0ff] bg-[#eef2ff] p-3 sm:p-4">
         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-[#4f46e5]">
           {displayStatus === "loading" ? (
             <DatabaseZap aria-hidden="true" className="size-4" />
@@ -452,7 +499,13 @@ export function AnalysisDashboard({
           ) : (
             <CircleCheck aria-hidden="true" className="size-3" />
           )}
-          {displayStatus === "loading" ? "업데이트 중" : "검증 완료"}
+          {displayStatus === "loading"
+            ? "업데이트 중"
+            : activeResponse.meta.partial
+              ? "일부 결과"
+              : activeResponse.datasets.every((dataset) => dataset.empty)
+                ? "데이터 없음"
+                : "검증 완료"}
         </span>
       </section>
       {displayStatus === "error" ? (
@@ -470,12 +523,26 @@ export function AnalysisDashboard({
           </button>
         </section>
       ) : null}
-      <DashboardVersionHistory
-        activeAnalysisId={activeResponse.analysisId}
-        entries={historyEntries}
-        onSelectVersion={openAnalysisVersion}
-        sessionId={activeResponse.sessionId}
+      {storageMessage ? (
+        <p className="mt-3 text-xs text-[#8a5800]" role="status">
+          {storageMessage}
+        </p>
+      ) : null}
+      <AnalysisResultTools
+        key={`tools-${activeResponse.analysisId}`}
+        response={activeResponse}
       />
+      {activeResponse.meta.partial ||
+      activeResponse.datasets.every((dataset) => dataset.empty) ? (
+        <p
+          className="mt-3 rounded-lg border border-[#e8d4a4] bg-[#fff9ec] p-4 text-xs leading-6 text-[#8a5800]"
+          role="status"
+        >
+          {activeResponse.meta.partial
+            ? "일부 데이터를 조회하지 못했습니다. 조회 근거에서 누락된 항목을 확인할 수 있습니다."
+            : "현재 조건에 일치하는 데이터가 없습니다. 아래에서 기간을 변경하거나 필터를 해제해 주세요."}
+        </p>
+      ) : null}
       <DashboardEditor
         dashboard={activeResponse.dashboard}
         comparisonControlsDisabled={displayStatus === "loading"}
@@ -484,9 +551,17 @@ export function AnalysisDashboard({
         drilldownAnalysisDisabled={displayStatus === "loading"}
         findings={activeResponse.findings}
         key={activeResponse.analysisId}
+        onPeriodChange={startPeriodChange}
         onComparisonChange={startComparisonChange}
         onContextFiltersChange={startContextFiltersChange}
         onDrilldownAnalysis={startDrilldownAnalysis}
+      />
+      <DashboardVersionHistory
+        activeAnalysisId={activeResponse.analysisId}
+        disabled={isAnalysisPending}
+        entries={historyEntries}
+        onSelectVersion={openAnalysisVersion}
+        sessionId={activeResponse.sessionId}
       />
       <div className="mt-5">
         <FollowUpPrompt

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { getKoreanDisplayTitle } from "./formatters";
 import { getDashboardWidgetDisplayCopy } from "./dashboard-widget-frame";
 
@@ -11,6 +12,8 @@ import {
   Check,
   Edit3,
   GripVertical,
+  LayoutGrid,
+  Eye,
   Redo2,
   RotateCcw,
   Trash2,
@@ -116,13 +119,15 @@ export function WidgetEditorControls({
         <ArrowDown aria-hidden="true" className="size-3.5" />
       </button>
       <button
-        aria-label={`${title} 삭제`}
+        aria-label={`${title} 숨기기`}
         className="dashboard-control-button text-[#93000a]"
         onClick={() => {
           useDashboardEditorStore.getState().hideWidget(dashboardId, widget.id);
-          onAction(`${title}을 삭제했습니다. 실행 취소로 복원할 수 있습니다.`);
+          onAction(
+            `${title}을 숨겼습니다. 숨긴 위젯에서 다시 표시할 수 있습니다.`,
+          );
         }}
-        title="위젯 삭제"
+        title="위젯 숨기기"
         type="button"
       >
         <Trash2 aria-hidden="true" className="size-3.5" />
@@ -169,6 +174,59 @@ export function EditorToolbar({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        {!isEditing ? (
+          <Link className="dashboard-toolbar-button" href="#follow-up-question">
+            이어서 질문
+          </Link>
+        ) : null}
+        <button
+          className="dashboard-toolbar-button"
+          disabled={!document}
+          onClick={() => {
+            useDashboardEditorStore
+              .getState()
+              .autoArrange(dashboard.id, dashboard.widgets);
+            onAction("숨김과 표시 형식을 유지하면서 배치를 자동 정리했습니다.");
+          }}
+          type="button"
+        >
+          <LayoutGrid aria-hidden="true" className="size-3.5" />
+          자동 정리
+        </button>
+        {document && document.present.hiddenWidgetIds.length > 0 ? (
+          <details className="relative">
+            <summary className="dashboard-toolbar-button cursor-pointer">
+              <Eye aria-hidden="true" className="size-3.5" />
+              숨긴 위젯 {document.present.hiddenWidgetIds.length}개
+            </summary>
+            <ul className="absolute right-0 z-30 mt-2 w-64 max-w-[80vw] rounded-lg border border-[#dde2e8] bg-white p-2 shadow-lg">
+              {dashboard.widgets
+                .filter((widget) =>
+                  document.present.hiddenWidgetIds.includes(widget.id),
+                )
+                .map((widget) => (
+                  <li key={widget.id}>
+                    <button
+                      className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-xs hover:bg-[#eef2ff]"
+                      onClick={() => {
+                        useDashboardEditorStore
+                          .getState()
+                          .restoreWidget(dashboard.id, widget.id);
+                        onAction("숨긴 위젯을 다시 표시했습니다.");
+                      }}
+                      type="button"
+                    >
+                      {getKoreanDisplayTitle(
+                        widget.title,
+                        getDashboardWidgetDisplayCopy(widget).label,
+                      )}
+                      <span className="shrink-0 text-[#4f46e5]">복구</span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </details>
+        ) : null}
         {isEditing ? (
           <>
             <button

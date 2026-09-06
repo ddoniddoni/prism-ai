@@ -31,7 +31,9 @@ export function replaceAnalysisContextFilters(
 
 export function applyAnalysisContextOverride(
   context: AnalysisContext,
-  override: Partial<Pick<AnalysisContext, "filters" | "compareWith">>,
+  override: Partial<
+    Pick<AnalysisContext, "filters" | "compareWith" | "period">
+  >,
 ): AnalysisContext {
   return analysisContextSchema.parse({
     ...context,
@@ -39,6 +41,7 @@ export function applyAnalysisContextOverride(
       ? { filters: normalizeAnalyticsFilters(override.filters) }
       : {}),
     ...(override.compareWith ? { compareWith: override.compareWith } : {}),
+    ...(override.period ? { period: override.period } : {}),
   });
 }
 
@@ -58,21 +61,22 @@ export function constrainPlanToContextFilters(
 export function constrainPlanToContextOverride(
   plan: AnalysisPlan,
   context: AnalysisContext,
-  override: Partial<Pick<AnalysisContext, "filters" | "compareWith">>,
+  override: Partial<
+    Pick<AnalysisContext, "filters" | "compareWith" | "period">
+  >,
 ): AnalysisPlan {
   return normalizeAnalysisPlan({
     ...plan,
+    contextPatch: { ...plan.contextPatch, ...override },
     queries: plan.queries.map((query) => ({
       ...query,
       ...(override.filters
         ? {
-            filters: normalizeAnalyticsFilters([
-              ...query.filters,
-              ...context.filters,
-            ]),
+            filters: normalizeAnalyticsFilters(context.filters),
           }
         : {}),
       ...(override.compareWith ? { compareWith: context.compareWith } : {}),
+      ...(override.period ? { period: context.period } : {}),
     })),
   });
 }

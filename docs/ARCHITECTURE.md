@@ -87,7 +87,8 @@ Dashboard의 표현 책임은 다음 파일로 나눈다.
 | 파일 | 책임 |
 | --- | --- |
 | `analysis-dashboard.tsx` | API Mutation, 이전 성공 응답 유지, 후속 질문·조건 변경·History 연결 |
-| `dashboard-header.tsx` | 분석 제목, 기간, Filter Chip, 비교 기준 Control |
+| `dashboard-header.tsx`, `dashboard-period-control.tsx` | 분석 제목, 기간 선택·직접 날짜 입력, Filter Chip, 비교 기준 Control |
+| `analysis-result-tools.tsx`, `analysis-export-data.ts` | 조회 상태·기간·경고 표시와 검증 Dataset의 CSV 내보내기 |
 | `dashboard-renderer.tsx` | 읽기용 Dashboard 조합과 초기 CSS Grid |
 | `dashboard-widget-registry.tsx` | Schema의 모든 Widget Type 등록과 memo 경계 |
 | `dashboard-widget-frame.tsx` | 공통 Card, 검증 Dataset 기준 표시 문구와 Heading |
@@ -323,7 +324,8 @@ type AnalyzeResponse = {
 
 - Question 2자 이상 300자 이하
 - Request Body Zod 검증
-- 현재 Context와 함께 단일 `eq` Drilldown Filter 또는 Filter·비교 Override 허용
+- 현재 Context와 함께 단일 `eq` Drilldown Filter 또는 Filter·비교·기간 Override 허용
+- 직접 조건 조작은 원래 Context에서 변경 필드만 적용하고 모든 Query의 기간·비교·Filter를 최종 Context로 강제한다. 원래 질문에서 다시 추론한 조건은 직접 선택을 덮어쓰지 않는다.
 - Drilldown과 Context Override를 같은 요청에 보내면 거부
 - 동일 Cache Key의 동시 요청은 한 번 실행하고 응답 ID는 요청별로 다시 부여
 - Gemini 호출별 Timeout 적용. Browser 취소 Signal의 전체 Pipeline 전달은 미구현

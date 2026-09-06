@@ -13,6 +13,7 @@ import {
   persistedDashboardEditorStateSchema,
   reconcileDashboardEditorDocument,
   redoDashboardEditorDocument,
+  restoreDashboardWidget,
   undoDashboardEditorDocument,
   type DashboardEditorDocument,
   type EditorBreakpoint,
@@ -42,6 +43,11 @@ type DashboardEditorState = {
     breakpoint: EditorBreakpoint,
     widgetId: string,
     height: number,
+  ) => void;
+  restoreWidget: (dashboardId: string, widgetId: string) => void;
+  autoArrange: (
+    dashboardId: string,
+    widgets: readonly DashboardWidget[],
   ) => void;
   hideWidget: (dashboardId: string, widgetId: string) => void;
   moveWidget: (
@@ -135,25 +141,22 @@ function moveLayoutItem(
     return [...layout];
   }
 
-  return layout.map((item) => {
-    if (item.i === current.i) {
-      return {
-        ...item,
-        x: Math.min(target.x, Math.max(0, columns - item.w)),
-        y: target.y,
-      };
+  [ordered[currentIndex], ordered[targetIndex]] = [target, current];
+  let x = 0;
+  let y = 0;
+  let rowHeight = 0;
+  const positions = new Map<string, EditorLayoutItem>();
+  for (const item of ordered) {
+    if (x + item.w > columns) {
+      x = 0;
+      y += rowHeight;
+      rowHeight = 0;
     }
-
-    if (item.i === target.i) {
-      return {
-        ...item,
-        x: Math.min(current.x, Math.max(0, columns - item.w)),
-        y: current.y,
-      };
-    }
-
-    return item;
-  });
+    positions.set(item.i, { ...item, x, y });
+    x += item.w;
+    rowHeight = Math.max(rowHeight, item.h);
+  }
+  return layout.map((item) => positions.get(item.i) ?? item);
 }
 
 export const useDashboardEditorStore = create<DashboardEditorState>()(
@@ -259,7 +262,6 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
           const nextSnapshot = {
             ...document.present,
             hiddenWidgetIds: [...document.present.hiddenWidgetIds, widgetId],
-            layoutMode: "custom" as const,
           };
 
           return {
@@ -267,6 +269,37 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
               state.documents,
               dashboardId,
               commitDashboardEditorSnapshot(document, nextSnapshot),
+            ),
+          };
+        }),
+      restoreWidget: (dashboardId, widgetId) =>
+        set((state) => {
+          const document = state.documents[dashboardId];
+          if (!document) return state;
+          return {
+            documents: replaceDocument(
+              state.documents,
+              dashboardId,
+              commitDashboardEditorSnapshot(
+                document,
+                restoreDashboardWidget(document.present, widgetId),
+              ),
+            ),
+          };
+        }),
+      autoArrange: (dashboardId, widgets) =>
+        set((state) => {
+          const document = state.documents[dashboardId];
+          if (!document) return state;
+          return {
+            documents: replaceDocument(
+              state.documents,
+              dashboardId,
+              commitDashboardEditorSnapshot(document, {
+                ...createDashboardEditorSnapshot(widgets),
+                hiddenWidgetIds: document.present.hiddenWidgetIds,
+                typeOverrides: document.present.typeOverrides,
+              }),
             ),
           };
         }),
@@ -325,7 +358,6 @@ export const useDashboardEditorStore = create<DashboardEditorState>()(
 
           const nextSnapshot = {
             ...document.present,
-            layoutMode: "custom" as const,
             typeOverrides: {
               ...document.present.typeOverrides,
               [widgetId]: type,

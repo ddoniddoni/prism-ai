@@ -101,12 +101,15 @@ export class AnalyzeQuestionService {
     );
     const plannedContext = mergeAnalysisContext(plannerContext, plan);
     const context = request.contextOverride
-      ? applyAnalysisContextOverride(plannedContext, request.contextOverride)
+      ? applyAnalysisContextOverride(
+          currentContext ?? plannedContext,
+          request.contextOverride,
+        )
       : request.drilldownFilter
         ? addDrilldownFilter(plannedContext, request.drilldownFilter)
         : plannedContext;
     const constrainedPlan = request.contextOverride
-      ? constrainPlanToContextOverride(plan, context, request.contextOverride)
+      ? constrainPlanToContextOverride(plan, context, context)
       : request.drilldownFilter
         ? constrainPlanToContextFilters(plan, context.filters)
         : plan;
